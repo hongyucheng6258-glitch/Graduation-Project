@@ -1,0 +1,21 @@
+FROM maven:3.9-eclipse-temurin-17 AS build
+
+WORKDIR /build
+COPY web/backend/pom.xml ./pom.xml
+RUN mvn -B -DskipTests dependency:go-offline
+COPY web/backend/src ./src
+RUN mvn -B -DskipTests package
+
+FROM eclipse-temurin:17-jre
+
+# 构建版本信息：docker compose build --build-arg BUILD_VERSION=v1.2.0 传入
+ARG BUILD_VERSION=dev
+ENV APP_VERSION=$BUILD_VERSION
+
+WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends wget \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /build/target/platform-server.jar ./app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

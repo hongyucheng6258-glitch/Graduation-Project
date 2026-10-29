@@ -1,0 +1,89 @@
+/* ============================================================
+   梧桐校园 · Element Plus 主题覆盖（后台端，与学生端一致）
+   在 `element-plus/dist/index.css` 之后引入。暗色随 data-theme 生效。
+   ============================================================ */
+:root {
+  --el-color-primary: var(--brand);
+  --el-color-primary-light-3: oklch(63% 0.12 265);
+  --el-color-primary-light-5: oklch(71% 0.11 265);
+  --el-color-primary-light-7: oklch(82% 0.09 265);
+  --el-color-primary-light-8: oklch(88% 0.08 265);
+  --el-color-primary-light-9: var(--brand-soft);
+  --el-color-primary-dark-2: var(--brand-strong);
+
+  --el-color-success: var(--success);
+  --el-color-warning: var(--warning);
+  --el-color-danger:  var(--error);
+  --el-color-error:   var(--error);
+  --el-color-info:    var(--ink-3);
+
+  --el-text-color-primary: var(--ink);
+  --el-text-color-regular: var(--ink-2);
+  --el-text-color-secondary: var(--ink-3);
+  --el-text-color-placeholder: var(--ink-3);
+
+  --el-border-color: var(--line-strong);
+  --el-border-color-light: var(--line);
+  --el-border-color-lighter: var(--line);
+  --el-border-color-extra-light: var(--line);
+  --el-border-color-dark: var(--ink-3);
+
+  --el-fill-color: var(--surface-2);
+  --el-fill-color-light: var(--surface-2);
+  --el-fill-color-lighter: var(--surface-3);
+  --el-fill-color-blank: var(--surface);
+
+  --el-bg-color: var(--surface);
+  --el-bg-color-page: var(--paper);
+  --el-bg-color-overlay: var(--surface);
+
+  --el-border-radius-base: 10px;
+  --el-border-radius-small: 8px;
+  --el-border-radius-round: 999px;
+
+  --el-font-size-base: 14px;
+  --el-font-family: var(--font-sans);
+}
+
+:root[data-theme="dark"] {
+  --el-color-primary: var(--brand);
+  --el-color-primary-light-3: oklch(66% 0.12 265);
+  --el-color-primary-light-5: oklch(60% 0.12 265);
+  --el-color-primary-light-7: oklch(50% 0.11 265);
+  --el-color-primary-light-8: oklch(44% 0.10 265);
+  --el-color-primary-light-9: var(--brand-soft);
+  --el-color-primary-dark-2: var(--brand-strong);
+
+  --el-color-success: var(--success);
+  --el-color-warning: var(--warning);
+  --el-color-danger:  var(--error);
+  --el-color-error:   var(--error);
+  --el-color-info:    var(--ink-3);
+
+  --el-text-color-primary: var(--ink);
+  --el-text-color-regular: var(--ink-2);
+  --el-text-color-secondary: var(--ink-3);
+  --el-text-color-placeholder: var(--ink-3);
+
+  --el-border-color: var(--line-strong);
+  --el-border-color-light: var(--line);
+  --el-border-color-lighter: var(--line);
+  --el-border-color-extra-light: var(--line);
+  --el-border-color-dark: var(--ink-3);
+
+  --el-fill-color: var(--surface-2);
+  --el-fill-color-light: var(--surface-2);
+  --el-fill-color-lighter: var(--surface-3);
+  --el-fill-color-blank: var(--surface);
+
+  --el-bg-color: var(--surface);
+  --el-bg-color-page: var(--paper);
+  --el-bg-color-overlay: var(--surface);
+
+  --el-border-radius-base: 10px;
+  --el-border-radius-small: 8px;
+  --el-border-radius-round: 999px;
+
+  --el-font-size-base: 14px;
+  --el-font-family: var(--font-sans);
+}

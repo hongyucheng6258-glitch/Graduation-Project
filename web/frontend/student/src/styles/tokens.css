@@ -1,0 +1,145 @@
+/* ============================================================
+   梧桐校园 · 设计 Token（V2 蓝白校园风）
+   对齐「前端UI-原型-HTML版」V2 设计体系：校园蓝品牌 + 云白底 +
+   杏色/雾绿点缀，中文优先、无衬线、功能化布局。明/暗双主题。
+   引用方：所有组件与 element-theme.css 均消费这里的变量。
+   ============================================================ */
+:root {
+  /* —— 中性 / 表面（云白偏蓝） —— */
+  --paper:        oklch(98.2% 0.005 250);
+  --surface:      oklch(100% 0 0);
+  --surface-2:    oklch(96.8% 0.006 250);
+  --surface-3:    oklch(94.5% 0.008 250);
+  --ink:          oklch(25% 0.04 265);
+  --ink-2:        oklch(42% 0.03 260);
+  --ink-3:        oklch(56% 0.025 255);
+  --line:         oklch(90% 0.01 250);
+  --line-strong:  oklch(82% 0.015 250);
+
+  /* —— 品牌：校园蓝（智慧 / 连接） —— */
+  --brand:        oklch(56% 0.19 265);
+  --brand-strong: oklch(48% 0.18 265);
+  --brand-deep:   oklch(40% 0.17 265);
+  --brand-ink:    oklch(99% 0.005 265);
+  --brand-soft:   oklch(95.5% 0.02 265);
+  --brand-line:   oklch(87% 0.045 265);
+
+  /* —— 强调：杏色（温暖 / 高亮） —— */
+  --accent:        oklch(86% 0.055 65);
+  --accent-strong: oklch(76% 0.06 60);
+  --accent-ink:    oklch(36% 0.055 60);
+  --accent-soft:   oklch(95% 0.025 65);
+  --accent-line:   oklch(88% 0.04 65);
+
+  /* —— 雾绿 / 杏色（V2 点缀色，供封面/快捷条使用） —— */
+  --peach: oklch(94% 0.035 65);
+  --sage:  oklch(94% 0.03 155);
+
+  /* —— 语义色 —— */
+  --success:    oklch(58% 0.11 155);
+  --success-soft: oklch(95% 0.03 155);
+  --warning:    oklch(70% 0.14 65);
+  --warning-soft: oklch(96% 0.05 65);
+  --error:      oklch(58% 0.17 20);
+  --error-soft: oklch(95% 0.04 20);
+
+  /* —— 信息蓝（AI / 科技感 / 链接） —— */
+  --info:        oklch(55% 0.12 260);
+  --info-strong: oklch(47% 0.13 260);
+  --info-ink:    oklch(99% 0.005 260);
+  --info-soft:   oklch(95% 0.02 260);
+  --info-line:   oklch(87% 0.045 260);
+
+  /* —— 成就金（勋章 / 积分 / 打卡） —— */
+  --gold:        oklch(75% 0.13 75);
+  --gold-strong: oklch(58% 0.13 75);
+  --gold-soft:   oklch(96% 0.055 75);
+  --gold-line:   oklch(88% 0.08 75);
+
+  /* —— 典雅紫（身份徽章 / 特殊标识） —— */
+  --purple:        oklch(45% 0.13 290);
+  --purple-strong: oklch(38% 0.13 290);
+  --purple-soft:   oklch(95% 0.04 290);
+  --purple-line:   oklch(87% 0.06 290);
+
+  /* —— 间距（4pt 基准） —— */
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px;
+  --s-6:32px; --s-7:48px; --s-8:64px; --s-9:96px;
+
+  /* —— 圆角 —— */
+  --r-xs:6px; --r-sm:9px; --r-md:13px; --r-lg:18px; --r-xl:24px; --r-pill:999px;
+
+  /* —— 字体（V2：中文优先、无衬线，取消衬线展示字） —— */
+  --font-sans: "Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+  --font-display: "Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+  --font-mono: ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+
+  /* —— 字阶（产品 UI 固定值） —— */
+  --fs-display:2.5rem; --fs-h1:1.75rem; --fs-h2:1.375rem; --fs-h3:1.125rem;
+  --fs-body:1rem; --fs-sm:0.875rem; --fs-xs:0.75rem; --fs-cap:0.6875rem;
+
+  /* —— 阴影（克制） —— */
+  --shadow-sm: 0 1px 2px oklch(25% 0.04 265 / .05), 0 1px 3px oklch(25% 0.04 265 / .04);
+  --shadow-md: 0 6px 16px oklch(25% 0.04 265 / .08);
+  --shadow-lg: 0 18px 40px oklch(25% 0.04 265 / .11);
+
+  /* —— 缓动 —— */
+  --ease-out: cubic-bezier(0.16,1,0.3,1);
+  --ease-quart: cubic-bezier(0.25,1,0.5,1);
+}
+
+:root[data-theme="dark"] {
+  /* —— 暗色：深墨蓝底 —— */
+  --paper:        oklch(17% 0.02 260);
+  --surface:      oklch(21% 0.025 260);
+  --surface-2:    oklch(26% 0.03 260);
+  --surface-3:    oklch(30% 0.03 260);
+  --ink:          oklch(94% 0.008 250);
+  --ink-2:        oklch(78% 0.015 250);
+  --ink-3:        oklch(62% 0.02 250);
+  --line:         oklch(35% 0.03 255);
+  --line-strong:  oklch(42% 0.03 255);
+
+  --brand:        oklch(75% 0.12 265);
+  --brand-strong: oklch(68% 0.12 265);
+  --brand-deep:   oklch(55% 0.12 265);
+  --brand-ink:    oklch(16% 0.04 265);
+  --brand-soft:   oklch(30% 0.06 265);
+  --brand-line:   oklch(40% 0.08 265);
+
+  --accent:        oklch(74% 0.06 65);
+  --accent-strong: oklch(66% 0.06 60);
+  --accent-ink:    oklch(22% 0.05 60);
+  --accent-soft:   oklch(30% 0.035 65);
+  --accent-line:   oklch(42% 0.04 65);
+
+  --peach: oklch(30% 0.035 65);
+  --sage:  oklch(30% 0.03 155);
+
+  --success:    oklch(70% 0.12 155);
+  --success-soft: oklch(27% 0.05 155);
+  --warning:    oklch(78% 0.14 65);
+  --warning-soft: oklch(28% 0.06 65);
+  --error:      oklch(68% 0.17 20);
+  --error-soft: oklch(28% 0.06 20);
+
+  --info:        oklch(70% 0.1 260);
+  --info-strong: oklch(78% 0.09 260);
+  --info-ink:    oklch(16% 0.04 260);
+  --info-soft:   oklch(29% 0.06 260);
+  --info-line:   oklch(41% 0.07 260);
+
+  --gold:        oklch(80% 0.13 75);
+  --gold-strong: oklch(85% 0.1 75);
+  --gold-soft:   oklch(29% 0.06 75);
+  --gold-line:   oklch(41% 0.08 75);
+
+  --purple:        oklch(68% 0.13 290);
+  --purple-strong: oklch(60% 0.13 290);
+  --purple-soft:   oklch(28% 0.06 290);
+  --purple-line:   oklch(40% 0.07 290);
+
+  --shadow-sm: 0 1px 2px oklch(0% 0 0 / .3), 0 1px 3px oklch(0% 0 0 / .25);
+  --shadow-md: 0 6px 16px oklch(0% 0 0 / .4);
+  --shadow-lg: 0 18px 40px oklch(0% 0 0 / .5);
+}

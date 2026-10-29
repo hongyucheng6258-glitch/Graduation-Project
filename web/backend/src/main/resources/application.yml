@@ -1,0 +1,109 @@
+# ============================================================
+# AI校园综合服务平台 - 后端配置（本地开发默认值，部署时可用环境变量覆盖）
+# ============================================================
+server:
+  port: 8080
+  servlet:
+    context-path: /   # 接口统一 /api 前缀在各 Controller 上声明
+    encoding:
+      enabled: true
+      charset: UTF-8
+      force: true
+      force-response: true
+
+spring:
+  application:
+    name: ai-campus-platform
+  # ---- MySQL 数据源（本地默认，库先执行 db/schema.sql 初始化） ----
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 注意：characterEncoding 必须填 Java 字符集名（UTF-8），不能填 MySQL 的 utf8mb4，
+    # 否则驱动会抛 UnsupportedEncodingException: utf8mb4 导致应用启动失败。
+    # 服务端库表已是 utf8mb4，客户端用 UTF-8 即可完整支持中文与 emoji。
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB:ai_campus_platform}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD}
+  # ---- Redis（限流计数 / AI配置缓存 / 会话上下文缓存） ----
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 2
+  # ---- 文件上传大小限制 ----
+  servlet:
+    multipart:
+      max-file-size: 20MB       # PDF 最大 20MB
+      max-request-size: 64MB       # Base64 入库场景预留请求与响应开销；MySQL max_allowed_packet 建议至少64MB
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss   # 共享约定：时间统一格式
+    time-zone: Asia/Shanghai
+
+# ---- 图形验证码（登录前验证） ----
+platform:
+  captcha:
+    enabled: false         # false 时跳过验证（自动化测试/本地联调）
+    expire-seconds: 300    # 验证码有效期（秒）
+    math-ratio: 0.5        # 运算验证码出现比例(0~1)，其余为图形验证码
+
+# ---- MyBatis-Plus ----
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true   # 下划线转驼峰
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto                      # 主键自增，与 schema 一致
+
+# ---- MinIO 对象存储（本机 minio.exe 单节点，bucket=campus 匿名读） ----
+# 默认值 = 本机实测值（deploy/start-minio.bat 启动时设置的 MINIO_ROOT_USER/PASSWORD）：
+#   API 端口 9000（未显式指定，MinIO 默认）；控制台端口 9001；数据目录 E:\minio-data
+# 注意：access-key/secret-key 必须与启动 MinIO 时的 MINIO_ROOT_USER/MINIO_ROOT_PASSWORD 一致，
+#       否则上传时报 SignatureDoesNotMatch / InvalidAccessKeyId，接口返回 code=500（详见部署说明 13.8）。
+# bucket 无需手工创建：首次上传时 MinioUtils.ensureBucket() 会自动建桶并设置匿名读策略。
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:admin}         # 本机实测值，可用环境变量 MINIO_ACCESS_KEY 覆盖
+  secret-key: ${MINIO_SECRET_KEY:12345678}      # 本机实测值，可用环境变量 MINIO_SECRET_KEY 覆盖
+  bucket: ${MINIO_BUCKET:campus}
+
+# ---- JWT 鉴权（共享约定：claims={uid,role}，有效期7天） ----
+jwt:
+  secret: ${JWT_SECRET}
+  expire-days: 7
+
+# ---- AI 网关（DeepSeek OpenAI兼容协议） ----
+# 配置优先级（AiConfigHolder.get 的真实逻辑：DB 值 StrUtil.isBlank 时才回退本文件）：
+#   ① ai_config 表中该 key 的「非空」值   ← 最高，管理后台可在线改，改完调 refresh() 免重启
+#   ② 环境变量（AI_API_KEY / AI_BASE_URL / AI_MODEL）
+#   ③ 本文件冒号后的默认值               ← 最低
+# 说明：ai_config.api_key 为空字符串时 **不会** 覆盖掉 ②③，会正常回退，不存在「空值顶掉真实 Key」的坑。
+# 不要把真实 Key 写入源码或提交到仓库；请通过环境变量或安全配置中心提供。
+ai:
+  base-url: ${AI_BASE_URL:https://api.deepseek.com}
+  api-key: ${AI_API_KEY:}          # 占位符：真实Key在 ai_config 表；也可用环境变量兜底
+  model-name: ${AI_MODEL:deepseek-chat}
+  temperature: 0.7
+  max-tokens: 2048
+  timeout-ms: 60000
+  retry-times: 2
+  rate-limit-per-day: 50                 # 每用户每日 AI 调用上限
+
+# ---- 活动签到二维码 HMAC 密钥 ----
+signin:
+  secret: ${SIGNIN_SECRET}
+
+# REST CORS 与 WebSocket 握手共用可信 Origin 白名单，生产环境通过 TRUSTED_ORIGINS 逗号分隔覆盖
+security:
+  trusted-origins: "${TRUSTED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}"
+
+logging:
+  level:
+    com.campus.platform: info

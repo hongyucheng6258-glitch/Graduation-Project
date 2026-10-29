@@ -1,0 +1,5 @@
+services:
+  backend:
+    environment:
+      PLATFORM_CAPTCHA_ENABLED: "false"
+      AI_API_KEY: ""

@@ -1,0 +1,15 @@
+FROM node:20-alpine AS build
+
+WORKDIR /app
+COPY web/frontend/admin/package*.json ./
+RUN npm ci
+COPY web/frontend/admin/ ./
+RUN npm run build
+
+FROM nginx:1.27-alpine
+# 构建版本信息：构建时以 ARG 传入，写入 /app/version.json 供运维核对
+ARG BUILD_VERSION=dev
+RUN mkdir -p /usr/share/nginx/html && echo "{\"version\":\"$BUILD_VERSION\"}" > /usr/share/nginx/html/version.json
+COPY docker/nginx/admin.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html/admin
+EXPOSE 80

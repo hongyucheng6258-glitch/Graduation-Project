@@ -1,0 +1,13 @@
+.git
+.gitignore
+.dockerignore
+**/node_modules
+**/dist
+**/target
+ui-prototype
+前端UI-原型-HTML版
+测试素材
+测试截图
+db-backup-*.sql
+.local-browser
+*.log

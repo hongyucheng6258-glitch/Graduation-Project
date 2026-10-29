@@ -1,0 +1,70 @@
+# IDE and operating system
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Local assistant/workspace state
+.workbuddy/
+.worktrees/
+.trae-html-share-packages/
+.reasonix/
+reasonix.toml
+
+# Local non-source directories and files
+deploy/
+docs/
+javap_output/
+代码审查报告.html
+功能截图/
+论文图表/
+
+# Build outputs and dependencies
+**/target/
+**/dist/
+**/node_modules/
+**/__pycache__/
+*.pyc
+*.class
+*.jar
+
+# Environment files and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Runtime logs and temporary files
+*.log
+*.tmp
+*.temp
+*.err
+.enc_check.txt
+
+# Local backups and generated reverse-engineering artifacts
+_backup_*/
+database-backups/
+javap_output/
+
+# Local documents containing environment-specific credentials or runtime evidence
+overview.md
+
+# Local generated/shareable reports
+*.html.zip
+
+# Local database backups, test screenshots and temporary browser profiles (do not commit)
+/db-backup-*.sql
+/测试截图/
+**/test-results/
+**/playwright-report/
+**/.tmp-browser/
+/.local-browser/
+# Generated UI prototype QA screenshots and reports
+/ui-prototype/qa/**/*.png
+/ui-prototype/qa/**/*.json
+/前端UI-原型-HTML版/qa/**/*.png
+/前端UI-原型-HTML版/qa/**/*.json

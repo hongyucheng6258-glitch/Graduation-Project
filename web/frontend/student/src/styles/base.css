@@ -1,0 +1,86 @@
+/* ============================================================
+   梧桐校园 · 基础样式（reset / 字体 / 排版 / 可访问性）
+   在 tokens.css 之后引入。
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 16px; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background .4s var(--ease-out), color .4s var(--ease-out);
+}
+h1, h2, h3, h4, p, figure { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+img, svg { display: block; max-width: 100%; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+
+::selection { background: var(--brand-soft); color: var(--brand-strong); }
+
+/* 可见焦点环（键盘可达性） */
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: var(--r-xs); }
+
+/* 细腻滚动条 */
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* 尊重减少动效偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Shared by the student shell and in-room service pages. */
+
+.btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+  line-height: 1.6;
+  cursor: pointer;
+  transition: border-color .18s, background-color .18s, color .18s;
+}
+.btn:hover { border-color: var(--brand-line); background: var(--brand-soft); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.primary:hover { background: var(--brand-strong); border-color: var(--brand-strong); }
+.btn.small { min-height: 34px; padding: 0 12px; font-size: 12px; }
+.text-btn {
+  border: 0;
+  background: none;
+  color: var(--brand);
+  font-size: 13px;
+  padding: 3px 0;
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.text-btn:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+.btn svg { width: 17px; height: 17px; flex: none; }
+@media(max-width: 600px) { .el-dialog { max-width: calc(100vw - 24px); } .el-message-box { max-width: calc(100vw - 24px); } }
+
+.load-error { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 18px; margin-bottom: 16px; border: 1px solid var(--brand-line); border-radius: 12px; background: var(--surface); color: var(--ink-2); }

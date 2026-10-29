@@ -1,0 +1,52 @@
+const path = require('node:path');
+const outputDir = process.env.CAMPUS_TEST_OUTPUT || path.join(require('node:os').tmpdir(), 'campus-browser-checks');
+require('node:fs').mkdirSync(outputDir, { recursive: true });
+const {chromium}=require(process.env.PLAYWRIGHT_PATH || 'playwright');
+const assert=require('node:assert/strict');
+(async()=>{
+const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[],writes=[];let signed=false;
+page.on('pageerror',e=>errors.push(e.message));
+await page.addInitScript(()=>{localStorage.setItem('token','browser-test-only');localStorage.setItem('userInfo',JSON.stringify({id:9,nickname:'测试同学'}));localStorage.setItem('wutong-campus-comfort','true')});
+const act={id:42,title:'校园摄影活动',category:'文艺娱乐',description:'报名流程验证',startTime:'2027-10-01T10:00:00',location:'图书馆',userId:2,publisherNickname:'同学',canSignup:true,memberCount:0,maxMembers:20,images:['data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="300"%3E%3Crect width="800" height="300" fill="%232864ea"/%3E%3C/svg%3E']};
+await page.route('**/api/**',async route=>{
+ const url=new URL(route.request().url()),p=url.pathname,m=route.request().method();if(!p.startsWith('/api/'))return route.continue();let data={};
+ if(m!=='GET')writes.push({p,m,data:route.request().postDataJSON()});
+ if(p==='/api/activity/list')data={list:[act],total:24};
+ else if(p==='/api/activity/42')data={...act,mySignupStatus:signed?0:null};
+ else if(p==='/api/activity/42/signup'){signed=true;data=null}
+ else if(p==='/api/chat/conversations')data=m==='POST'?{id:8}:[];
+ else if(p==='/api/chat/conversations/8')data={id:8,peerUserId:2,peerNickname:'发布者'};
+ else if(p.endsWith('/messages'))data=[];
+ else if(p==='/api/chat/ws-ticket')data={ticket:'test'};
+ else if(p.includes('favorite'))data=false;
+ else if(p.endsWith('/list'))data={list:[],total:0};
+ await route.fulfill({json:{code:200,data}})
+});
+await page.goto('http://localhost:5173/campus-3d');
+await page.getByRole('button',{name:'开始探索'}).click();
+await page.getByRole('button',{name:'校园导览',exact:false}).first().click();
+await page.locator('.map-zone button').filter({hasText:'校园活动'}).click();
+await page.getByRole('button',{name:'打开服务内容'}).click();
+await page.locator('.activity-page').waitFor();
+await page.getByPlaceholder('搜索活动…').fill('摄影');await page.getByPlaceholder('搜索活动…').press('Enter');
+await page.locator('.event-card').first().click();await page.getByRole('button',{name:'立即报名'}).click();
+await page.getByPlaceholder('报名说明/组队信息（如：计科2201张三，求组队）').fill('计科班，参加摄影活动');
+await page.getByRole('button',{name:'确认报名',exact:true}).click();
+await page.getByText('报名待审批',{exact:true}).waitFor();
+assert.equal(writes.filter(x=>x.p==='/api/activity/42/signup').length,1);
+await page.getByRole('button',{name:'返回上一级',exact:false}).click();await page.locator('.activity-page').waitFor();
+assert.equal(await page.getByPlaceholder('搜索活动…').inputValue(),'摄影');
+await page.locator('.event-card').first().click();await page.getByRole('button',{name:'联系发布者'}).click();
+await page.locator('.room-page-host .room').waitFor();assert.equal(new URL(page.url()).pathname,'/campus-3d');
+await page.getByRole('button',{name:'返回上一级',exact:false}).click();await page.locator('.event-page').waitFor();
+await page.getByRole('button',{name:'返回房间',exact:false}).click();await page.locator('.room-prompt').waitFor();assert.match(await page.locator('.room-prompt').innerText(),/校园活动/);
+await page.getByRole('button',{name:'全屏',exact:false}).first().click();await page.getByRole('button',{name:'打开服务内容'}).click();await page.locator('.event-card').first().click();
+await page.getByRole('button',{name:'举报此内容'}).click();await page.locator('.el-dialog:visible').waitFor();assert.equal(await page.evaluate(()=>document.fullscreenElement?.tagName),'HTML');
+await page.keyboard.press('Escape');await page.locator('.el-dialog:visible').waitFor({state:'hidden'});assert.equal(await page.locator('.room-workspace').count(),1);
+await page.screenshot({path:path.join(outputDir, 'system-room-detail.png')});
+await page.evaluate(()=>document.exitFullscreen());await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(outputDir, 'system-room-mobile.png')});
+const overflow=await page.locator('.room-page-host').evaluate(e=>e.scrollWidth>e.clientWidth+1);assert.equal(overflow,false);
+console.log(JSON.stringify({passed:['real scene entry','shared activity images','signup form and single request','filter retained','private chat in room','return to same room','fullscreen dialog','Escape closes only dialog','mobile no horizontal overflow'],errors,writes:writes.filter(x=>x.p.includes('signup'))}));
+assert.deepEqual(errors,[]);await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});
