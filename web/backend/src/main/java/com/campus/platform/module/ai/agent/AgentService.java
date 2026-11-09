@@ -42,6 +42,8 @@ public class AgentService {
             按工具的编号描述闲置结果，不要重新排序。闲置模块当前支持互换，不能按现金价格筛选。
             学生明确要求发布闲置时，使用 prepare_idle_publish 生成草稿。如果缺少物品名称，先询问。
             发布草稿需要学生在页面补充、核对并提交。不要编造物品事实，不要声称已发布或已审核。
+            学生明确要求预约闲置互换时，调用 prepare_idle_appointment 生成确认卡。按第几个预约时只传 resultNumber。
+            告知学生需点击确认才提交，等待发布者处理。没有明确目标时先搜索或询问，不能猜物品 ID。
             对前几轮活动追问地点、时间、名额或报名状态时，使用此前记录的 ID 再调用 get_activity_detail。
             即使历史回答中有这些信息，也先查询当前值，因为活动信息随时可能变化。
             学生明确要求报名活动时，使用 prepare_activity_signup 生成确认卡。
@@ -135,9 +137,11 @@ public class AgentService {
                 var idleItems = idle.guideCards(userId, idleIds);
                 long id = conversation.save(userId, sessionId, question, answer, references(state),
                         List.copyOf(state.citations), state.actions.stream().map(ActivitySignupActions.Proposal::id).toList(),
-                        idleIds, state.searchedIdle, state.idleDrafts.stream().map(IdlePublishDrafts.Draft::id).toList());
+                        idleIds, state.searchedIdle, state.idleDrafts.stream().map(IdlePublishDrafts.Draft::id).toList(),
+                        state.idleAppointments.stream().map(IdleAppointmentActions.Card::id).toList());
                 return new Reply(answer, List.copyOf(state.toolsUsed), id, List.copyOf(state.citations), prompt.id(),
-                        List.copyOf(state.actions), idleItems, state.searchedIdle, List.copyOf(state.idleDrafts));
+                        List.copyOf(state.actions), idleItems, state.searchedIdle, List.copyOf(state.idleDrafts),
+                        List.copyOf(state.idleAppointments));
             }
             if (round == MAX_ROUNDS - 1 || attempted + calls.size() > MAX_TOOL_CALLS) {
                 throw new BizException(ResultCode.AI_INVOKE_FAIL, "校园查询超过工具调用上限，请缩小问题范围");
@@ -163,9 +167,13 @@ public class AgentService {
         if ("prepare_activity_signup".equals(name) && !state.actions.isEmpty()) {
             return error("本轮已有待确认报名，一次只可确认一场活动");
         }
+        if (IdleAppointmentActions.PREPARE.equals(name) && !state.idleAppointments.isEmpty()) {
+            return error("本轮已有闲置预约确认卡，一次只可准备一项预约");
+        }
         try {
             var args = json.reader().with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(arguments);
-            if (IdleAgentTools.DETAIL.equals(name) && args instanceof ObjectNode object && object.has("resultNumber")) {
+            if ((IdleAgentTools.DETAIL.equals(name) || IdleAppointmentActions.PREPARE.equals(name))
+                    && args instanceof ObjectNode object && object.has("resultNumber")) {
                 var number = object.remove("resultNumber");
                 if (object.has("itemId") || !number.isIntegralNumber() || !number.canConvertToInt()
                         || number.asInt() < 1 || number.asInt() > state.lastIdleSearch.size()) {
@@ -198,6 +206,8 @@ public class AgentService {
                 state.idleCardIds.add(result.path("itemId").asLong());
             } else if (IdlePublishDrafts.PREPARE.equals(name)) {
                 state.idleDrafts.add(json.treeToValue(result, IdlePublishDrafts.Draft.class));
+            } else if (IdleAppointmentActions.PREPARE.equals(name)) {
+                state.idleAppointments.add(json.treeToValue(result, IdleAppointmentActions.Card.class));
             }
             return result.toString();
         } catch (JsonProcessingException e) {
@@ -278,6 +288,7 @@ public class AgentService {
         final List<ActivitySignupActions.Proposal> actions = new ArrayList<>();
         final LinkedHashSet<Long> idleCardIds = new LinkedHashSet<>();
         final List<IdlePublishDrafts.Draft> idleDrafts = new ArrayList<>();
+        final List<IdleAppointmentActions.Card> idleAppointments = new ArrayList<>();
         List<Long> lastIdleSearch = List.of();
         boolean searchedIdle;
     }
@@ -287,5 +298,5 @@ public class AgentService {
     public record Citation(long documentId, String fileName, int page) {}
     public record Reply(String answer, List<String> toolsUsed, long sessionId, List<Citation> citations, long promptVersion,
                         List<ActivitySignupActions.Proposal> actions, List<IdleGuideCard> idleItems, boolean idleSearch,
-                        List<IdlePublishDrafts.Draft> idleDrafts) {}
+                        List<IdlePublishDrafts.Draft> idleDrafts, List<IdleAppointmentActions.Card> idleAppointments) {}
 }

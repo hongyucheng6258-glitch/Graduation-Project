@@ -97,6 +97,10 @@ export function confirmIdleDraft(id, form) {
   return request.post(`/ai/agent/idle-drafts/${encodeURIComponent(id)}/confirm`, form, { silent: true, timeout: 65000 })
 }
 
+export function confirmIdleAppointment(id) {
+  return request.post(`/ai/agent/idle-appointments/${encodeURIComponent(id)}/confirm`, null, { silent: true })
+}
+
 export function indexPdf(pdfId, rebuild = false) {
   return request.post(`/ai/knowledge/pdf/${pdfId}/index`, null, { params: { rebuild }, silent: true })
 }

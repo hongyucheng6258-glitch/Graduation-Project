@@ -21,15 +21,18 @@ public class AgentController {
     private final AgentService agent;
     private final ActivitySignupActions actions;
     private final IdlePublishDrafts idleDrafts;
+    private final IdleAppointmentActions idleAppointments;
     private final boolean enabled;
     private final boolean ragEnabled;
 
     public AgentController(AgentService agent, ActivitySignupActions actions, IdlePublishDrafts idleDrafts,
+                           IdleAppointmentActions idleAppointments,
                            @Value("${campus.agent.enabled:false}") boolean enabled,
                            @Value("${campus.agent.rag.enabled:false}") boolean ragEnabled) {
         this.agent = agent;
         this.actions = actions;
         this.idleDrafts = idleDrafts;
+        this.idleAppointments = idleAppointments;
         this.enabled = enabled;
         this.ragEnabled = ragEnabled;
     }
@@ -62,6 +65,12 @@ public class AgentController {
                                                      @Valid @RequestBody IdlePublishDrafts.Submission request) {
         checkEnabled();
         return R.ok(idleDrafts.confirm(UserContext.getUid(), id, request));
+    }
+
+    @PostMapping("/idle-appointments/{id}/confirm")
+    public R<IdleAppointmentActions.Card> confirmIdleAppointment(@PathVariable String id) {
+        checkEnabled();
+        return R.ok(idleAppointments.confirm(UserContext.getUid(), id));
     }
 
     private void checkEnabled() {

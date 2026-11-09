@@ -78,6 +78,16 @@
               <p v-else-if="draft.state === 'EXPIRED'" role="status">草稿已过期，请重新生成。</p>
               <RouterLink v-else :to="{ name: 'IdlePublish', query: { draft: draft.id } }">编辑并确认发布</RouterLink>
             </div>
+            <div v-for="appointment in m.idleAppointments || []" :key="appointment.id" class="ai-confirm idle-appointment-card">
+              <strong>确认预约互换</strong>
+              <p>{{ appointment.itemTitle }}</p>
+              <p v-if="appointment.remark" class="section-sub">留言：{{ appointment.remark }}</p>
+              <p v-if="appointment.state === 'SUBMITTED'" role="status">{{ appointmentStatus(appointment.appointmentStatus) }}</p>
+              <p v-else-if="appointment.state === 'EXPIRED'" role="status">预约确认卡已过期，请重新发起。</p>
+              <el-button v-else type="primary" :loading="appointment.sending" @click="confirmAppointment(appointment)">
+                确认预约
+              </el-button>
+            </div>
             <div v-if="m.citations?.length" class="ai-sources" aria-label="检索到的资料">
               <span>资料来源</span>
               <button v-for="source in m.citations" :key="`${source.documentId}-${source.page}`"
@@ -280,6 +290,7 @@ async function switchSession(s) {
       idleItems: m.attachments?.idleItems,
       idleSearch: m.attachments?.idleSearch,
       idleDrafts: m.attachments?.idleDrafts,
+      idleAppointments: m.attachments?.idleAppointments,
       actions: m.attachments?.actions,
       streaming: false
     }))
@@ -425,6 +436,7 @@ async function send() {
       msg.idleItems = answer?.idleItems
       msg.idleSearch = answer?.idleSearch
       msg.idleDrafts = answer?.idleDrafts
+      msg.idleAppointments = answer?.idleAppointments
       msg.actions = answer?.actions
       if (answer?.sessionId) {
         currentSession.value = { id: answer.sessionId }
@@ -549,6 +561,23 @@ async function confirmAction(action) {
     ElMessage.error(e.message || '报名未能提交')
   } finally {
     action.sending = false
+  }
+}
+
+function appointmentStatus(status) {
+  return ['预约已提交，等待发布者处理。', '发布者已接受预约。', '发布者已拒绝预约。', '互换已完成。', '预约已取消。'][status]
+    || '预约已提交，可在闲置详情查看进度。'
+}
+
+async function confirmAppointment(appointment) {
+  if (appointment.sending) return
+  appointment.sending = true
+  try {
+    Object.assign(appointment, await aiApi.confirmIdleAppointment(appointment.id))
+  } catch (e) {
+    ElMessage.error(e.message || '预约未能提交')
+  } finally {
+    appointment.sending = false
   }
 }
 
