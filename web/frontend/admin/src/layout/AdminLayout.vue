@@ -133,7 +133,10 @@ const auditTypes = [
 const navGroups = computed(() => [
   {
     label: '概览',
-    items: [{ to: '/dashboard', label: '数据看板', icon: 'dashboard' }]
+    items: [
+      { to: '/dashboard', label: '数据看板', icon: 'dashboard' },
+      { to: '/assistant', label: '管理智能助手', icon: 'spark' }
+    ]
   },
   {
     label: '内容审核',

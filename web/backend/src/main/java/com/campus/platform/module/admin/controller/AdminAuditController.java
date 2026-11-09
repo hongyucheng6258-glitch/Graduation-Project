@@ -5,6 +5,7 @@ import com.campus.platform.module.admin.dto.AuditDTO;
 
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.R;
+import com.campus.platform.module.idle.entity.IdleItem;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -19,8 +20,14 @@ public class AdminAuditController {
     public R<PageResult<?>> pendingList(
             @RequestParam(defaultValue = "idle") String type,
             @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize) {
-        return R.ok(auditService.pendingList(type, pageNum, pageSize));
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(defaultValue = "false") boolean riskOnly) {
+        return R.ok(auditService.pendingList(type, pageNum, pageSize, riskOnly));
+    }
+
+    @GetMapping("/idle/{id}")
+    public R<IdleItem> idleDetail(@PathVariable Long id) {
+        return R.ok(auditService.idleDetail(id));
     }
 
     @GetMapping("/all")

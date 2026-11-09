@@ -90,6 +90,9 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination v-if="riskPages > 1" v-model:current-page="riskPage" :page-count="riskPages"
+        :disabled="loading || acting" layout="prev, pager, next"
+        aria-label="待复核列表分页（各模块每页最多 100 条）" @current-change="loadAll" />
       <div v-if="!loading && pendingList.length === 0" class="empty">
         <b>没有待复核内容</b>
         <p>AI 预审命中高风险的内容会出现在这里</p>
@@ -180,6 +183,8 @@ const allRows = ref([])
 const blockVisible = ref(false)
 const blockReason = ref('')
 const currentRow = ref(null)
+const riskPage = ref(1)
+const riskPages = ref(1)
 
 const tabs = [
   { key: 'pending', label: '待复核' },
@@ -187,7 +192,7 @@ const tabs = [
   { key: 'rules', label: '规则命中' }
 ]
 
-const pendingCount = computed(() => pendingList.value.length)
+const pendingCount = ref(0)
 const blockedCount = computed(() => blockedList.value.length)
 const passedCount = computed(() => allRows.value.filter((r) => (r.aiRiskLevel ?? 0) === 0 && r.auditStatus === 1).length)
 const blockRate = computed(() => {
@@ -227,12 +232,14 @@ async function loadAll() {
   loading.value = true
   try {
     const [pends, alls] = await Promise.all([
-      Promise.all(TYPES.map((t) => auditList({ type: t, pageNum: 1, pageSize: 100 }).catch(() => ({ list: [], total: 0 })))),
+      Promise.all(TYPES.map((t) => auditList({ type: t, pageNum: riskPage.value, pageSize: 100, riskOnly: true }).catch(() => ({ list: [], total: 0 })))),
       Promise.all(TYPES.map((t) => auditAll({ type: t, pageNum: 1, pageSize: 100 }).catch(() => ({ list: [], total: 0 }))))
     ])
     const pending = pends.flatMap((res, i) => (res.list || []).map((r) => ({ ...r, type: TYPES[i] })))
     const all = alls.flatMap((res, i) => (res.list || []).map((r) => ({ ...r, type: TYPES[i] })))
-    pendingList.value = pending.filter((r) => (r.aiRiskLevel ?? 0) >= 1)
+    pendingCount.value = pends.reduce((total, res) => total + Number(res.total), 0)
+    riskPages.value = Math.max(1, ...pends.map(res => Math.ceil(res.total / 100)))
+    pendingList.value = pending
     allRows.value = all
     blockedList.value = all.filter((r) => (r.aiRiskLevel ?? 0) >= 2).sort((a, b) => (b.createTime || '').localeCompare(a.createTime || ''))
   } finally {

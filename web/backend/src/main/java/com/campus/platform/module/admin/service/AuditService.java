@@ -42,34 +42,49 @@ public class AuditService {
 
     /** 待审列表 */
     public PageResult<?> pendingList(String type, int pageNum, int pageSize) {
+        return pendingList(type, pageNum, pageSize, false);
+    }
+
+    public PageResult<?> pendingList(String type, int pageNum, int pageSize, boolean riskOnly) {
         return switch (type) {
             case Constants.BIZ_IDLE -> PageResult.of(idleItemMapper.selectPage(
                     new Page<>(pageNum, pageSize),
                     new LambdaQueryWrapper<IdleItem>()
                             .eq(IdleItem::getAuditStatus, Constants.AUDIT_PENDING)
+                            .ge(riskOnly, IdleItem::getAiRiskLevel, 1)
                             .orderByAsc(IdleItem::getId)));
             case Constants.BIZ_ACTIVITY -> PageResult.of(activityMapper.selectPage(
                     new Page<>(pageNum, pageSize),
                     new LambdaQueryWrapper<Activity>()
                             .eq(Activity::getAuditStatus, Constants.AUDIT_PENDING)
+                            .ge(riskOnly, Activity::getAiRiskLevel, 1)
                             .orderByAsc(Activity::getId)));
             case Constants.BIZ_LOSTFOUND -> PageResult.of(lostFoundMapper.selectPage(
                     new Page<>(pageNum, pageSize),
                     new LambdaQueryWrapper<LostFound>()
                             .eq(LostFound::getAuditStatus, Constants.AUDIT_PENDING)
+                            .ge(riskOnly, LostFound::getAiRiskLevel, 1)
                             .orderByAsc(LostFound::getId)));
             case Constants.BIZ_POST -> PageResult.of(postMapper.selectPage(
                     new Page<>(pageNum, pageSize),
                     new LambdaQueryWrapper<Post>()
                             .eq(Post::getAuditStatus, Constants.AUDIT_PENDING)
+                            .ge(riskOnly, Post::getAiRiskLevel, 1)
                             .orderByAsc(Post::getId)));
             case Constants.BIZ_PARTNER -> PageResult.of(studyPartnerMapper.selectPage(
                     new Page<>(pageNum, pageSize),
                     new LambdaQueryWrapper<StudyPartner>()
                             .eq(StudyPartner::getAuditStatus, Constants.AUDIT_PENDING)
+                            .ge(riskOnly, StudyPartner::getAiRiskLevel, 1)
                             .orderByAsc(StudyPartner::getId)));
             default -> throw new BizException(ResultCode.BAD_REQUEST, "不支持的审核类型: " + type);
         };
+    }
+
+    public IdleItem idleDetail(Long id) {
+        var item = idleItemMapper.selectById(id);
+        if (item == null) throw new BizException(ResultCode.NOT_FOUND, "未找到闲置记录");
+        return item;
     }
 
     /** 全量内容列表：自动通过、人工通过、待审核、已驳回均可管理。 */

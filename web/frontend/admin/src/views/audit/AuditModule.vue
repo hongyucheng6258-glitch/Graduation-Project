@@ -7,7 +7,8 @@
         <p class="desc">{{ cfg.desc }}</p>
       </div>
       <div class="page-head-actions">
-        <el-radio-group v-model="viewMode" @change="handleViewChange">
+        <RouterLink v-if="focusedId" class="btn btn-ghost btn-sm" to="/audit/idle?view=pending">返回待审列表</RouterLink>
+        <el-radio-group v-else v-model="viewMode" @change="handleViewChange">
           <el-radio-button value="all">全部内容</el-radio-button>
           <el-radio-button value="pending">待人工审核</el-radio-button>
         </el-radio-group>
@@ -96,15 +97,20 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { auditAll, auditList, auditPass, auditReject } from '../../api/audit'
+import { auditAll, auditList, auditPass, auditReject, idleAuditDetail } from '../../api/audit'
 import { formatTime } from '../../utils/date'
 import { normalizeImages, firstValidImage } from '../../utils/image'
 
 const props = defineProps({
   type: { type: String, required: true }
 })
+const route = useRoute()
+const focusedId = computed(() => props.type === 'idle' && typeof route.query.record === 'string'
+  && /^[1-9]\d*$/.test(route.query.record) ? route.query.record : null)
+let requestVersion = 0
 
 const CFG = {
   activity: { title: '活动审核', desc: '校园活动发布审核 · 内容安全与合规校验', icon: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' },
@@ -165,14 +171,19 @@ function handleViewChange() {
 }
 
 async function load() {
+  const version = ++requestVersion
+  const recordId = focusedId.value
   loading.value = true
+  if (recordId) list.value = []
   try {
     const requestFn = viewMode.value === 'all' ? auditAll : auditList
-    const res = await requestFn({ type: props.type, pageNum: pageNum.value, pageSize })
+    const res = recordId ? { list: [{ ...await idleAuditDetail(recordId), id: recordId }], total: 1 }
+      : await requestFn({ type: props.type, pageNum: pageNum.value, pageSize })
+    if (version !== requestVersion) return
     list.value = res.list
     total.value = res.total
   } finally {
-    loading.value = false
+    if (version === requestVersion) loading.value = false
   }
 }
 
@@ -194,6 +205,7 @@ function openReject(row) {
 }
 
 async function reject() {
+  if (!currentRow.value) return
   if (!rejectReason.value.trim()) {
     ElMessage.warning('请填写驳回理由')
     return
@@ -214,8 +226,13 @@ function resetAndLoad() {
   imageErrors.value = {}
   load()
 }
-onMounted(resetAndLoad)
-watch(() => props.type, resetAndLoad)
+watch([() => props.type, () => route.query.view, focusedId], ([, view], [, previousView]) => {
+  rejectVisible.value = false
+  currentRow.value = null
+  rejectReason.value = ''
+  if (view !== previousView) viewMode.value = view === 'pending' ? 'pending' : 'all'
+  resetAndLoad()
+}, { immediate: true })
 </script>
 
 <style scoped>

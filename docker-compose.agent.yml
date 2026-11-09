@@ -22,6 +22,7 @@ services:
       - ./web/backend/src/main/resources/db/2026-11-09-agent-action.sql:/migrations/03-action.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-09-agent-idle-draft.sql:/migrations/04-idle-draft.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-09-agent-idle-appointment.sql:/migrations/05-idle-appointment.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-09-admin-assistant.sql:/migrations/06-admin-assistant.sql:ro
     command:
       - /bin/sh
       - -ec
@@ -35,6 +36,7 @@ services:
       TZ: ${CAMPUS_TIMEZONE:-Asia/Shanghai}
       PLATFORM_CAPTCHA_ENABLED: "${CAMPUS_DOCKER_CAPTCHA_ENABLED:-true}"
       CAMPUS_AGENT_ENABLED: "${CAMPUS_AGENT_ENABLED:-true}"
+      CAMPUS_ADMIN_ASSISTANT_ENABLED: "${CAMPUS_ADMIN_ASSISTANT_ENABLED:-true}"
       CAMPUS_AGENT_RAG_ENABLED: "${CAMPUS_AGENT_RAG_ENABLED:-true}"
       CAMPUS_AGENT_RAG_QDRANT_URL: http://qdrant:6333
       CAMPUS_AGENT_RAG_EMBEDDING_URL: http://embedding:11434

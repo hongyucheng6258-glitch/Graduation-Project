@@ -55,16 +55,19 @@ public class ReportAdminService {
         return PageResult.of(page);
     }
 
+    public Report detail(Long id) {
+        Report report = reportMapper.selectById(id);
+        if (report == null) throw new BizException(ResultCode.NOT_FOUND, "举报不存在");
+        return report;
+    }
+
     /**
      * 处置举报。
      * action: offline=下架内容 / warn=警告发布者 / ban=封禁发布者 / ignore=举报不成立
      */
     @Transactional
     public void handle(Long adminId, Long reportId, ReportHandleDTO dto) {
-        Report report = reportMapper.selectById(reportId);
-        if (report == null) {
-            throw new BizException(ResultCode.NOT_FOUND, "举报不存在");
-        }
+        Report report = detail(reportId);
         if (report.getStatus() == Constants.REPORT_HANDLED) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "该举报已处理");
         }

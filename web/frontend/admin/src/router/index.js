@@ -17,6 +17,7 @@ const routes = [
     redirect: '/dashboard',
     children: [
       { path: 'dashboard', name: 'Dashboard', component: () => import('../views/dashboard/Dashboard.vue'), meta: { title: '数据大屏' } },
+      { path: 'assistant', name: 'AdminAssistant', component: () => import('../views/ai/AdminAssistant.vue'), meta: { title: '管理智能助手' } },
       { path: 'user', name: 'UserList', component: () => import('../views/user/UserList.vue'), meta: { title: '用户管理' } },
       { path: 'audit/activity', name: 'ActivityAudit', component: () => import('../views/audit/AuditModule.vue'), props: { type: 'activity' }, meta: { title: '活动审核' } },
 { path: 'audit/idle', name: 'IdleAudit', component: () => import('../views/audit/AuditModule.vue'), props: { type: 'idle' }, meta: { title: '闲置审核' } },

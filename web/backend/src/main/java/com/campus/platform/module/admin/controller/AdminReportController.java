@@ -24,6 +24,11 @@ public class AdminReportController {
         return R.ok(reportAdminService.list(status, pageNum, pageSize));
     }
 
+    @GetMapping("/{id}")
+    public R<Report> detail(@PathVariable Long id) {
+        return R.ok(reportAdminService.detail(id));
+    }
+
     @PutMapping("/{id}/handle")
     public R<Void> handle(@PathVariable Long id, @Valid @RequestBody ReportHandleDTO dto) {
         reportAdminService.handle(UserContext.getUid(), id, dto);

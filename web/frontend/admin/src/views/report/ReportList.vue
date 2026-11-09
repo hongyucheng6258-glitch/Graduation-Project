@@ -4,7 +4,8 @@
   <el-card>
     <template #header>举报处理</template>
     <div class="toolbar">
-      <el-radio-group v-model="status" @change="search">
+      <RouterLink v-if="focusedId" to="/report?view=pending">返回待处理举报</RouterLink>
+      <el-radio-group v-else v-model="status" @change="search">
         <el-radio-button :value="undefined">全部</el-radio-button>
         <el-radio-button :value="0">待处理</el-radio-button>
         <el-radio-button :value="1">已处理</el-radio-button>
@@ -69,11 +70,16 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import { ElMessage } from 'element-plus'
-import { reportList, handleReport } from '../../api/report'
+import { reportDetail, reportList, handleReport } from '../../api/report'
 
+const route = useRoute()
+const focusedId = computed(() => typeof route.query.record === 'string' && /^[1-9]\d*$/.test(route.query.record)
+  ? route.query.record : null)
+let requestVersion = 0
 const status = ref(undefined)
 const list = ref([])
 const pageNum = ref(1)
@@ -92,13 +98,18 @@ function search() {
 }
 
 async function load() {
+  const version = ++requestVersion
+  const recordId = focusedId.value
   loading.value = true
+  if (recordId) list.value = []
   try {
-    const res = await reportList({ status: status.value, pageNum: pageNum.value, pageSize: 10 })
+    const res = recordId ? { list: [{ ...await reportDetail(recordId), id: recordId }], total: 1 }
+      : await reportList({ status: status.value, pageNum: pageNum.value, pageSize: 10 })
+    if (version !== requestVersion) return
     list.value = res.list
     total.value = res.total
   } finally {
-    loading.value = false
+    if (version === requestVersion) loading.value = false
   }
 }
 
@@ -110,6 +121,7 @@ function openHandle(row) {
 }
 
 async function doHandle() {
+  if (!currentRow.value) return
   if (!handleForm.handleResult.trim()) {
     ElMessage.warning('请填写处置说明')
     return
@@ -125,7 +137,13 @@ async function doHandle() {
   }
 }
 
-onMounted(load)
+watch([() => route.query.view, focusedId], ([view]) => {
+  handleVisible.value = false
+  currentRow.value = null
+  handleForm.handleResult = ''
+  status.value = view === 'pending' ? 0 : undefined
+  search()
+}, { immediate: true })
 </script>
 
 <style scoped>

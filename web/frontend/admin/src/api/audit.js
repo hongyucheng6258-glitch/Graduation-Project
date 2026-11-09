@@ -9,6 +9,10 @@ export function auditAll(params) {
   return request.get('/audit/all', { params })
 }
 
+export function idleAuditDetail(id) {
+  return request.get(`/audit/idle/${encodeURIComponent(id)}`)
+}
+
 export function auditPass(type, id) {
   return request.put(`/audit/${type}/${id}/pass`)
 }
