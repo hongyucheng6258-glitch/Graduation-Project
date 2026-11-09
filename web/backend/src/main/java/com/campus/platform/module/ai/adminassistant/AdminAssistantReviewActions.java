@@ -23,7 +23,7 @@ class AdminAssistantReviewActions {
     private static final String SNAPSHOT = """
             SELECT title,LEFT(description,480),audit_status,
                 SHA2(JSON_ARRAY(user_id,title,description,images,category,expect_item,status,
-                    audit_status,ai_risk_level,ai_audit_reason),256)
+                    audit_status,ai_risk_level,ai_audit_reason,audit_revision),256)
             FROM idle_item WHERE id=?
             """;
     private static final String CARDS = """

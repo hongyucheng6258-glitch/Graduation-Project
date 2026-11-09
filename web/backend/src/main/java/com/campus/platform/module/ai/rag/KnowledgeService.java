@@ -86,7 +86,7 @@ public class KnowledgeService {
                     INSERT INTO kb_index_job(document_id,state) VALUES(?,'QUEUED')
                     ON DUPLICATE KEY UPDATE state='QUEUED',attempts=0,attempt_token=NULL,available_at=NOW()
                     """, current.id());
-            return status(current.id(), pdf.getUserId());
+            return new Status(current.id(), current.pdfId(), "QUEUED", null, current.activeVersion(), current.scope(), current.ownerId());
         });
     }
 
@@ -94,7 +94,7 @@ public class KnowledgeService {
         Status status = jdbc.query("""
                 SELECT id,pdf_id,state,error_message,active_version,scope,owner_id
                 FROM kb_document WHERE id=? AND state NOT IN ('DELETED','PURGED')
-                AND (owner_id=? OR (scope='PUBLIC' AND active_version IS NOT NULL))
+                AND ((scope='PRIVATE' AND owner_id=?) OR (scope='PUBLIC' AND active_version IS NOT NULL))
                 """, this::statusRow, id, userId).stream().findFirst().orElse(null);
         if (status == null || userId == null) {
             throw new BizException(ResultCode.NOT_FOUND, "未找到知识库文档");
@@ -113,7 +113,16 @@ public class KnowledgeService {
         if (docId != null && status(docId, userId).activeVersion() == null) {
             throw new BizException(ResultCode.BAD_REQUEST, "文档索引尚未就绪");
         }
-        var ids = vectors.search(userId, docId, question, deadline);
+        return retrieve(userId, docId, question, deadline, false);
+    }
+
+    List<Evidence> searchInternal(String question, long deadline) {
+        return retrieve(0L, null, question, deadline, true);
+    }
+
+    private List<Evidence> retrieve(Long userId, Long docId, String question, long deadline, boolean internal) {
+        var ids = internal ? vectors.search(userId, docId, question, deadline, true)
+                : vectors.search(userId, docId, question, deadline);
         List<Evidence> evidence = new ArrayList<>();
         for (String id : ids) {
             if (System.nanoTime() >= deadline) {
@@ -123,9 +132,11 @@ public class KnowledgeService {
                     SELECT d.id,p.file_name,c.page_number,c.body,c.version FROM kb_chunk c
                     JOIN kb_document d ON d.id=c.document_id AND d.active_version=c.version
                     JOIN pdf_document p ON p.id=d.pdf_id AND p.user_id=d.owner_id
-                    WHERE c.id=? AND d.state NOT IN ('DELETED','PURGED') AND (d.scope='PUBLIC' OR d.owner_id=?)
+                    WHERE c.id=? AND d.state NOT IN ('DELETED','PURGED')
+                        AND ((?=1 AND d.scope='ADMIN') OR
+                            (?=0 AND (d.scope='PUBLIC' OR (d.scope='PRIVATE' AND d.owner_id=?))))
                     """, (rs, row) -> new Evidence(rs.getLong(1), rs.getString(2), rs.getInt(3), rs.getString(4), rs.getString(5)),
-                    id, userId);
+                    id, internal ? 1 : 0, internal ? 1 : 0, userId);
             if (!rows.isEmpty()) {
                 Evidence candidate = rows.get(0);
                 if ((docId == null || docId.equals(candidate.documentId())) && !evidence.contains(candidate)) {
@@ -147,7 +158,24 @@ public class KnowledgeService {
     }
 
     public FileContent file(long id, Long userId) {
-        Status doc = status(id, userId);
+        return file(status(id, userId));
+    }
+
+    FileContent internalFile(long id, String version) {
+        return file(verifyInternalVersion(id, version));
+    }
+
+    Status verifyInternalVersion(long id, String version) {
+        var doc = jdbc.query("""
+                SELECT id,pdf_id,state,error_message,active_version,scope,owner_id
+                FROM kb_document WHERE id=? AND scope='ADMIN' AND active_version=?
+                    AND state NOT IN ('DELETED','PURGED')
+                """, this::statusRow, id, version).stream().findFirst()
+                .orElseThrow(() -> new BizException(ResultCode.NOT_FOUND, "资料已更新或撤回，请重新查询"));
+        return doc;
+    }
+
+    private FileContent file(Status doc) {
         PdfDocument pdf = pdfs.selectById(doc.pdfId());
         if (pdf == null || !Objects.equals(pdf.getUserId(), doc.ownerId())) {
             throw new BizException(ResultCode.NOT_FOUND, "未找到 PDF 文件");
@@ -167,27 +195,35 @@ public class KnowledgeService {
     }
 
     Status reindexPublic(long id) {
+        return reindexScoped(id, "PUBLIC");
+    }
+
+    Status reindexScoped(long id, String scope) {
         var pdfId = jdbc.queryForList("""
-                SELECT pdf_id FROM kb_document WHERE id=? AND scope='PUBLIC' AND state NOT IN ('DELETED','PURGED')
-                """, Long.class, id).stream().findFirst()
-                .orElseThrow(() -> new BizException(ResultCode.NOT_FOUND, "未找到公共资料"));
+                SELECT pdf_id FROM kb_document WHERE id=? AND scope=? AND state NOT IN ('DELETED','PURGED')
+                """, Long.class, id, scope).stream().findFirst()
+                .orElseThrow(() -> new BizException(ResultCode.NOT_FOUND, "未找到资料"));
         var pdf = pdfs.selectById(pdfId);
         if (pdf == null) {
             throw new BizException(ResultCode.NOT_FOUND, "未找到公共资料文件");
         }
-        return enqueuePdf(pdf, "PUBLIC", true);
+        return enqueuePdf(pdf, scope, true);
     }
 
     List<PublicDocument> publicDocuments() {
+        return documents("PUBLIC");
+    }
+
+    List<PublicDocument> documents(String scope) {
         return jdbc.query("""
                 SELECT d.id,p.file_name,d.state,d.error_message FROM kb_document d
                 JOIN pdf_document p ON p.id=d.pdf_id
-                WHERE d.scope='PUBLIC' AND d.state NOT IN ('DELETED','PURGED')
+                WHERE d.scope=? AND d.state NOT IN ('DELETED','PURGED')
                 ORDER BY d.id DESC LIMIT 100
-                """, (rs, row) -> new PublicDocument(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4)));
+                """, (rs, row) -> new PublicDocument(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4)), scope);
     }
 
-    private void remove(long id, Long userId, String scope) {
+    void remove(long id, Long userId, String scope) {
         transaction.executeWithoutResult(tx -> {
             int changed = jdbc.update("""
                     UPDATE kb_document SET state='DELETED',active_version=NULL,error_message=NULL

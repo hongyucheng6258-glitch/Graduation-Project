@@ -7,14 +7,14 @@ import os
 import subprocess
 import time
 import uuid
+from urllib.parse import urlsplit
 
 import pymysql
 
 from verify_live import ROOT, call, local_config, ok, token
 
 
-def verify(db, cfg, browser):
-    base = "http://127.0.0.1:8080"
+def verify(base, db, cfg, browser):
     path = "/api/admin/assistant"
     marker = "Review" + uuid.uuid4().hex[:8]
     admin_ids, item_ids = [], []
@@ -67,6 +67,10 @@ def verify(db, cfg, browser):
             cur.execute("UPDATE idle_item SET description='内容已变更' WHERE id=%s", (item,))
             db.commit()
             assert confirm(stale, first)["code"] != 200
+            previous_edit = prepare(first, a)
+            cur.execute("UPDATE idle_item SET audit_revision=%s WHERE id=%s", (str(uuid.uuid4()), item))
+            db.commit()
+            assert confirm(previous_edit, first)["code"] != 200, "Re-submission with the same content accepted a stale card"
             expired = prepare(first, a)
             cur.execute("UPDATE admin_assistant_review SET expires_at=DATE_SUB(NOW(), INTERVAL 1 MINUTE) WHERE id=%s", (expired["id"],))
             db.commit()
@@ -147,9 +151,12 @@ def verify(db, cfg, browser):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--browser", action="store_true")
+    parser.add_argument("--base", default="http://127.0.0.1:8080")
     args = parser.parse_args()
+    if urlsplit(args.base).hostname not in ("127.0.0.1", "localhost", "::1"):
+        raise SystemExit("Loopback backends only")
     config = local_config()
     with pymysql.connect(host="127.0.0.1", port=int(config.get("MYSQL_PORT", 3306)),
                          user=config.get("MYSQL_USER", "root"), password=config["MYSQL_PASSWORD"],
                          database=config.get("MYSQL_DB", "ai_campus_platform"), charset="utf8mb4") as connection:
-        verify(connection, config, args.browser)
+        verify(args.base.rstrip("/"), connection, config, args.browser)

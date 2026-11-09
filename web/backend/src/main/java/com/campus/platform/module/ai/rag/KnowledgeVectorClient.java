@@ -91,16 +91,24 @@ class KnowledgeVectorClient {
     }
 
     List<String> search(long userId, Long docId, String question, long deadline) {
+        return search(userId, docId, question, deadline, false);
+    }
+
+    List<String> search(long userId, Long docId, String question, long deadline, boolean internal) {
         int end = question.offsetByCodePoints(0, Math.min(maxQueryChars, question.codePointCount(0, question.length())));
         JsonNode vector = embed(List.of(question.substring(0, end)), deadline).get(0);
         ObjectNode body = json.createObjectNode().put("limit", 15).put("score_threshold", minScore);
         body.set("query", vector);
         var filter = body.putObject("filter");
-        var access = filter.putArray("should");
-        access.add(condition("scope", "PUBLIC"));
-        var privateAccess = access.addObject().putArray("must");
-        privateAccess.add(condition("scope", "PRIVATE"));
-        privateAccess.add(condition("owner_id", userId));
+        if (internal) {
+            filter.putArray("must").add(condition("scope", "ADMIN"));
+        } else {
+            var access = filter.putArray("should");
+            access.add(condition("scope", "PUBLIC"));
+            var privateAccess = access.addObject().putArray("must");
+            privateAccess.add(condition("scope", "PRIVATE"));
+            privateAccess.add(condition("owner_id", userId));
+        }
         if (docId != null) {
             filter.putArray("must").add(condition("doc_id", docId));
         }

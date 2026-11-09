@@ -32,6 +32,7 @@ import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -57,6 +59,9 @@ public class IdleService {
     private final SensitiveWordService sensitiveWordService;
     private final ContentAiAuditService contentAiAuditService;
 
+    @Value("${CAMPUS_ADMIN_ASSISTANT_ENABLED:false}")
+    private boolean versionedAudit;
+
     /** 发布闲置（进入待审核） */
     public IdleItem publish(Long userId, IdlePublishDTO dto) {
         if (sensitiveWordService.contains(dto.getTitle()) || sensitiveWordService.contains(dto.getDescription())) {
@@ -73,7 +78,15 @@ public class IdleService {
         item.setStatus(Constants.IDLE_ON_SHELF);
         item.setViewCount(0);
         idleItemMapper.insert(item);
-        contentAiAuditService.audit(Constants.BIZ_IDLE, item, userId, dto.getTitle(), dto.getDescription());
+        if (versionedAudit) {
+            String revision = UUID.randomUUID().toString();
+            int marked = idleItemMapper.update(null, new UpdateWrapper<IdleItem>().eq("id", item.getId())
+                    .eq("audit_status", Constants.AUDIT_PENDING).isNull("audit_revision").set("audit_revision", revision));
+            if (marked == 1) auditIdle(item, revision);
+            else return idleItemMapper.selectById(item.getId());
+        } else {
+            auditIdle(item, null);
+        }
         return item;
     }
 
@@ -220,9 +233,22 @@ public class IdleService {
         item.setCategory(dto.getCategory());
         item.setAuditStatus(Constants.AUDIT_PENDING);
         item.setAuditReason(null);
-        idleItemMapper.updateById(item);
-        contentAiAuditService.audit(Constants.BIZ_IDLE, item, userId, dto.getTitle(), dto.getDescription());
+        String revision = versionedAudit ? UUID.randomUUID().toString() : null;
+        idleItemMapper.update(null, new UpdateWrapper<IdleItem>().eq("id", id).eq("user_id", userId)
+                .set("title", item.getTitle()).set("description", item.getDescription()).set("images", item.getImages())
+                .set("expect_item", item.getExpectItem()).set("category", item.getCategory())
+                .set("audit_status", Constants.AUDIT_PENDING).set("audit_reason", null)
+                .set(revision != null, "audit_revision", revision));
+        auditIdle(item, revision);
         return item;
+    }
+
+    private void auditIdle(IdleItem item, String revision) {
+        if (revision == null) {
+            contentAiAuditService.audit(Constants.BIZ_IDLE, item, item.getUserId(), item.getTitle(), item.getDescription());
+        } else {
+            contentAiAuditService.audit(Constants.BIZ_IDLE, item, item.getUserId(), item.getTitle(), item.getDescription(), revision);
+        }
     }
 
     /** 下架（仅本人） */

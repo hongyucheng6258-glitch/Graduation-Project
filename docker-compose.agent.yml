@@ -24,6 +24,8 @@ services:
       - ./web/backend/src/main/resources/db/2026-11-09-agent-idle-appointment.sql:/migrations/05-idle-appointment.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-09-admin-assistant.sql:/migrations/06-admin-assistant.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-09-admin-assistant-review.sql:/migrations/07-admin-assistant-review.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-09-admin-assistant-notice.sql:/migrations/08-admin-assistant-notice.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-09-idle-audit-revision.sql:/migrations/09-idle-audit-revision.sql:ro
     command:
       - /bin/sh
       - -ec

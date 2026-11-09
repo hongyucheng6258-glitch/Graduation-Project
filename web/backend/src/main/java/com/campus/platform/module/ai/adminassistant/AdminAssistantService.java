@@ -5,8 +5,6 @@ import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.admin.service.StatsService;
 import com.campus.platform.module.ai.agent.AgentModelClient;
 import com.campus.platform.module.ai.agent.AgentTool;
-import com.campus.platform.module.ai.gateway.AiConfigHolder;
-import com.campus.platform.utils.RedisUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,12 +15,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 @Service
@@ -51,15 +47,11 @@ class AdminAssistantService {
     private final AdminAssistantEvidence evidence;
     private final AgentModelClient model;
     private final ObjectMapper json;
-    private final RedisUtils redis;
-    private final AiConfigHolder config;
+    private final AdminAssistantAccess access;
 
     Reply ask(Long adminId, String sessionId, String question) {
         var history = sessions.history(adminId, sessionId, 4);
-        Long used = redis.incr("admin:assistant:quota:" + adminId + ":" + LocalDate.now(), 1, TimeUnit.DAYS);
-        if (used == null || used > config.getRateLimitPerDay()) {
-            throw new BizException(ResultCode.RATE_LIMITED, "今日管理助手调用次数已达上限");
-        }
+        access.charge(adminId);
 
         var messages = new ArrayList<ObjectNode>();
         messages.add(message("system", PROMPT));

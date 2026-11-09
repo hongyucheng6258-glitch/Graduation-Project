@@ -65,6 +65,10 @@ public class ContentAiAuditService {
     }
 
     public void audit(String type, Object content, Long userId, String title, String body) {
+        audit(type, content, userId, title, body, null);
+    }
+
+    public void audit(String type, Object content, Long userId, String title, String body, String idleRevision) {
         AiAuditResult result = ruleDecision(title, body);
         if (aiEnabled()) {
             try {
@@ -79,10 +83,14 @@ public class ContentAiAuditService {
                         : new AiAuditResult("MEDIUM", 50, "AI审核暂不可用，已转人工审核", List.of("AI降级"));
             }
         }
-        applyDecision(type, content, result);
+        applyDecision(type, content, result, idleRevision);
     }
 
     public void applyDecision(String type, Object content, AiAuditResult result) {
+        applyDecision(type, content, result, null);
+    }
+
+    private void applyDecision(String type, Object content, AiAuditResult result, String idleRevision) {
         int riskLevel = riskLevel(result.level());
         int score = result.score() == null ? riskLevel * 40 + 10 : Math.max(0, Math.min(100, result.score()));
         String reason = StrUtil.blankToDefault(result.reason(), "未发现明显风险");
@@ -94,14 +102,15 @@ public class ContentAiAuditService {
                 IdleItem item = (IdleItem) content;
                 int updated = idleItemMapper.update(null, new UpdateWrapper<IdleItem>()
                         .eq("id", item.getId()).eq("audit_status", Constants.AUDIT_PENDING)
+                        .eq(idleRevision != null, "audit_revision", idleRevision)
                         .apply("BINARY title <=> BINARY {0}", item.getTitle())
                         .apply("BINARY description <=> BINARY {0}", item.getDescription())
                         .apply("BINARY category <=> BINARY {0}", item.getCategory())
                         .apply("BINARY expect_item <=> BINARY {0}", item.getExpectItem())
                         .apply("SHA2(images,256) <=> {0}", item.getImages() == null ? null : SecureUtil.sha256(item.getImages()))
-                        .apply("ai_audit_time <=> {0}", item.getAiAuditTime())
-                        .apply("ai_risk_level <=> {0}", item.getAiRiskLevel())
-                        .apply("BINARY ai_audit_reason <=> BINARY {0}", item.getAiAuditReason())
+                        .apply(idleRevision == null, "ai_audit_time <=> {0}", item.getAiAuditTime())
+                        .apply(idleRevision == null, "ai_risk_level <=> {0}", item.getAiRiskLevel())
+                        .apply(idleRevision == null, "BINARY ai_audit_reason <=> BINARY {0}", item.getAiAuditReason())
                         .set("ai_risk_level", riskLevel).set("ai_audit_reason", reason)
                         .set("ai_audit_time", now).set("audit_source", "ai")
                         .set(autoPass, "audit_status", Constants.AUDIT_PASS));

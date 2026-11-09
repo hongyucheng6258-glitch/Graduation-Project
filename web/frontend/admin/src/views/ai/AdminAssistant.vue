@@ -2,7 +2,14 @@
   <WtPageHeader title="管理智能助手" subtitle="查看实时待办，从结果直接打开处理页面。" />
 
   <el-alert v-if="available === false" title="管理智能助手尚未启用" type="info" :closable="false" />
-  <div v-else class="assistant-workspace" :aria-busy="initializing">
+  <el-tabs v-if="available" v-model="workspace" aria-label="管理助手功能">
+    <el-tab-pane name="tasks" label="待办与审核" />
+    <el-tab-pane v-if="ragEnabled" name="rules" label="内部规则" />
+    <el-tab-pane name="notice" label="公告草稿" />
+    <el-tab-pane name="diagnostics" label="运行诊断" />
+  </el-tabs>
+  <AdminAssistantOperations v-if="available && workspace !== 'tasks'" :key="workspace" :mode="workspace" :can-manage-rules="canManageRules" />
+  <div v-show="available !== false && workspace === 'tasks'" class="assistant-workspace" :aria-busy="initializing">
     <aside class="session-panel" aria-label="管理助手会话">
       <div class="session-heading">
         <h2>会话</h2>
@@ -106,6 +113,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
+import AdminAssistantOperations from './AdminAssistantOperations.vue'
 import { askAssistant, assistantCapabilities, assistantHistory, assistantReviews, assistantSessions,
   confirmAssistantReview, prepareAssistantReview } from '../../api/assistant'
 
@@ -131,6 +139,9 @@ const reviewing = ref(false)
 const question = ref('')
 const activeId = ref(null)
 const available = ref(null)
+const workspace = ref('tasks')
+const ragEnabled = ref(false)
+const canManageRules = ref(false)
 const initializing = ref(true)
 const loading = ref(false)
 const sending = ref(false)
@@ -145,7 +156,10 @@ const recordRoute = record => ({ path: record.kind === 'idle' ? '/audit/idle' : 
 
 onMounted(async () => {
   try {
-    available.value = (await assistantCapabilities()).enabled
+    const capabilities = await assistantCapabilities()
+    available.value = capabilities.enabled
+    ragEnabled.value = capabilities.ragEnabled
+    canManageRules.value = capabilities.canManageRules
     if (!available.value) return
     sessions.value = await assistantSessions()
     if (sessions.value.length) await openSession(sessions.value[0].id)

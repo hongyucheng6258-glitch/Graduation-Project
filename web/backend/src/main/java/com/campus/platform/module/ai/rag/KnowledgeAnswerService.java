@@ -23,6 +23,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.function.Consumer;
 
 @Service
 @RequiredArgsConstructor
@@ -77,8 +78,20 @@ public class KnowledgeAnswerService {
         String query = previous.isBlank() || question.length() > 80 ? question
                 : question + "\n上一轮问题：" + previous;
         var evidence = knowledge.search(userId, documentId, query);
+        var reply = compose(question, previous, evidence, source -> knowledge.verifyVersion(userId, source.documentId(), source.version()));
+        return new Reply(reply.answer(), reply.citations().stream()
+                .map(item -> new Citation(item.documentId(), item.fileName(), item.page())).toList());
+    }
+
+    InternalReply askInternal(String question) {
+        var evidence = knowledge.searchInternal(question, System.nanoTime() + Duration.ofSeconds(20).toNanos());
+        return compose(question, "", evidence, source -> knowledge.verifyInternalVersion(source.documentId(), source.version()));
+    }
+
+    private InternalReply compose(String question, String previous, List<KnowledgeService.Evidence> evidence,
+                                  Consumer<KnowledgeService.Evidence> verify) {
         if (evidence.isEmpty()) {
-            return new Reply(NO_ANSWER, List.of());
+            return new InternalReply(NO_ANSWER, List.of());
         }
         var revision = prompts.active("knowledge_answer", "");
         var system = json.createObjectNode().put("role", "system").put("content", """
@@ -97,7 +110,7 @@ public class KnowledgeAnswerService {
         }
         var user = json.createObjectNode().put("role", "user").put("content", context.toString());
         var assistant = model.complete(List.of(system, user), List.of(), Duration.ofSeconds(30));
-        evidence.forEach(source -> knowledge.verifyVersion(userId, source.documentId(), source.version()));
+        evidence.forEach(verify);
         try {
             String raw = assistant.path("content").asText().strip();
             if (raw.startsWith("```") && raw.endsWith("```") && raw.contains("\n")) {
@@ -111,18 +124,18 @@ public class KnowledgeAnswerService {
             if (!sources.isArray() || !result.path("answer").isTextual()) {
                 throw new BizException(ResultCode.AI_INVOKE_FAIL, "模型未返回可验证的资料答案");
             }
-            var citations = new LinkedHashSet<Citation>();
+            var citations = new LinkedHashSet<InternalCitation>();
             for (var number : sources) {
                 if (!number.isIntegralNumber() || !number.canConvertToInt()
                         || number.asInt() < 1 || number.asInt() > evidence.size()) {
                     throw new BizException(ResultCode.AI_INVOKE_FAIL, "模型返回了不存在的资料引用");
                 }
                 var item = evidence.get(number.asInt() - 1);
-                citations.add(new Citation(item.documentId(), item.fileName(), item.page()));
+                citations.add(new InternalCitation(item.documentId(), item.fileName(), item.page(), item.version()));
             }
             String answer = result.path("answer").asText().strip();
-            return answer.isEmpty() || citations.isEmpty() ? new Reply(NO_ANSWER, List.of())
-                    : new Reply(answer, List.copyOf(citations));
+            return answer.isEmpty() || citations.isEmpty() ? new InternalReply(NO_ANSWER, List.of())
+                    : new InternalReply(answer, List.copyOf(citations));
         } catch (JsonProcessingException e) {
             throw new BizException(ResultCode.AI_INVOKE_FAIL, "模型未返回可解析的资料答案");
         }
@@ -134,4 +147,6 @@ public class KnowledgeAnswerService {
 
     public record Reply(String answer, List<Citation> citations) {}
     public record Citation(long documentId, String fileName, int page) {}
+    public record InternalReply(String answer, List<InternalCitation> citations) {}
+    public record InternalCitation(long documentId, String fileName, int page, String version) {}
 }

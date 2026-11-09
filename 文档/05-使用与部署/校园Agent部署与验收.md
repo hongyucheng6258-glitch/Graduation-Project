@@ -19,6 +19,12 @@ MySQL 就绪后，由 `agent-migrate` 自动执行以下脚本。迁移退出码
 3. `web/backend/src/main/resources/db/2026-11-09-agent-action.sql`
 4. `web/backend/src/main/resources/db/2026-11-09-agent-idle-draft.sql`
 5. `web/backend/src/main/resources/db/2026-11-09-agent-idle-appointment.sql`
+6. `web/backend/src/main/resources/db/2026-11-09-admin-assistant.sql`
+7. `web/backend/src/main/resources/db/2026-11-09-admin-assistant-review.sql`
+8. `web/backend/src/main/resources/db/2026-11-09-admin-assistant-notice.sql`
+9. `web/backend/src/main/resources/db/2026-11-09-idle-audit-revision.sql`
+
+管理端从「概览 → 管理智能助手」进入。Compose 默认启用该入口。本机直接运行后端时，先应用上述增量脚本，再设置 `CAMPUS_ADMIN_ASSISTANT_ENABLED=true`。超级管理员可维护内部 PDF，审核员可查询和打开引用。内部规则检索和学生知识库使用独立的访问范围。公告草稿先保存到公告模块，再由管理员预览并发布。
 
 本机运行后端时，分别配置 `CAMPUS_AGENT_ENABLED=true` 与 `CAMPUS_AGENT_RAG_ENABLED=true`。可通过 `CAMPUS_AGENT_RAG_EMBEDDING_URL`、`CAMPUS_AGENT_RAG_EMBEDDING_MODEL` 和 `CAMPUS_AGENT_RAG_QDRANT_URL` 指定服务。替换 Embedding 模型时使用新的 `CAMPUS_AGENT_RAG_COLLECTION`，然后在学生 PDF 问答或管理端公共知识库点击「重建索引」，避免复用不同模型生成的向量。
 
@@ -60,6 +66,16 @@ python -X utf8 tests/agent/verify_idle_guide.py
 python -X utf8 tests/agent/verify_idle_publish.py
 python -X utf8 tests/agent/verify_idle_appointment.py
 python -X utf8 tests/agent/verify_campus_resources.py
+```
+
+管理智能助手同样支持接口和浏览器验收。`--rag` 要求向量服务和模型均已就绪。
+
+```powershell
+python -X utf8 tests/agent/verify_admin_assistant.py --evidence --browser
+python -X utf8 tests/agent/verify_admin_review.py
+python -X utf8 tests/agent/verify_admin_review.py --browser
+python -X utf8 tests/agent/verify_admin_operations.py --rag
+python -X utf8 tests/agent/verify_admin_operations.py --rag --browser
 ```
 
 脚本默认只允许本机后端。不要在生产数据库运行验收脚本或演示数据重置脚本。
