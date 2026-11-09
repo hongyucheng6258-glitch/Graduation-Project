@@ -227,9 +227,8 @@ public class IdleService {
 
     /** 下架（仅本人） */
     public void offline(Long userId, Long id) {
-        IdleItem item = checkOwner(userId, id);
-        item.setStatus(Constants.IDLE_OFF_SHELF);
-        idleItemMapper.updateById(item);
+        checkOwner(userId, id);
+        idleItemMapper.updateAvailability(id, Constants.IDLE_OFF_SHELF, null, false);
     }
 
     /** 重新上架（仅本人；需审核通过且非已成交） */
@@ -244,8 +243,9 @@ public class IdleService {
         if (item.getStatus() == Constants.IDLE_ON_SHELF) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "物品已在架上");
         }
-        item.setStatus(Constants.IDLE_ON_SHELF);
-        idleItemMapper.updateById(item);
+        if (idleItemMapper.updateAvailability(id, Constants.IDLE_ON_SHELF, item.getStatus(), true) != 1) {
+            throw new BizException(ResultCode.DUPLICATE_OPERATION, "物品状态已变化，请刷新后重试");
+        }
     }
 
     /** 我的发布 */
@@ -316,11 +316,7 @@ public class IdleService {
         appointmentMapper.updateById(appointment);
         // 拒绝则物品恢复在架
         if (!accept) {
-            IdleItem item = idleItemMapper.selectById(appointment.getItemId());
-            if (item != null && item.getStatus() == Constants.IDLE_RESERVED) {
-                item.setStatus(Constants.IDLE_ON_SHELF);
-                idleItemMapper.updateById(item);
-            }
+            idleItemMapper.updateAvailability(appointment.getItemId(), Constants.IDLE_ON_SHELF, Constants.IDLE_RESERVED, false);
         }
         IdleItem item = idleItemMapper.selectById(appointment.getItemId());
         messageService.send(appointment.getBuyerId(), Constants.MSG_INTERACT,
@@ -342,11 +338,7 @@ public class IdleService {
         }
         appointment.setStatus(Constants.APPOINT_FINISHED);
         appointmentMapper.updateById(appointment);
-        IdleItem item = idleItemMapper.selectById(appointment.getItemId());
-        if (item != null) {
-            item.setStatus(Constants.IDLE_FINISHED);
-            idleItemMapper.updateById(item);
-        }
+        idleItemMapper.updateAvailability(appointment.getItemId(), Constants.IDLE_FINISHED, null, false);
         Long other = appointment.getBuyerId().equals(userId) ? appointment.getSellerId() : appointment.getBuyerId();
         messageService.send(other, Constants.MSG_INTERACT, "互换已完成",
                 "一笔闲置互换已确认完成，快去互评吧。", Constants.BIZ_IDLE, appointment.getItemId());

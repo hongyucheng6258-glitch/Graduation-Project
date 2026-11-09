@@ -4,6 +4,7 @@ import com.campus.platform.module.admin.service.AuditService;
 import com.campus.platform.module.admin.dto.AuditDTO;
 
 import com.campus.platform.common.PageResult;
+import com.campus.platform.common.Constants;
 import com.campus.platform.common.R;
 import com.campus.platform.module.idle.entity.IdleItem;
 import jakarta.validation.Valid;
@@ -39,14 +40,18 @@ public class AdminAuditController {
     }
 
     @PutMapping("/{type}/{id}/pass")
-    public R<Void> pass(@PathVariable String type, @PathVariable Long id) {
-        auditService.pass(type, id);
+    public R<Void> pass(@PathVariable String type, @PathVariable Long id,
+                        @RequestParam(defaultValue = "false") boolean pendingOnly) {
+        if (pendingOnly && Constants.BIZ_IDLE.equals(type)) auditService.reviewPendingIdle(id, true, null);
+        else auditService.pass(type, id);
         return R.ok();
     }
 
     @PutMapping("/{type}/{id}/reject")
-    public R<Void> reject(@PathVariable String type, @PathVariable Long id, @Valid @RequestBody AuditDTO dto) {
-        auditService.reject(type, id, dto.getReason());
+    public R<Void> reject(@PathVariable String type, @PathVariable Long id, @Valid @RequestBody AuditDTO dto,
+                          @RequestParam(defaultValue = "false") boolean pendingOnly) {
+        if (pendingOnly && Constants.BIZ_IDLE.equals(type)) auditService.reviewPendingIdle(id, false, dto.getReason());
+        else auditService.reject(type, id, dto.getReason());
         return R.ok();
     }
 }

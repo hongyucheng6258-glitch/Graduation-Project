@@ -100,11 +100,7 @@ public class ReportAdminService {
     private void offlineTarget(String type, Long targetId) {
         switch (type) {
             case Constants.BIZ_IDLE -> {
-                IdleItem item = idleItemMapper.selectById(targetId);
-                if (item != null) {
-                    item.setStatus(Constants.IDLE_OFF_SHELF);
-                    idleItemMapper.updateById(item);
-                }
+                idleItemMapper.updateAvailability(targetId, Constants.IDLE_OFF_SHELF, null, false);
             }
             case Constants.BIZ_ACTIVITY -> {
                 Activity activity = activityMapper.selectById(targetId);

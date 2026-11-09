@@ -13,10 +13,10 @@ export function idleAuditDetail(id) {
   return request.get(`/audit/idle/${encodeURIComponent(id)}`)
 }
 
-export function auditPass(type, id) {
-  return request.put(`/audit/${type}/${id}/pass`)
+export function auditPass(type, id, pendingOnly = false) {
+  return request.put(`/audit/${type}/${id}/pass`, null, { params: { pendingOnly } })
 }
 
-export function auditReject(type, id, reason) {
-  return request.put(`/audit/${type}/${id}/reject`, { reason })
+export function auditReject(type, id, reason, pendingOnly = false) {
+  return request.put(`/audit/${type}/${id}/reject`, { reason }, { params: { pendingOnly } })
 }

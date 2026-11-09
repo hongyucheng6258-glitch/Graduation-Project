@@ -53,6 +53,10 @@ class AdminAssistantSessions {
         return sessionId;
     }
 
+    void requireOwner(Long adminId, String sessionId) {
+        requireOwner(adminId, sessionId, false);
+    }
+
     private void requireOwner(Long adminId, String sessionId, boolean lock) {
         if (jdbc.queryForList("SELECT id FROM admin_assistant_session WHERE id=? AND admin_id=?"
                 + (lock ? " FOR UPDATE" : ""), String.class, sessionId, adminId).isEmpty()) {

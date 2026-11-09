@@ -55,10 +55,26 @@
               <RouterLink :to="recordRoute(record)">{{ record.kind === 'idle' ? '打开闲置审核记录' : '打开举报记录' }}</RouterLink>
               <RouterLink v-if="record.target?.kind === 'idle' && record.target.title" class="target-link"
                 :to="recordRoute(record.target)">查看被举报闲置</RouterLink>
+              <el-button v-if="record.kind === 'idle' && record.status === 0" text :disabled="busy"
+                @click="openReview(record)">准备审核</el-button>
             </article>
           </section>
         </li>
       </ol>
+      <section v-if="reviews.length" class="results review-results" aria-label="审核确认与回执">
+        <h3>审核确认与回执</h3>
+        <article v-for="card in reviews" :key="card.id" class="evidence-card review-card">
+          <header><strong>{{ card.title }}</strong><span>{{ card.decision === 'PASS' ? '审核通过' : '驳回审核' }}</span></header>
+          <p v-if="card.excerpt">内容节选　{{ card.excerpt }}</p>
+          <p v-if="card.reason">审核理由　{{ card.reason }}</p>
+          <p v-if="card.state === 'APPLIED'" role="status">审核已提交，发布者已收到通知。</p>
+          <p v-else-if="card.state === 'EXPIRED'" class="muted">确认卡已过期，请重新准备。</p>
+          <template v-else>
+            <p class="muted">{{ card.decision === 'PASS' ? '确认后将按物品在架状态展示，并通知发布者。' : '确认后物品将保持不可见，驳回理由会发给发布者。' }}</p>
+            <el-button :type="card.decision === 'PASS' ? 'primary' : 'danger'" :disabled="busy" @click="confirmReview(card)">确认执行审核</el-button>
+          </template>
+        </article>
+      </section>
       <p v-if="busy" class="muted" role="status">{{ sending ? '正在查询待办…' : '正在加载会话…' }}</p>
 
       <form class="composer" @submit.prevent="send(question)">
@@ -71,12 +87,27 @@
       </form>
     </section>
   </div>
+  <el-dialog v-model="reviewVisible" title="准备闲置审核" width="min(460px, 92vw)">
+    <p><strong>{{ reviewTarget?.title }}</strong></p>
+    <el-radio-group v-model="reviewDecision" aria-label="审核决定">
+      <el-radio value="PASS">通过</el-radio>
+      <el-radio value="REJECT">驳回</el-radio>
+    </el-radio-group>
+    <el-input v-model="reviewReason" aria-label="审核理由" type="textarea" maxlength="255" :rows="3"
+      :placeholder="reviewDecision === 'REJECT' ? '填写给发布者的驳回理由' : '可填写审核备注'" />
+    <template #footer>
+      <el-button @click="reviewVisible = false">取消</el-button>
+      <el-button type="primary" :loading="reviewing" :disabled="reviewDecision === 'REJECT' && !reviewReason.trim()"
+        @click="prepareReview">生成确认卡</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
-import { askAssistant, assistantCapabilities, assistantHistory, assistantSessions } from '../../api/assistant'
+import { askAssistant, assistantCapabilities, assistantHistory, assistantReviews, assistantSessions,
+  confirmAssistantReview, prepareAssistantReview } from '../../api/assistant'
 
 const audit = (type, label) => ({ label, route: { path: `/audit/${type}`, query: { view: 'pending' } } })
 const destinations = {
@@ -91,6 +122,12 @@ const destinations = {
 const suggestions = ['现在有哪些待办？', '找出待审核闲置，优先显示有风险提示的记录', '有多少待处理举报？']
 const sessions = ref([])
 const turns = ref([])
+const reviews = ref([])
+const reviewVisible = ref(false)
+const reviewTarget = ref(null)
+const reviewDecision = ref('PASS')
+const reviewReason = ref('')
+const reviewing = ref(false)
 const question = ref('')
 const activeId = ref(null)
 const available = ref(null)
@@ -98,7 +135,7 @@ const initializing = ref(true)
 const loading = ref(false)
 const sending = ref(false)
 const error = ref('')
-const busy = computed(() => initializing.value || loading.value || sending.value)
+const busy = computed(() => initializing.value || loading.value || sending.value || reviewing.value)
 const clock = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'short', timeStyle: 'medium' })
 const formatTime = value => clock.format(new Date(value))
 const recordStatus = record => record.kind === 'report'
@@ -124,7 +161,9 @@ async function openSession(id) {
   loading.value = true
   error.value = ''
   try {
-    turns.value = await assistantHistory(id)
+    const [history, cards] = await Promise.all([assistantHistory(id), assistantReviews(id)])
+    turns.value = history
+    reviews.value = cards
     activeId.value = id
     question.value = ''
   } catch (e) {
@@ -137,8 +176,51 @@ async function openSession(id) {
 function newSession() {
   activeId.value = null
   turns.value = []
+  reviews.value = []
   question.value = ''
   error.value = ''
+}
+
+function openReview(record) {
+  reviewTarget.value = record
+  reviewDecision.value = 'PASS'
+  reviewReason.value = ''
+  reviewVisible.value = true
+}
+
+async function prepareReview() {
+  if (busy.value || !activeId.value || !reviewTarget.value) return
+  reviewing.value = true
+  error.value = ''
+  try {
+    const card = await prepareAssistantReview({ sessionId: activeId.value, itemId: reviewTarget.value.id,
+      decision: reviewDecision.value, reason: reviewReason.value.trim() })
+    reviews.value.unshift(card)
+    reviewVisible.value = false
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    reviewing.value = false
+  }
+}
+
+async function confirmReview(card) {
+  if (busy.value) return
+  reviewing.value = true
+  error.value = ''
+  try {
+    const receipt = await confirmAssistantReview(card.id)
+    Object.assign(card, receipt)
+    for (const turn of turns.value) {
+      for (const record of turn.records) {
+        if (record.kind === 'idle' && record.id === card.itemId) record.status = receipt.auditStatus
+      }
+    }
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    reviewing.value = false
+  }
 }
 
 async function send(text) {
@@ -184,6 +266,7 @@ async function send(text) {
 .evidence-card p { margin: 6px 0; }
 .evidence-card a { color: var(--brand-strong); }
 .target-link { margin-left: 12px; }
+.review-results { margin-block: 16px; }
 .composer { display: grid; gap: 6px; margin-top: 12px; }
 .composer > div { display: flex; gap: 10px; }
 .assistant-error { color: var(--danger, #ae2929); }

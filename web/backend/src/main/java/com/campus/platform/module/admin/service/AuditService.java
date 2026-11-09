@@ -22,6 +22,9 @@ import com.campus.platform.module.qa.entity.CampusQuestion;
 import com.campus.platform.module.qa.mapper.CampusQuestionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
 
 /**
  * 通用审核服务（D2，架构设计 1.1 难点3）：
@@ -107,31 +110,50 @@ public class AuditService {
     }
 
     /** 审核通过 → 通知作者 */
+    @Transactional
     public void pass(String type, Long id) {
+        if (Constants.BIZ_IDLE.equals(type)) {
+            reviewIdle(id, Constants.AUDIT_PASS, null, false);
+            return;
+        }
         AuditedTarget target = doAudit(type, id, Constants.AUDIT_PASS, null);
         notifyAuthor(target, true, null);
     }
 
     /** 审核驳回（必填理由）→ 通知作者 */
+    @Transactional
     public void reject(String type, Long id, String reason) {
+        if (Constants.BIZ_IDLE.equals(type)) {
+            reviewIdle(id, Constants.AUDIT_REJECT, reason, false);
+            return;
+        }
         AuditedTarget target = doAudit(type, id, Constants.AUDIT_REJECT, reason);
         notifyAuthor(target, false, reason);
+    }
+
+    @Transactional
+    public int reviewPendingIdle(Long id, boolean pass, String reason) {
+        int decision = pass ? Constants.AUDIT_PASS : Constants.AUDIT_REJECT;
+        reviewIdle(id, decision, pass ? null : reason, true);
+        return decision;
+    }
+
+    private void reviewIdle(Long id, int decision, String reason, boolean pendingOnly) {
+        var item = idleItemMapper.lockForAudit(id);
+        if (item == null) throw new BizException(ResultCode.NOT_FOUND, "内容不存在");
+        if (pendingOnly && !Objects.equals(item.getAuditStatus(), Constants.AUDIT_PENDING)) {
+            throw new BizException(ResultCode.DUPLICATE_OPERATION, "该闲置已处理，请刷新");
+        }
+        if (Objects.equals(item.getAuditStatus(), decision) && Objects.equals(item.getAuditReason(), reason)) return;
+        String source = item.getAiRiskLevel() == null ? "manual" : "ai_manual";
+        idleItemMapper.updateAuditDecision(id, decision, reason, source);
+        notifyAuthor(new AuditedTarget(item.getUserId(), "闲置「" + item.getTitle() + "」", Constants.BIZ_IDLE, id),
+                decision == Constants.AUDIT_PASS, reason);
     }
 
     /** 各类型统一更新审核状态，返回作者与可回跳的业务目标 */
     private AuditedTarget doAudit(String type, Long id, int auditStatus, String reason) {
         switch (type) {
-            case Constants.BIZ_IDLE -> {
-                IdleItem item = idleItemMapper.selectById(id);
-                if (item == null) {
-                    throw new BizException(ResultCode.NOT_FOUND, "内容不存在");
-                }
-                item.setAuditStatus(auditStatus);
-                item.setAuditReason(reason);
-                item.setAuditSource(item.getAiRiskLevel() == null ? "manual" : "ai_manual");
-                idleItemMapper.updateById(item);
-                return new AuditedTarget(item.getUserId(), "闲置「" + item.getTitle() + "」", Constants.BIZ_IDLE, item.getId());
-            }
             case Constants.BIZ_ACTIVITY -> {
                 Activity activity = activityMapper.selectById(id);
                 if (activity == null) {
@@ -183,9 +205,11 @@ public class AuditService {
     }
 
     private void notifyAuthor(AuditedTarget target, boolean passed, String reason) {
+        String passedResult = Constants.BIZ_IDLE.equals(target.bizType())
+                ? "已通过审核。可在我的闲置查看展示状态。" : "已通过审核，现已公开展示。";
         messageService.send(target.authorId(), Constants.MSG_AUDIT,
                 passed ? "审核通过" : "审核未通过",
-                passed ? "你发布的" + target.title() + "已通过审核，现已公开展示。"
+                passed ? "你发布的" + target.title() + passedResult
                         : "你发布的" + target.title() + "未通过审核，原因：" + reason,
                 target.bizType(), target.bizId());
     }

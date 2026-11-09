@@ -1,0 +1,49 @@
+const assert = require('node:assert/strict')
+const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright')
+
+async function main() {
+  const fixture = JSON.parse(process.env.CAMPUS_ADMIN_REVIEW_FIXTURE)
+  const url = process.env.CAMPUS_ADMIN_URL || 'http://127.0.0.1:5174'
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE })
+  try {
+    const context = await browser.newContext()
+    await context.addInitScript(token => {
+      localStorage.setItem('admin_token', token)
+      localStorage.setItem('admin_info', JSON.stringify({ nickname: '审核验收员', role: 'audit' }))
+    }, fixture.token)
+    const page = await context.newPage()
+    await page.goto(`${url}/admin/assistant`)
+    const asked = page.waitForResponse(res => res.url().endsWith('/api/admin/assistant/ask'), { timeout: 40000 })
+    await page.getByRole('textbox', { name: '向管理助手提问' }).fill(fixture.question)
+    await page.getByRole('button', { name: '发送' }).click()
+    assert.equal((await (await asked).json()).data.turn.records[0].id, String(fixture.itemId))
+    await page.getByRole('button', { name: '准备审核' }).click()
+    const dialog = page.getByRole('dialog', { name: '准备闲置审核' })
+    await dialog.getByText('驳回', { exact: true }).click()
+    assert.equal(await dialog.getByRole('button', { name: '生成确认卡' }).isDisabled(), true)
+    await dialog.getByRole('textbox', { name: '审核理由' }).fill('请补充换物条件')
+    const prepared = page.waitForResponse(res => res.url().endsWith('/reviews/prepare'))
+    await dialog.getByRole('button', { name: '生成确认卡' }).click()
+    const result = await (await prepared).json()
+    assert.equal(result.code, 200, result.message)
+    assert.equal(result.data.state, 'PENDING')
+    const card = page.getByRole('region', { name: '审核确认与回执' }).locator('article').filter({ hasText: fixture.title })
+    await card.getByText(/请补充换物条件/).waitFor()
+    await page.reload()
+    await card.getByRole('button', { name: '确认执行审核' }).waitFor()
+    const confirmed = page.waitForResponse(res => res.url().endsWith(`/reviews/${result.data.id}/confirm`))
+    await card.getByRole('button', { name: '确认执行审核' }).click()
+    const receipt = await (await confirmed).json()
+    assert.equal(receipt.code, 200, receipt.message)
+    assert.equal(receipt.data.auditStatus, 2)
+    await card.getByRole('status').filter({ hasText: '发布者已收到通知' }).waitFor()
+    await page.reload()
+    await card.getByRole('status').filter({ hasText: '发布者已收到通知' }).waitFor()
+    assert.equal(await card.getByRole('button', { name: '确认执行审核' }).count(), 0)
+    console.log('PASS admin browser prepares a rejection, resumes confirmation and restores its receipt')
+  } finally {
+    await browser.close()
+  }
+}
+
+main().catch(error => { console.error(error.stack); process.exitCode = 1 })

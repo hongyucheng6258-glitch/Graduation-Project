@@ -28,6 +28,7 @@ public class AdminAssistantController {
     private final AdminAssistantSessions sessions;
     private final AdminAssistantService assistant;
     private final AdminPermissionService permissions;
+    private final AdminAssistantReviewActions reviews;
 
     @Value("${CAMPUS_ADMIN_ASSISTANT_ENABLED:false}")
     private boolean enabled;
@@ -50,6 +51,21 @@ public class AdminAssistantController {
     @PostMapping("/ask")
     public R<AdminAssistantService.Reply> ask(@Valid @RequestBody Question question) {
         return R.ok(assistant.ask(requireAccess(), question.sessionId(), question.question().strip()));
+    }
+
+    @GetMapping("/sessions/{id}/reviews")
+    public R<List<AdminAssistantReviewActions.Card>> reviews(@PathVariable String id) {
+        return R.ok(reviews.list(requireAccess(), id));
+    }
+
+    @PostMapping("/reviews/prepare")
+    public R<AdminAssistantReviewActions.Card> prepareReview(@Valid @RequestBody AdminAssistantReviewActions.Request request) {
+        return R.ok(reviews.prepare(requireAccess(), request));
+    }
+
+    @PostMapping("/reviews/{id}/confirm")
+    public R<AdminAssistantReviewActions.Card> confirmReview(@PathVariable String id) {
+        return R.ok(reviews.confirm(requireAccess(), id));
     }
 
     private Long requireAccess() {

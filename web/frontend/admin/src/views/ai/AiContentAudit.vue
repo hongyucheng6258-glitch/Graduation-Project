@@ -255,7 +255,7 @@ async function restore(row) {
   }
   acting.value = true
   try {
-    await auditPass(row.type, row.id)
+    await auditPass(row.type, row.id, row.auditStatus === 0)
     ElMessage.success('已恢复展示')
     loadAll()
   } finally {
@@ -272,7 +272,7 @@ function openBlock(row) {
 async function confirmBlock() {
   acting.value = true
   try {
-    await auditReject(currentRow.value.type, currentRow.value.id, blockReason.value.trim() || 'AI 预审判定为高风险内容，维持拦截')
+    await auditReject(currentRow.value.type, currentRow.value.id, blockReason.value.trim() || 'AI 预审判定为高风险内容，维持拦截', currentRow.value.auditStatus === 0)
     ElMessage.success('已维持拦截')
     blockVisible.value = false
     loadAll()

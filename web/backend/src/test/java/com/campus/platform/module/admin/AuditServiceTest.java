@@ -85,14 +85,11 @@ class AuditServiceTest {
         @DisplayName("通过应置 audit_status=1、清空驳回理由，并通知作者")
         void pass_shouldSetStatusOneAndNotify() {
             IdleItem item = buildIdle(10L, 5L, "九成新自行车");
-            when(idleItemMapper.selectById(10L)).thenReturn(item);
+            when(idleItemMapper.lockForAudit(10L)).thenReturn(item);
 
             auditService.pass(Constants.BIZ_IDLE, 10L);
 
-            ArgumentCaptor<IdleItem> captor = ArgumentCaptor.forClass(IdleItem.class);
-            verify(idleItemMapper).updateById(captor.capture());
-            assertThat(captor.getValue().getAuditStatus()).isEqualTo(Constants.AUDIT_PASS);
-            assertThat(captor.getValue().getAuditReason()).isNull();
+            verify(idleItemMapper).updateAuditDecision(10L, Constants.AUDIT_PASS, null, "manual");
 
             verify(messageService).send(eq(5L), eq(Constants.MSG_AUDIT), eq("审核通过"),
                     anyString(), eq(Constants.BIZ_IDLE), eq(10L));
@@ -102,14 +99,11 @@ class AuditServiceTest {
         @DisplayName("驳回应置 audit_status=2、写入理由，且理由随消息送达作者")
         void reject_shouldSetStatusTwoWithReasonAndNotify() {
             IdleItem item = buildIdle(10L, 5L, "违规商品");
-            when(idleItemMapper.selectById(10L)).thenReturn(item);
+            when(idleItemMapper.lockForAudit(10L)).thenReturn(item);
 
             auditService.reject(Constants.BIZ_IDLE, 10L, "涉嫌售卖违禁品");
 
-            ArgumentCaptor<IdleItem> captor = ArgumentCaptor.forClass(IdleItem.class);
-            verify(idleItemMapper).updateById(captor.capture());
-            assertThat(captor.getValue().getAuditStatus()).isEqualTo(Constants.AUDIT_REJECT);
-            assertThat(captor.getValue().getAuditReason()).isEqualTo("涉嫌售卖违禁品");
+            verify(idleItemMapper).updateAuditDecision(10L, Constants.AUDIT_REJECT, "涉嫌售卖违禁品", "manual");
 
             // D2 验收：驳回理由必须随消息送达
             ArgumentCaptor<String> contentCaptor = ArgumentCaptor.forClass(String.class);
@@ -122,7 +116,7 @@ class AuditServiceTest {
         @Test
         @DisplayName("内容不存在应 404，且不发通知")
         void pass_shouldThrowNotFound() {
-            when(idleItemMapper.selectById(999L)).thenReturn(null);
+            when(idleItemMapper.lockForAudit(999L)).thenReturn(null);
 
             assertThatThrownBy(() -> auditService.pass(Constants.BIZ_IDLE, 999L))
                     .isInstanceOf(BizException.class)

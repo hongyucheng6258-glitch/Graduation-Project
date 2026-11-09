@@ -319,11 +319,7 @@ class IdleServiceTest {
             verify(appointmentMapper).updateById(cap.capture());
             assertThat(cap.getValue().getStatus()).isEqualTo(Constants.APPOINT_REJECTED);
 
-            ArgumentCaptor<IdleItem> itemCap = ArgumentCaptor.forClass(IdleItem.class);
-            verify(idleItemMapper).updateById(itemCap.capture());
-            assertThat(itemCap.getValue().getStatus())
-                    .as("拒绝预约后物品必须回到在架，否则该闲置再也无人能预约")
-                    .isEqualTo(Constants.IDLE_ON_SHELF);
+            verify(idleItemMapper).updateAvailability(ITEM_ID, Constants.IDLE_ON_SHELF, Constants.IDLE_RESERVED, false);
         }
 
         @Test
@@ -365,9 +361,7 @@ class IdleServiceTest {
             verify(appointmentMapper).updateById(cap.capture());
             assertThat(cap.getValue().getStatus()).isEqualTo(Constants.APPOINT_FINISHED);
 
-            ArgumentCaptor<IdleItem> itemCap = ArgumentCaptor.forClass(IdleItem.class);
-            verify(idleItemMapper).updateById(itemCap.capture());
-            assertThat(itemCap.getValue().getStatus()).isEqualTo(Constants.IDLE_FINISHED);
+            verify(idleItemMapper).updateAvailability(ITEM_ID, Constants.IDLE_FINISHED, null, false);
 
             verify(messageService).send(eq(SELLER), eq(Constants.MSG_INTERACT),
                     anyString(), anyString(), eq(Constants.BIZ_IDLE), any());
@@ -517,7 +511,7 @@ class IdleServiceTest {
         // 3) 完成
         idleService.finishAppoint(BUYER, APPOINT_ID);
         assertThat(created.getStatus()).isEqualTo(Constants.APPOINT_FINISHED);
-        assertThat(it.getStatus()).isEqualTo(Constants.IDLE_FINISHED);
+        verify(idleItemMapper).updateAvailability(ITEM_ID, Constants.IDLE_FINISHED, null, false);
 
         // 4) 双向互评各一次
         when(reviewMapper.selectCount(any())).thenReturn(0L);

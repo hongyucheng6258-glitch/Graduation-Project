@@ -154,8 +154,9 @@ public class AdminContentService {
         if (item.getAuditStatus() != Constants.AUDIT_PASS) {
             throw new BizException(ResultCode.AUDIT_PENDING, "内容未通过审核");
         }
-        item.setStatus(status);
-        idleItemMapper.updateById(item);
+        if (idleItemMapper.updateAvailability(id, status, null, true) != 1) {
+            throw new BizException(ResultCode.DUPLICATE_OPERATION, "物品状态已变化，请刷新后重试");
+        }
     }
 
     private void setLfStatus(Long id, int status) {

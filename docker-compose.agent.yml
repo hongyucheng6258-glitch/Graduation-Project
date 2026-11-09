@@ -23,6 +23,7 @@ services:
       - ./web/backend/src/main/resources/db/2026-11-09-agent-idle-draft.sql:/migrations/04-idle-draft.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-09-agent-idle-appointment.sql:/migrations/05-idle-appointment.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-09-admin-assistant.sql:/migrations/06-admin-assistant.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-09-admin-assistant-review.sql:/migrations/07-admin-assistant-review.sql:ro
     command:
       - /bin/sh
       - -ec

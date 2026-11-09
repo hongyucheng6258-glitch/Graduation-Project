@@ -190,7 +190,7 @@ async function load() {
 async function pass(row) {
   acting.value = true
   try {
-    await auditPass(props.type, row.id)
+    await auditPass(props.type, row.id, row.auditStatus === 0)
     ElMessage.success('已通过，作者将收到通知')
     load()
   } finally {
@@ -212,7 +212,7 @@ async function reject() {
   }
   acting.value = true
   try {
-    await auditReject(props.type, currentRow.value.id, rejectReason.value.trim())
+    await auditReject(props.type, currentRow.value.id, rejectReason.value.trim(), currentRow.value.auditStatus === 0)
     ElMessage.success('已驳回，作者将收到通知')
     rejectVisible.value = false
     load()
