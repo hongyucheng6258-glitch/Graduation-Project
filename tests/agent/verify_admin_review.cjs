@@ -29,6 +29,8 @@ async function main() {
     assert.equal(result.data.state, 'PENDING')
     const card = page.getByRole('region', { name: '审核确认与回执' }).locator('article').filter({ hasText: fixture.title })
     await card.getByText(/请补充换物条件/).waitFor()
+    const evidence = page.getByRole('region', { name: '业务证据' })
+    assert.equal(await evidence.locator('article').filter({ has: page.getByRole('button', { name: '确认执行审核' }) }).count(), 1)
     await page.reload()
     await card.getByRole('button', { name: '确认执行审核' }).waitFor()
     const confirmed = page.waitForResponse(res => res.url().endsWith(`/reviews/${result.data.id}/confirm`))

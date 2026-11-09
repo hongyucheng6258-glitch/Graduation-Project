@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite'
+import { fileURLToPath } from 'node:url'
+import { defineConfig, searchForWorkspaceRoot } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 // 允许文档使用 unload/pagehide 事件，避免新版 Chrome 控制台输出
@@ -54,6 +55,7 @@ function adminBaseRedirectPlugin() {
 }
 
 export default defineConfig({
+  resolve: { dedupe: ['vue'] },
   base: '/admin/',
   plugins: [vue(), unloadPolicyPlugin(), adminBaseRedirectPlugin()],
   optimizeDeps: {
@@ -71,6 +73,7 @@ export default defineConfig({
     }
   },
   server: {
+    fs: { allow: [searchForWorkspaceRoot(process.cwd()), fileURLToPath(new URL('../shared', import.meta.url))] },
     port: 5174,
     strictPort: true,
     proxy: {

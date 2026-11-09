@@ -1,154 +1,90 @@
 <template>
-  <div class="ai-page">
-    <div class="ai-layout">
-      <!-- 左栏：会话列表 -->
-      <aside class="ai-side">
-        <WtButton type="soft" block class="new-btn" @click="newSession">＋ 新建会话</WtButton>
-        <div class="session-list">
-          <div
-            v-for="s in sessions"
-            :key="s.id"
-            class="ai-session"
-            :class="{ active: s.id === currentSession?.id }"
-            @click="switchSession(s)"
-          >
-            <svg class="ai-session__ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z" />
-            </svg>
-            <span class="s-title">{{ s.title }}</span>
-            <el-dropdown size="small" @command="(cmd) => onSessionCmd(cmd, s)" @click.stop>
-              <el-icon class="s-more"><MoreFilled /></el-icon>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="rename">重命名</el-dropdown-item>
-                  <el-dropdown-item command="delete">删除</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-          <WtEmptyState v-if="!sessions.length" type="empty" title="暂无会话" description="点击上方新建一个对话" />
-        </div>
-      </aside>
-
-      <!-- 右栏：对话窗 -->
-      <div class="ai-main">
-        <div class="ai-top">
-          <div class="ai-orb">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3"/>
-            </svg>
-          </div>
-          <div class="ai-top__meta">
-            <b>{{ tab === 'pdf' ? 'PDF 问答' : (tab === 'guide' ? '🏫 AI 校园向导' : 'AI 自由对话') }}</b>
-            <div class="section-sub" style="font-size: var(--fs-cap)">{{ tab === 'guide' ? (capabilities.enabled ? '查活动、校园资料和闲置，生成发布草稿' : '实时校园数据问答') : '学习助手' }}</div>
-          </div>
-          <div class="ai-top__tools">
-            <WtTabs v-model="tab" :options="sceneTabs" />
-          </div>
-        </div>
-
-        <!-- PDF 问答：文档上传区 -->
-        <div v-if="tab === 'pdf'" class="pdf-bar">
-          <el-upload :show-file-list="false" :http-request="doPdfUpload" accept=".pdf">
-            <el-button :loading="pdfUploading">上传PDF课件</el-button>
-          </el-upload>
-          <span v-if="pdfDoc" class="pdf-info">{{ pdfDoc.fileName }}（{{ pdfDoc.pageCount }}页，{{ pdfIndexLabel }}）</span>
-          <span v-else class="pdf-tip">上传文本型PDF后可针对文档内容提问</span>
-          <el-button v-if="pdfIndex?.state === 'FAILED'" text @click="startPdfIndex(pdfDoc)">重试索引</el-button>
-          <el-button v-else-if="pdfIndex?.state === 'READY'" text @click="startPdfIndex(pdfDoc, true)">重建索引</el-button>
-        </div>
-
-        <!-- 快捷问题（对齐原型 quick-prompts，空会话时展示） -->
-        <div v-if="!messages.length && tab !== 'pdf'" class="quick-prompts">
-          <span v-for="q in quickPrompts" :key="q" class="quick-prompt" @click="askQuick(q)">{{ q }}</span>
-        </div>
-
-        <!-- 消息区 -->
-        <div ref="msgBox" class="ai-chat">
-          <template v-for="(m, i) in messages" :key="i">
-            <ChatBubble :role="m.role" :content="m.content" :streaming="m.streaming"
-              :nickname="userStore.userInfo?.nickname || '我'" :user-avatar="userStore.userInfo?.avatar" />
-            <IdleGuideCards v-if="m.idleItems?.length" :items="m.idleItems" :contacting="contactingIdle" :numbered="m.idleSearch"
-              @contact="contactIdle" />
-            <div v-for="resource in m.resources || []" :key="`${resource.kind}-${resource.id}`" class="ai-confirm resource-card">
-              <strong>{{ resource.title }}</strong>
-              <p class="section-sub">{{ resourceLabel(resource) }}<template v-if="resource.subtitle"> · {{ resource.subtitle }}</template></p>
-              <RouterLink :to="resourceRoute(resource)">{{ resource.kind === 'partner' ? '查看发布者主页' : '打开原帖' }}</RouterLink>
-            </div>
-            <div v-for="draft in m.idleDrafts || []" :key="draft.id" class="ai-confirm idle-draft-card">
-              <strong>闲置发布草稿</strong>
-              <p>{{ draft.title }}</p>
-              <p v-if="draft.expectItem" class="section-sub">想换：{{ draft.expectItem }}</p>
-              <p v-if="draft.state === 'SUBMITTED'" role="status">已提交，可在我的闲置查看审核进度。</p>
-              <p v-else-if="draft.state === 'EXPIRED'" role="status">草稿已过期，请重新生成。</p>
-              <RouterLink v-else :to="{ name: 'IdlePublish', query: { draft: draft.id } }">编辑并确认发布</RouterLink>
-            </div>
-            <div v-for="appointment in m.idleAppointments || []" :key="appointment.id" class="ai-confirm idle-appointment-card">
-              <strong>确认预约互换</strong>
-              <p>{{ appointment.itemTitle }}</p>
-              <p v-if="appointment.remark" class="section-sub">留言：{{ appointment.remark }}</p>
-              <p v-if="appointment.state === 'SUBMITTED'" role="status">{{ appointmentStatus(appointment.appointmentStatus) }}</p>
-              <p v-else-if="appointment.state === 'EXPIRED'" role="status">预约确认卡已过期，请重新发起。</p>
-              <p v-else-if="appointment.state === 'CHANGED'" role="status">物品信息或状态已变化，请重新查询。</p>
-              <el-button v-else type="primary" :loading="appointment.sending" @click="confirmAppointment(appointment)">
-                确认预约
-              </el-button>
-            </div>
-            <div v-if="m.citations?.length" class="ai-sources" aria-label="检索到的资料">
-              <span>资料来源</span>
-              <button v-for="source in m.citations" :key="`${source.documentId}-${source.page}`"
-                type="button" @click="openCitation(source)">
-                {{ source.fileName }} · 第 {{ source.page }} 页
-              </button>
-            </div>
-            <div v-for="action in m.actions || []" :key="action.id" class="ai-confirm">
-              <strong>确认活动报名</strong>
-              <p>{{ action.activityTitle }}</p>
-              <p v-if="action.remark" class="section-sub">备注：{{ action.remark }}</p>
-              <p v-if="action.result === 'SUBMITTED'" role="status">报名已提交，等待审核。</p>
-              <p v-else-if="action.result === 'EXPIRED'" role="status">确认卡已过期，请重新发起报名。</p>
-              <el-button v-else type="primary" :loading="action.sending" @click="confirmAction(action)">
-                确认提交报名
-              </el-button>
-            </div>
-          </template>
-          <WtEmptyState v-if="!messages.length" type="empty" title="开始提问吧" description="支持多轮上下文追问，AI 会记得聊过的内容" />
-        </div>
-
-        <!-- 输入区 -->
-        <div class="ai-input">
-          <input
-            v-model="question"
-            type="text"
-            :placeholder="tab === 'pdf' ? '针对PDF文档内容提问…' : (tab === 'guide' ? '问问校园：周末有什么活动 / 我报名的活动 / 有失物招领吗' : '输入你的问题，回车发送，Shift+Enter 换行')"
-            @keydown.enter.exact.prevent="send"
-          />
-          <button class="send" :disabled="!question.trim() || asking || switching" aria-label="发送" @click="send">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M22 2 11 13M22 2l-7 20-4-9-9-4z" />
-            </svg>
-          </button>
-        </div>
-        <div class="ai-footnote">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" />
-          </svg>
-          AI 回答由 DeepSeek 生成，关键信息请自行核对；调用全程留痕可观测。
-        </div>
+  <AssistantShell ref="assistantShell" v-model:mode="tab" v-model:question="question" :tabs="sceneTabs"
+    :title="sceneTitle" :subtitle="sceneSubtitle" :sessions="sessions" :active-id="currentSession?.id"
+    :placeholder="placeholder" :prompts="!messages.length && tab !== 'pdf' ? quickPrompts : []"
+    :busy="asking || switching" footnote="AI 回答由 DeepSeek 生成，关键信息请自行核对。"
+    @new-session="newSession" @select-session="switchSession" @send="send" @prompt="askQuick">
+    <template #session-actions="{ session }">
+      <el-dropdown size="small" @command="(cmd) => onSessionCmd(cmd, session)" @click.stop>
+        <el-icon class="s-more"><MoreFilled /></el-icon>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="rename">重命名</el-dropdown-item>
+            <el-dropdown-item command="delete">删除</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </template>
+    <template #empty-sessions>
+      <WtEmptyState type="empty" title="暂无会话" description="点击上方新建一个对话" />
+    </template>
+    <template #toolbar>
+      <div v-if="tab === 'pdf'" class="pdf-bar">
+        <el-upload :show-file-list="false" :http-request="doPdfUpload" accept=".pdf">
+          <el-button :loading="pdfUploading">上传PDF课件</el-button>
+        </el-upload>
+        <span v-if="pdfDoc" class="pdf-info">{{ pdfDoc.fileName }}（{{ pdfDoc.pageCount }}页，{{ pdfIndexLabel }}）</span>
+        <span v-else class="pdf-tip">上传文本型PDF后可针对文档内容提问</span>
+        <el-button v-if="pdfIndex?.state === 'FAILED'" text @click="startPdfIndex(pdfDoc)">重试索引</el-button>
+        <el-button v-else-if="pdfIndex?.state === 'READY'" text @click="startPdfIndex(pdfDoc, true)">重建索引</el-button>
       </div>
-    </div>
-  </div>
+    </template>
+    <template v-for="(m, i) in messages" :key="i">
+      <AssistantBubble :role="m.role" :content="m.content" :streaming="m.streaming"
+        :render-markdown="renderMarkdown" :nickname="userStore.userInfo?.nickname || '我'" :user-avatar="userStore.userInfo?.avatar" />
+      <IdleGuideCards v-if="m.idleItems?.length" :items="m.idleItems" :contacting="contactingIdle" :numbered="m.idleSearch"
+        @contact="contactIdle" />
+      <AssistantCard v-for="resource in m.resources || []" :key="`${resource.kind}-${resource.id}`" class="resource-card">
+        <strong>{{ resource.title }}</strong>
+        <p class="section-sub">{{ resourceLabel(resource) }}<template v-if="resource.subtitle"> · {{ resource.subtitle }}</template></p>
+        <RouterLink :to="resourceRoute(resource)">{{ resource.kind === 'partner' ? '查看发布者主页' : '打开原帖' }}</RouterLink>
+      </AssistantCard>
+      <AssistantCard v-for="draft in m.idleDrafts || []" :key="draft.id" class="idle-draft-card">
+        <strong>闲置发布草稿</strong>
+        <p>{{ draft.title }}</p>
+        <p v-if="draft.expectItem" class="section-sub">想换：{{ draft.expectItem }}</p>
+        <p v-if="draft.state === 'SUBMITTED'" role="status">已提交，可在我的闲置查看审核进度。</p>
+        <p v-else-if="draft.state === 'EXPIRED'" role="status">草稿已过期，请重新生成。</p>
+        <RouterLink v-else :to="{ name: 'IdlePublish', query: { draft: draft.id } }">编辑并确认发布</RouterLink>
+      </AssistantCard>
+      <AssistantCard v-for="appointment in m.idleAppointments || []" :key="appointment.id" class="idle-appointment-card">
+        <strong>确认预约互换</strong>
+        <p>{{ appointment.itemTitle }}</p>
+        <p v-if="appointment.remark" class="section-sub">留言：{{ appointment.remark }}</p>
+        <p v-if="appointment.state === 'SUBMITTED'" role="status">{{ appointmentStatus(appointment.appointmentStatus) }}</p>
+        <p v-else-if="appointment.state === 'EXPIRED'" role="status">预约确认卡已过期，请重新发起。</p>
+        <p v-else-if="appointment.state === 'CHANGED'" role="status">物品信息或状态已变化，请重新查询。</p>
+        <el-button v-else type="primary" :loading="appointment.sending" @click="confirmAppointment(appointment)">
+          确认预约
+        </el-button>
+      </AssistantCard>
+      <AssistantCitations :sources="m.citations" @open="openCitation" />
+      <AssistantCard v-for="action in m.actions || []" :key="action.id">
+        <strong>确认活动报名</strong>
+        <p>{{ action.activityTitle }}</p>
+        <p v-if="action.remark" class="section-sub">备注：{{ action.remark }}</p>
+        <p v-if="action.result === 'SUBMITTED'" role="status">报名已提交，等待审核。</p>
+        <p v-else-if="action.result === 'EXPIRED'" role="status">确认卡已过期，请重新发起报名。</p>
+        <el-button v-else type="primary" :loading="action.sending" @click="confirmAction(action)">
+          确认提交报名
+        </el-button>
+      </AssistantCard>
+    </template>
+    <WtEmptyState v-if="!messages.length" type="empty" title="开始提问吧" description="支持多轮上下文追问，AI 会记得聊过的内容" />
+  </AssistantShell>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MoreFilled } from '@element-plus/icons-vue'
-import ChatBubble from '../../components/ChatBubble.vue'
+import AssistantShell from '../../../../shared/assistant/AssistantShell.vue'
+import AssistantBubble from '../../../../shared/assistant/AssistantBubble.vue'
+import AssistantCard from '../../../../shared/assistant/AssistantCard.vue'
+import AssistantCitations from '../../../../shared/assistant/AssistantCitations.vue'
+import { renderMarkdown } from '../../utils/markdown'
 import IdleGuideCards from '../../components/IdleGuideCards.vue'
-import WtButton from '../../components/wt/WtButton.vue'
-import WtTabs from '../../components/wt/WtTabs.vue'
 import WtEmptyState from '../../components/wt/WtEmptyState.vue'
 import { useUserStore } from '../../store/user'
 import * as aiApi from '../../api/ai'
@@ -176,7 +112,7 @@ function cancelStream() {
   }
   requestSeq += 1
 }
-const msgBox = ref()
+const assistantShell = ref(null)
 // PDF 问答状态
 const pdfUploading = ref(false)
 const pdfDoc = ref(null)
@@ -198,6 +134,12 @@ const sceneTabs = [
   { value: 'guide', label: '🏫 校园向导' },
   { value: 'pdf', label: '📄 PDF问答' }
 ]
+
+const sceneTitle = computed(() => tab.value === 'pdf' ? 'PDF 问答' : tab.value === 'guide' ? 'AI 校园向导' : 'AI 自由对话')
+const sceneSubtitle = computed(() => tab.value === 'guide'
+  ? (capabilities.value.enabled ? '查活动、校园资料和闲置，生成发布草稿' : '实时校园数据问答') : '学习助手')
+const placeholder = computed(() => tab.value === 'pdf' ? '针对 PDF 文档内容提问…'
+  : tab.value === 'guide' ? '问问校园，例如周末有什么活动？' : '输入你的问题，按回车发送')
 
 const sceneOf = () => (tab.value === 'pdf' ? 'pdf' : tab.value === 'guide' && capabilities.value.enabled ? 'agent' : 'chat')
 
@@ -635,139 +577,11 @@ async function refreshSessionList() {
 }
 
 function scrollBottom() {
-  nextTick(() => {
-    if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight
-  })
+  assistantShell.value?.scrollToBottom()
 }
 </script>
 
 <style scoped>
-.ai-sources {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 9px;
-  margin: 0 0 12px 42px;
-  font-size: 12px;
-}
-.ai-sources button {
-  border: 1px solid var(--el-border-color);
-  border-radius: 6px;
-  padding: 4px 8px;
-  background: var(--el-bg-color);
-  color: var(--el-color-primary);
-  cursor: pointer;
-  overflow-wrap: anywhere;
-}
-.ai-confirm {
-  width: min(100% - 44px, 350px);
-  box-sizing: border-box;
-  margin: 0 0 12px 42px;
-  padding: 12px 14px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 8px;
-  background: var(--el-bg-color);
-}
-.ai-confirm p { margin: 6px 0; overflow-wrap: anywhere; }
-.quick-prompts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-  margin-bottom: var(--s-4);
-}
-.quick-prompt {
-  padding: 8px 14px;
-  border-radius: var(--r-pill);
-  background: var(--info-soft);
-  color: var(--info-strong);
-  border: 1px solid var(--info-line);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all .15s var(--ease-out);
-}
-.quick-prompt:hover {
-  background: var(--info);
-  color: var(--info-ink);
-  border-color: var(--info);
-  transform: translateY(-1px);
-}<style scoped>
-.ai-page { height: 100%; }
-.ai-layout {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  gap: var(--s-5);
-  height: calc(100vh - 220px);
-  min-height: 480px;
-}
-.ai-side {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  padding: var(--s-4);
-  overflow: auto;
-}
-.new-btn { margin-bottom: var(--s-2); }
-.session-list { display: flex; flex-direction: column; gap: 4px; }
-.ai-session {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-3);
-  border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  color: var(--ink-2);
-  background: transparent;
-  border: none;
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  transition: background 0.2s, color 0.2s;
-}
-.ai-session__ico { width: 18px; height: 18px; flex: none; color: var(--brand); }
-.ai-session:hover { background: var(--surface-2); }
-.ai-session.active { background: var(--brand-soft); color: var(--brand-strong); font-weight: 600; }
-.ai-session.active .ai-session__ico { color: var(--brand-strong); }
-.s-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.s-more { color: var(--ink-3); cursor: pointer; }
-.s-more:hover { color: var(--ink); }
-
-.ai-main {
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-  min-width: 0;
-}
-.ai-top {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-4) var(--s-5);
-  border-bottom: 1px solid var(--line);
-}
-.ai-orb {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--r-pill);
-  display: grid;
-  place-items: center;
-  color: #fff;
-  background: linear-gradient(140deg, var(--brand), var(--accent));
-  box-shadow: var(--shadow-sm);
-  flex: none;
-}
-.ai-orb svg { width: 18px; height: 18px; }
-.ai-top__meta { min-width: 0; }
-.ai-top__meta b { font-size: var(--fs-body); }
-.ai-top__tools { margin-left: auto; }
-
 .pdf-bar {
   padding: 10px 16px;
   border-bottom: 1px solid var(--line);
@@ -777,66 +591,6 @@ function scrollBottom() {
 }
 .pdf-info { font-size: 13px; color: var(--success); }
 .pdf-tip { font-size: 13px; color: var(--ink-3); }
-
-.ai-chat {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--s-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
-  background: var(--surface-2);
-}
-.ai-input {
-  display: flex;
-  gap: var(--s-3);
-  padding: var(--s-4);
-  border-top: 1px solid var(--line);
-  background: var(--surface);
-}
-.ai-input input {
-  flex: 1;
-  padding: var(--s-3) var(--s-4);
-  border-radius: var(--r-pill);
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  font-size: var(--fs-sm);
-  font-family: var(--font-sans);
-  color: var(--ink);
-}
-.ai-input input::placeholder { color: var(--ink-3); }
-.ai-input input:focus { outline: none; border-color: var(--brand); background: var(--surface); box-shadow: 0 0 0 4px var(--brand-soft); }
-.send {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--r-pill);
-  display: grid;
-  place-items: center;
-  background: linear-gradient(140deg, var(--brand), var(--brand-strong));
-  color: var(--brand-ink);
-  border: none;
-  cursor: pointer;
-  flex: none;
-  transition: transform 0.15s var(--ease-out), box-shadow 0.2s, opacity 0.2s;
-}
-.send:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.send:disabled { opacity: 0.5; cursor: not-allowed; }
-.send svg { width: 20px; height: 20px; }
-.ai-footnote {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  font-size: var(--fs-cap);
-  color: var(--ink-3);
-  padding: var(--s-3) var(--s-5);
-  border-top: 1px solid var(--line);
-  background: var(--surface-2);
-}
-.ai-footnote svg { width: 14px; height: 14px; color: var(--brand); flex: none; }
-
-@media (max-width: 820px) {
-  .ai-layout { grid-template-columns: 1fr; height: auto; }
-  .ai-side { flex-direction: row; overflow-x: auto; }
-  .session-list { flex-direction: row; }
-}
+.s-more { color: var(--ink-3); cursor: pointer; }
+.s-more:hover { color: var(--ink); }
 </style>

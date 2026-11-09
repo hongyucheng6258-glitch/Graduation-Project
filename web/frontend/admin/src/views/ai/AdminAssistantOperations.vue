@@ -9,16 +9,16 @@
         <el-input id="rule-question" v-model="input" maxlength="1200" placeholder="例如，待审核内容如何复核？" />
         <el-button type="primary" native-type="submit" :disabled="busy || !input.trim()">查找规则</el-button>
       </form>
-      <article v-if="answer" class="result-block" aria-label="规则答复">
-        <p class="answer-text">{{ answer.answer }}</p>
-        <el-button v-for="source in answer.citations" :key="`${source.documentId}-${source.page}`" text
-          @click="openSource(source)">{{ source.fileName }} · 第 {{ source.page }} 页</el-button>
+      <article v-if="answer" class="rule-answer" aria-label="规则答复">
+        <AssistantBubble role="user" :content="askedQuestion" :nickname="nickname" />
+        <AssistantBubble role="assistant" :content="answer.answer" class="answer-text" />
+        <AssistantCitations :sources="answer.citations" @open="openSource" />
       </article>
       <header class="ops-heading">
         <h3>内部资料</h3>
         <div class="ops-actions">
           <el-button :disabled="busy" @click="run(refresh)">刷新索引状态</el-button>
-          <label v-if="canManageRules" class="upload-label">
+          <label v-if="canManageRules" class="el-button upload-label" :class="{ 'is-disabled': busy }">
             上传规则 PDF <input type="file" accept="application/pdf,.pdf" :disabled="busy" @change="onUpload" />
           </label>
         </div>
@@ -49,12 +49,12 @@
       <section class="draft-list" aria-label="我的公告草稿">
         <h3>我的草稿</h3>
         <p v-if="!items.length && !busy" class="muted">暂无公告草稿。</p>
-        <article v-for="draft in items" :key="draft.id" class="result-block draft-row">
+        <AssistantCard v-for="draft in items" :key="draft.id" class="draft-row" wide>
           <strong>{{ draft.title }}</strong>
           <RouterLink v-if="draft.state === 'DRAFT'" :to="{ name: 'NoticeEdit', query: { draft: draft.id } }">核对并编辑草稿</RouterLink>
           <RouterLink v-else-if="draft.noticeId" :to="{ name: 'NoticeEdit', params: { id: draft.noticeId } }">打开已保存公告</RouterLink>
           <span v-else class="muted">草稿已过期</span>
-        </article>
+        </AssistantCard>
       </section>
     </template>
 
@@ -83,11 +83,15 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { ElMessageBox } from 'element-plus'
+import AssistantBubble from '../../../../shared/assistant/AssistantBubble.vue'
+import AssistantCard from '../../../../shared/assistant/AssistantCard.vue'
+import AssistantCitations from '../../../../shared/assistant/AssistantCitations.vue'
 import { askRules, assistantDiagnostics, generateNoticeDraft, listNoticeDrafts, listRules, reindexRule, ruleFile,
   uploadRule, withdrawRule } from '../../api/assistant'
 
-const props = defineProps({ mode: { type: String, required: true }, canManageRules: Boolean })
+const props = defineProps({ mode: { type: String, required: true }, canManageRules: Boolean, nickname: String })
 const input = ref('')
+const askedQuestion = ref('')
 const items = ref([])
 const answer = ref(null)
 const summary = ref(null)
@@ -111,7 +115,9 @@ async function refresh() {
 
 async function findRules() {
   answer.value = null
-  answer.value = await askRules(input.value.trim())
+  const question = input.value.trim()
+  answer.value = await askRules(question)
+  askedQuestion.value = question
 }
 
 async function writeNotice() {
@@ -153,16 +159,19 @@ onMounted(() => run(refresh))
 </script>
 
 <style scoped>
-.ops { max-width: 900px; padding: 20px; background: var(--surface, #fff); border: 1px solid var(--line); border-radius: 12px; }
+.ops { max-width: 900px; min-width: 0; }
 .ops h2 { margin: 0; font-size: 19px; }
 .ops h3 { margin: 0; font-size: 15px; }
 .ops-form { display: grid; gap: 8px; margin: 16px 0; }
 .ops-form .el-button { justify-self: start; }
-.ops-heading, .draft-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-block: 12px; }
+.ops-heading, .draft-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.ops-heading { margin-block: 12px; padding: 8px 12px; background: var(--surface-2); border-radius: var(--r-sm); }
 .ops-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .muted { color: var(--ink-2); font-size: 13px; }
-.result-block { border-top: 1px solid var(--line); padding: 10px 0; overflow-wrap: anywhere; }
-.answer-text { white-space: pre-wrap; }
+.draft-list h3 { margin-bottom: 8px; }
+.rule-answer { margin-top: var(--s-4); }
 .ops-error { color: var(--danger, #a52a2a); }
-.upload-label input { max-width: 230px; }
+.upload-label { position: relative; margin-left: 0; }
+.upload-label:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
+.upload-label input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: inherit; }
 </style>

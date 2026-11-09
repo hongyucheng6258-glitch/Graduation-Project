@@ -386,7 +386,7 @@ def verify_actions(base, cfg, db):
             db.commit()
 
 
-def verify_browser(base, cfg, db):
+def verify_browser(base, cfg, db, layout_only=False):
     suffix = uuid.uuid4().hex[:10]
     student = visitor = admin = activity = None
     title = "BrowserActivity" + suffix
@@ -414,7 +414,8 @@ def verify_browser(base, cfg, db):
                 "activityId": activity, "activityTitle": title, "identifier": identifier,
                 "pdf": base64.b64encode(pdf_bytes(identifier)).decode(),
             }
-            subprocess.run(["node", str(ROOT / "tests/agent/verify_browser.cjs")],
+            script = "verify_assistant_layout.cjs" if layout_only else "verify_browser.cjs"
+            subprocess.run(["node", str(ROOT / "tests/agent" / script)],
                            env={**os.environ, "CAMPUS_BROWSER_FIXTURE": json.dumps(fixture)},
                            timeout=165, check=True)
         finally:
@@ -439,7 +440,7 @@ def verify_browser(base, cfg, db):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default="http://127.0.0.1:18088")
-    parser.add_argument("--stage", choices=("tools", "rag", "combined", "actions", "browser"), default="tools")
+    parser.add_argument("--stage", choices=("tools", "rag", "combined", "actions", "browser", "layout"), default="tools")
     args = parser.parse_args()
     base = args.base.rstrip("/")
     assert urlsplit(base).hostname in ("127.0.0.1", "localhost", "::1"), "Loopback backend only"
@@ -448,8 +449,11 @@ def main():
                          user=cfg.get("MYSQL_USER", "root"), password=cfg["MYSQL_PASSWORD"],
                          database=cfg.get("MYSQL_DB", "ai_campus_platform"), charset="utf8mb4")
     with db:
-        {"tools": verify_read_only, "rag": verify_rag, "combined": verify_combined,
-         "actions": verify_actions, "browser": verify_browser}[args.stage](base, cfg, db)
+        if args.stage in ("browser", "layout"):
+            verify_browser(base, cfg, db, layout_only=args.stage == "layout")
+        else:
+            {"tools": verify_read_only, "rag": verify_rag, "combined": verify_combined,
+             "actions": verify_actions}[args.stage](base, cfg, db)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite'
+import { fileURLToPath } from 'node:url'
+import { defineConfig, searchForWorkspaceRoot } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 // 允许文档使用 unload/pagehide 事件，避免新版 Chrome 控制台输出
@@ -23,6 +24,7 @@ function unloadPolicyPlugin() {
 }
 
 export default defineConfig({
+  resolve: { dedupe: ['vue'] },
   plugins: [vue(), unloadPolicyPlugin()],
   optimizeDeps: {
     include: ['vue', 'vue-router', 'pinia', 'element-plus', 'highlight.js']
@@ -39,6 +41,7 @@ export default defineConfig({
     }
   },
   server: {
+    fs: { allow: [searchForWorkspaceRoot(process.cwd()), fileURLToPath(new URL('../shared', import.meta.url))] },
     port: 5173,
     strictPort: true,
     proxy: {
