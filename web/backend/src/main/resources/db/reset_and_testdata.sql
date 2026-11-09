@@ -9,6 +9,11 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 -- Remove optional Agent state before the legacy reset reuses user, PDF and activity IDs.
 -- Keep knowledge AUTO_INCREMENT values so vector payload IDs are not recycled.
+SET @agent_cleanup = IF(EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='agent_idle_draft'),
+    'DELETE FROM `agent_idle_draft`', 'DO 0');
+PREPARE agent_cleanup_stmt FROM @agent_cleanup;
+EXECUTE agent_cleanup_stmt;
+DEALLOCATE PREPARE agent_cleanup_stmt;
 SET @agent_cleanup = IF(EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='agent_message_attachment'),
     'DELETE FROM `agent_message_attachment`', 'DO 0');
 PREPARE agent_cleanup_stmt FROM @agent_cleanup;

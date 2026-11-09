@@ -89,6 +89,14 @@ export function confirmAgentAction(id) {
   return request.post(`/ai/agent/actions/${id}/confirm`, null, { silent: true })
 }
 
+export function loadIdleDraft(id) {
+  return request.get(`/ai/agent/idle-drafts/${encodeURIComponent(id)}`, { silent: true })
+}
+
+export function confirmIdleDraft(id, form) {
+  return request.post(`/ai/agent/idle-drafts/${encodeURIComponent(id)}/confirm`, form, { silent: true, timeout: 65000 })
+}
+
 export function indexPdf(pdfId, rebuild = false) {
   return request.post(`/ai/knowledge/pdf/${pdfId}/index`, null, { params: { rebuild }, silent: true })
 }

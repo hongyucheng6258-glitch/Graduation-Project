@@ -20,6 +20,7 @@ services:
       - ./web/backend/src/main/resources/db/2026-11-09-agent-knowledge.sql:/migrations/01-knowledge.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-09-agent-prompt.sql:/migrations/02-prompt.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-09-agent-action.sql:/migrations/03-action.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-09-agent-idle-draft.sql:/migrations/04-idle-draft.sql:ro
     command:
       - /bin/sh
       - -ec

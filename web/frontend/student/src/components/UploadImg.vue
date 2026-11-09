@@ -32,7 +32,7 @@ const props = defineProps({
   modelValue: { type: Array, default: () => [] },
   max: { type: Number, default: 9 }
 })
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'uploaded'])
 const uploading = ref(false)
 
 async function doUpload({ file }) {
@@ -43,6 +43,7 @@ async function doUpload({ file }) {
   uploading.value = true
   try {
     const res = await uploadImage(file)
+    emit('uploaded', res)
     const nextList = props.max === 1
       ? [res.url]
       : [...props.modelValue, res.url]

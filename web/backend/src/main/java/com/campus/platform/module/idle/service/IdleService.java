@@ -10,6 +10,7 @@ import com.campus.platform.module.idle.vo.AppointmentVO;
 import com.campus.platform.module.idle.vo.IdleDetailVO;
 import com.campus.platform.module.idle.dto.AppointDTO;
 import com.campus.platform.module.idle.vo.IdleItemVO;
+import com.campus.platform.module.idle.vo.IdleGuideCard;
 import com.campus.platform.module.idle.entity.IdleReview;
 import com.campus.platform.module.idle.entity.IdleItem;
 
@@ -37,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -78,15 +80,66 @@ public class IdleService {
     /** 列表检索（公开，仅审核通过 + 在架） */
     public PageResult<IdleItemVO> list(String keyword, String category, int pageNum, int pageSize) {
         Page<IdleItem> page = idleItemMapper.selectPage(new Page<>(pageNum, pageSize),
-                new LambdaQueryWrapper<IdleItem>()
-                        .eq(IdleItem::getAuditStatus, Constants.AUDIT_PASS)
-                        .eq(IdleItem::getStatus, Constants.IDLE_ON_SHELF)
+                onShelf()
                         .and(StrUtil.isNotBlank(keyword), w -> w
                                 .like(IdleItem::getTitle, keyword)
                                 .or().like(IdleItem::getDescription, keyword))
                         .eq(StrUtil.isNotBlank(category), IdleItem::getCategory, category)
                         .orderByDesc(IdleItem::getId));
         return PageResult.of(page, this::toVO);
+    }
+
+    public List<IdleGuideCard> guideSearch(Long uid, String keyword, String category, String exchange, int limit) {
+        var query = onShelf().select(IdleItem::getId, IdleItem::getUserId, IdleItem::getTitle, IdleItem::getDescription,
+                        IdleItem::getExpectItem, IdleItem::getCategory, IdleItem::getStatus)
+                .and(StrUtil.isNotBlank(keyword), w -> w.like(IdleItem::getTitle, escapeLike(keyword))
+                        .or().like(IdleItem::getDescription, escapeLike(keyword)))
+                .eq(StrUtil.isNotBlank(category), IdleItem::getCategory, category)
+                .like(StrUtil.isNotBlank(exchange), IdleItem::getExpectItem, escapeLike(exchange))
+                .orderByDesc(IdleItem::getId);
+        return idleItemMapper.selectPage(new Page<>(1, Math.max(1, Math.min(6, limit)), false), query)
+                .getRecords().stream().map(item -> guideCard(uid, item)).toList();
+    }
+
+    public IdleGuideCard guideDetail(Long uid, long itemId) {
+        var card = guideCards(uid, List.of(itemId)).get(0);
+        if (!card.isVisible()) {
+            throw new BizException(ResultCode.NOT_FOUND, "闲置不存在或暂不可见");
+        }
+        return card;
+    }
+
+    public List<IdleGuideCard> guideCards(Long uid, List<Long> itemIds) {
+        if (itemIds.isEmpty()) {
+            return List.of();
+        }
+        var visible = idleItemMapper.selectList(new LambdaQueryWrapper<IdleItem>()
+                .select(IdleItem::getId, IdleItem::getUserId, IdleItem::getTitle, IdleItem::getDescription,
+                        IdleItem::getExpectItem, IdleItem::getCategory, IdleItem::getStatus)
+                .in(IdleItem::getId, itemIds).eq(IdleItem::getAuditStatus, Constants.AUDIT_PASS))
+                .stream().collect(Collectors.toMap(IdleItem::getId, item -> guideCard(uid, item)));
+        return itemIds.stream().map(id -> visible.getOrDefault(id,
+                new IdleGuideCard(id, "物品已不可见", null, null, null, null, false, null))).toList();
+    }
+
+    private LambdaQueryWrapper<IdleItem> onShelf() {
+        return new LambdaQueryWrapper<IdleItem>().eq(IdleItem::getAuditStatus, Constants.AUDIT_PASS)
+                .eq(IdleItem::getStatus, Constants.IDLE_ON_SHELF);
+    }
+
+    private IdleGuideCard guideCard(Long uid, IdleItem item) {
+        boolean owned = Objects.equals(uid, item.getUserId());
+        String description = item.getDescription();
+        if (description != null && description.codePointCount(0, description.length()) > 500) {
+            description = description.substring(0, description.offsetByCodePoints(0, 500)) + "…";
+        }
+        return new IdleGuideCard(item.getId(), item.getTitle(), item.getCategory(), item.getExpectItem(), description,
+                item.getStatus(), owned, !owned && Objects.equals(item.getStatus(), Constants.IDLE_ON_SHELF)
+                        ? item.getUserId() : null);
+    }
+
+    private String escapeLike(String value) {
+        return value == null ? null : value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     /** 详情（浏览数+1；待审内容仅本人/管理员可见） */
@@ -101,7 +154,7 @@ public class IdleService {
         }
         // 浏览数自增
         item.setViewCount(item.getViewCount() + 1);
-        idleItemMapper.updateById(item);
+        idleItemMapper.update(null, new UpdateWrapper<IdleItem>().eq("id", id).setSql("view_count = view_count + 1"));
 
         IdleDetailVO vo = new IdleDetailVO();
         BeanUtil.copyProperties(toVO(item), vo);

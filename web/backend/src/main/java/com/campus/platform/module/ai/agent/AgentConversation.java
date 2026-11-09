@@ -32,9 +32,19 @@ class AgentConversation {
                 .stream().sorted(java.util.Comparator.comparing(AiMessage::getId)).toList();
     }
 
+    String latestIdleSearch(Long sessionId) {
+        if (sessionId == null) return "";
+        var context = messages.selectOne(new LambdaQueryWrapper<AiMessage>()
+                .eq(AiMessage::getSessionId, sessionId).eq(AiMessage::getRole, "context")
+                .like(AiMessage::getContent, "\"idleSearch\":")
+                .orderByDesc(AiMessage::getId).last("LIMIT 1"));
+        return context == null ? "" : context.getContent();
+    }
+
     @Transactional
     long save(Long uid, Long sessionId, String question, String answer, String context,
-              List<AgentService.Citation> citations, List<String> actionIds) {
+              List<AgentService.Citation> citations, List<String> actionIds, List<Long> idleIds, boolean idleSearch,
+              List<String> idleDraftIds) {
         if (sessionId == null) {
             var session = new AiSession();
             session.setUserId(uid);
@@ -50,7 +60,7 @@ class AgentConversation {
         }
         memory.saveMessage(sessionId, "user", question, null);
         long messageId = memory.saveMessage(sessionId, "assistant", answer, null);
-        attachments.save(messageId, citations, actionIds);
+        attachments.save(messageId, citations, actionIds, idleIds, idleSearch, idleDraftIds);
         if (!context.isEmpty()) {
             memory.saveMessage(sessionId, "context", context, null);
         }

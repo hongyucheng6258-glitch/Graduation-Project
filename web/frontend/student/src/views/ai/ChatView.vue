@@ -40,7 +40,7 @@
           </div>
           <div class="ai-top__meta">
             <b>{{ tab === 'pdf' ? 'PDF 问答' : (tab === 'guide' ? '🏫 AI 校园向导' : 'AI 自由对话') }}</b>
-            <div class="section-sub" style="font-size: var(--fs-cap)">{{ tab === 'guide' ? (capabilities.enabled ? '查活动、报名与校园资料' : '实时校园数据问答') : '学习助手' }}</div>
+            <div class="section-sub" style="font-size: var(--fs-cap)">{{ tab === 'guide' ? (capabilities.enabled ? '查活动、校园资料和闲置，生成发布草稿' : '实时校园数据问答') : '学习助手' }}</div>
           </div>
           <div class="ai-top__tools">
             <WtTabs v-model="tab" :options="sceneTabs" />
@@ -68,6 +68,16 @@
           <template v-for="(m, i) in messages" :key="i">
             <ChatBubble :role="m.role" :content="m.content" :streaming="m.streaming"
               :nickname="userStore.userInfo?.nickname || '我'" :user-avatar="userStore.userInfo?.avatar" />
+            <IdleGuideCards v-if="m.idleItems?.length" :items="m.idleItems" :contacting="contactingIdle" :numbered="m.idleSearch"
+              @contact="contactIdle" />
+            <div v-for="draft in m.idleDrafts || []" :key="draft.id" class="ai-confirm idle-draft-card">
+              <strong>闲置发布草稿</strong>
+              <p>{{ draft.title }}</p>
+              <p v-if="draft.expectItem" class="section-sub">想换：{{ draft.expectItem }}</p>
+              <p v-if="draft.state === 'SUBMITTED'" role="status">已提交，可在我的闲置查看审核进度。</p>
+              <p v-else-if="draft.state === 'EXPIRED'" role="status">草稿已过期，请重新生成。</p>
+              <RouterLink v-else :to="{ name: 'IdlePublish', query: { draft: draft.id } }">编辑并确认发布</RouterLink>
+            </div>
             <div v-if="m.citations?.length" class="ai-sources" aria-label="检索到的资料">
               <span>资料来源</span>
               <button v-for="source in m.citations" :key="`${source.documentId}-${source.page}`"
@@ -120,11 +130,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MoreFilled } from '@element-plus/icons-vue'
 import ChatBubble from '../../components/ChatBubble.vue'
+import IdleGuideCards from '../../components/IdleGuideCards.vue'
 import WtButton from '../../components/wt/WtButton.vue'
 import WtTabs from '../../components/wt/WtTabs.vue'
 import WtEmptyState from '../../components/wt/WtEmptyState.vue'
 import { useUserStore } from '../../store/user'
 import * as aiApi from '../../api/ai'
+import { idleDetail } from '../../api/idle'
+import { startChat } from '../../utils/startChat'
 import { responseAction } from '../../utils/request-policy.mjs'
 import { handleAuthExpired } from '../../utils/request-navigation'
 
@@ -153,6 +166,7 @@ const pdfUploading = ref(false)
 const pdfDoc = ref(null)
 const pdfIndex = ref(null)
 const capabilities = ref({ enabled: false, ragEnabled: false })
+const contactingIdle = ref(null)
 const switching = ref(false)
 let viewRequest = 0
 let indexRequest = 0
@@ -263,6 +277,9 @@ async function switchSession(s) {
       role: m.role,
       content: m.content,
       citations: m.attachments?.citations,
+      idleItems: m.attachments?.idleItems,
+      idleSearch: m.attachments?.idleSearch,
+      idleDrafts: m.attachments?.idleDrafts,
       actions: m.attachments?.actions,
       streaming: false
     }))
@@ -298,6 +315,8 @@ const quickPrompts = computed(() =>
     ? capabilities.value.enabled ? [
         '周末有哪些校园活动？',
         '我报名的活动有哪些？',
+        '找找可以用书交换的键盘',
+        '我想发布一件闲置',
         '请查资料：活动报名有哪些要求？'
       ] : [
         '周末有哪些活动？',
@@ -403,6 +422,9 @@ async function send() {
       if (!isCurrent()) return
       msg.content = (typeof answer === 'string' ? answer : answer.answer) || '暂时没有查到相关内容'
       msg.citations = answer?.citations
+      msg.idleItems = answer?.idleItems
+      msg.idleSearch = answer?.idleSearch
+      msg.idleDrafts = answer?.idleDrafts
       msg.actions = answer?.actions
       if (answer?.sessionId) {
         currentSession.value = { id: answer.sessionId }
@@ -527,6 +549,25 @@ async function confirmAction(action) {
     ElMessage.error(e.message || '报名未能提交')
   } finally {
     action.sending = false
+  }
+}
+
+async function contactIdle(card) {
+  if (contactingIdle.value !== null) return
+  contactingIdle.value = card.itemId
+  const view = viewRequest
+  try {
+    const item = await idleDetail(card.itemId)
+    if (view !== viewRequest) return
+    if (item.status !== 0 || item.auditStatus !== 1 || item.isOwner) {
+      ElMessage.warning('物品状态已变化，请打开详情查看')
+      return
+    }
+    await startChat(router, userStore, item.userId, { type: 'idle', id: card.itemId, title: item.title })
+  } catch (e) {
+    ElMessage.error(e.message || '暂时无法联系发布者')
+  } finally {
+    contactingIdle.value = null
   }
 }
 

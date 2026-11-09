@@ -4,9 +4,12 @@
   <div class="publish">
     <el-card>
       <template #header><h3>发布闲置物品</h3></template>
-      <el-alert type="info" :closable="false" title="发布后需管理员审核通过才会公开展示" style="margin-bottom: 16px" />
-      <AiAssistPanel :type="'idle'" type-name="闲置" @fill="applyAssist" />
-      <el-form :model="form" label-width="90px" style="max-width: 640px">
+      <el-alert v-if="!draftId" type="info" :closable="false" title="发布后需管理员审核通过才会公开展示" style="margin-bottom: 16px" />
+      <el-alert v-if="draftId && draftNotice" :type="draftBlocked ? 'warning' : 'info'" :closable="false"
+        :title="draftNotice" style="margin-bottom: 16px" />
+      <RouterLink v-if="draftId && draftBlocked" to="/ai/chat">返回校园向导</RouterLink>
+      <AiAssistPanel v-if="!draftBlocked" :type="'idle'" type-name="闲置" @fill="applyAssist" />
+      <el-form v-if="!draftBlocked" :model="form" label-width="90px" style="max-width: 640px">
         <el-form-item label="标题" required>
           <el-input v-model="form.title" maxlength="64" show-word-limit placeholder="如：九成新《数据结构》教材" />
         </el-form-item>
@@ -16,13 +19,13 @@
           </el-select>
         </el-form-item>
         <el-form-item label="物品描述">
-          <el-input v-model="form.description" type="textarea" :rows="4" placeholder="成色、入手渠道、瑕疵等" />
+          <el-input v-model="form.description" type="textarea" :rows="4" :maxlength="draftId ? 2000 : undefined" placeholder="成色、入手渠道、瑕疵等" />
         </el-form-item>
         <el-form-item label="期望换物">
-          <el-input v-model="form.expectItem" placeholder="想换什么？如：Java编程思想 / 篮球" />
+          <el-input v-model="form.expectItem" :maxlength="draftId ? 128 : undefined" placeholder="想换什么？如：Java编程思想 / 篮球" />
         </el-form-item>
         <el-form-item label="图片">
-          <UploadImg v-model="form.images" :max="9" />
+          <UploadImg v-model="form.images" :max="9" @uploaded="rememberImage" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="submitting" @click="submit">提交审核</el-button>
@@ -31,7 +34,7 @@
       </el-form>
 
       <!-- AI 智能估价：非编辑时显示 -->
-      <template v-if="!editId">
+      <template v-if="!editId && !draftBlocked">
         <el-divider />
         <div class="est-head">
           <h3>🤖 AI 智能估价</h3>
@@ -69,17 +72,40 @@ import { ElMessage } from 'element-plus'
 import UploadImg from '../../components/UploadImg.vue'
 import AiAssistPanel from '../../components/AiAssistPanel.vue'
 import { publishIdle, updateIdle, idleDetail, idleEstimate } from '../../api/idle'
+import { loadIdleDraft, confirmIdleDraft } from '../../api/ai'
 
 const router = useRouter()
 const route = useRoute()
 const editId = route.query.id ? Number(route.query.id) : 0
+const draftId = !editId && typeof route.query.draft === 'string' ? route.query.draft : ''
+const draftBlocked = ref(Boolean(draftId))
+const draftNotice = ref(draftId ? '正在加载草稿…' : '')
 const categories = ['教材书籍', '数码电子', '生活用品', '运动器材', '服饰鞋包', '其他']
 const form = reactive({ title: '', category: '', description: '', expectItem: '', images: [] })
+const imageIds = new Map()
 const submitting = ref(false)
 const estimating = ref(false)
 const estimate = ref(null)
 
 onMounted(async () => {
+  if (draftId) {
+    try {
+      const draft = await loadIdleDraft(draftId)
+      if (draft.state === 'SUBMITTED') {
+        draftNotice.value = '这份草稿已提交，可在我的闲置查看审核进度。'
+      } else if (draft.state === 'EXPIRED') {
+        draftNotice.value = '草稿已过期，请回到校园向导重新生成。'
+      } else {
+        const { title, category, description, expectItem } = draft
+        Object.assign(form, { title, category, description, expectItem })
+        draftNotice.value = '请核对向导生成的草稿，可修改文案或补充图片。提交后进入审核流程。'
+        draftBlocked.value = false
+      }
+    } catch (e) {
+      draftNotice.value = e.message || '加载草稿失败'
+    }
+    return
+  }
   if (!editId) return
   try {
     const d = await idleDetail(editId)
@@ -97,6 +123,10 @@ onMounted(async () => {
 function applyAssist(data) {
   if (data.title) form.title = data.title
   if (data.content) form.description = data.content
+}
+
+function rememberImage({ url, resourceId }) {
+  if (draftId) imageIds.set(url, resourceId)
 }
 
 /** AI 智能估价 */
@@ -121,6 +151,7 @@ async function doEstimate() {
   }
 }
 async function submit() {
+  if (submitting.value || draftBlocked.value) return
   if (!form.title.trim()) {
     ElMessage.warning('请填写标题')
     return
@@ -130,11 +161,18 @@ async function submit() {
     if (editId) {
       await updateIdle(editId, form)
       ElMessage.success('已保存，重新进入审核')
+    } else if (draftId) {
+      const { images, ...fields } = form
+      await confirmIdleDraft(draftId, { ...fields, imageIds: images.map(url => imageIds.get(url)) })
+      ElMessage.success('已提交，可在我的闲置查看审核进度')
     } else {
       await publishIdle(form)
       ElMessage.success('已提交，待管理员审核')
     }
     router.push('/profile')
+  } catch (e) {
+    if (!draftId) throw e
+    ElMessage.error(e.message || '草稿提交失败，请重试')
   } finally {
     submitting.value = false
   }

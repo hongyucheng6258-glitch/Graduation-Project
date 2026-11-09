@@ -4,8 +4,11 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.ai.gateway.AiConfigHolder;
 import com.campus.platform.module.ai.rag.KnowledgeService;
+import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.vo.IdleGuideCard;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +35,13 @@ public class AgentService {
             你是梧桐校园向导，用简体中文回答。
             查询当前活动、活动详情或学生自己的报名情况时，先调用可用的校园工具，再根据结果回答。
             校园规定、办事指南和文档内容使用知识库查询。一个问题涉及规则和实时数据时，两类信息分别查询后回答。
-            查询最近公告、闲置、失物或动态时使用 get_campus_updates。
+            查询最近公告、失物或动态时使用 get_campus_updates。
+            找闲置时使用 search_idle_items，物品关键词和期望换物分别传 keyword 和 exchange。
+            查询某个闲置的情况或想联系发布者时先调用 get_idle_detail。
+            用户说第几个时，传 resultNumber，按最近一次闲置搜索卡片的编号查详情。不要根据名称猜 ID。
+            按工具的编号描述闲置结果，不要重新排序。闲置模块当前支持互换，不能按现金价格筛选。
+            学生明确要求发布闲置时，使用 prepare_idle_publish 生成草稿。如果缺少物品名称，先询问。
+            发布草稿需要学生在页面补充、核对并提交。不要编造物品事实，不要声称已发布或已审核。
             对前几轮活动追问地点、时间、名额或报名状态时，使用此前记录的 ID 再调用 get_activity_detail。
             即使历史回答中有这些信息，也先查询当前值，因为活动信息随时可能变化。
             学生明确要求报名活动时，使用 prepare_activity_signup 生成确认卡。
@@ -49,11 +58,12 @@ public class AgentService {
     private final AiConfigHolder config;
     private final JdbcTemplate jdbc;
     private final ObjectProvider<KnowledgeService> knowledge;
+    private final IdleService idle;
     private final Map<String, AgentTool> tools;
 
     public AgentService(AgentModelClient model, ObjectMapper json, AgentQuota quota, AgentConversation conversation,
                         AgentPromptService prompts, AiConfigHolder config, JdbcTemplate jdbc, List<AgentToolSource> sources,
-                        ObjectProvider<KnowledgeService> knowledge) {
+                        ObjectProvider<KnowledgeService> knowledge, IdleService idle) {
         this.model = model;
         this.json = json;
         this.quota = quota;
@@ -62,6 +72,7 @@ public class AgentService {
         this.config = config;
         this.jdbc = jdbc;
         this.knowledge = knowledge;
+        this.idle = idle;
         this.tools = sources.stream().flatMap(source -> source.tools().stream())
                 .collect(Collectors.toUnmodifiableMap(AgentTool::name, Function.identity()));
     }
@@ -99,10 +110,15 @@ public class AgentService {
         for (var previous : conversation.history(userId, sessionId)) {
             String role = previous.getRole();
             if ("context".equals(role)) {
-                messages.add(message("assistant", "此前工具查到的活动 ID：" + previous.getContent()));
+                restoreActivities(previous.getContent(), messages);
             } else if ("user".equals(role) || "assistant".equals(role)) {
                 messages.add(message(role, previous.getContent()));
             }
+        }
+        state.lastIdleSearch = restoreIdleSearch(conversation.latestIdleSearch(sessionId));
+        if (!state.lastIdleSearch.isEmpty()) {
+            messages.add(message("assistant", "最近一次闲置搜索卡片有 " + state.lastIdleSearch.size()
+                    + " 个结果。用户按编号追问时仅使用 resultNumber。"));
         }
         messages.add(message("user", question));
         List<ObjectNode> definitions = tools.values().stream().map(tool -> tool.definition(json)).toList();
@@ -115,11 +131,13 @@ public class AgentService {
                 state.evidence.forEach(source -> knowledge.getObject().verifyVersion(userId, source.id(), source.version()));
                 checkDeadline(deadline);
                 String answer = assistant.path("content").asText();
-                long id = conversation.save(userId, sessionId, question, answer,
-                        state.activities.isEmpty() ? "" : state.activities.toString(), List.copyOf(state.citations),
-                        state.actions.stream().map(ActivitySignupActions.Proposal::id).toList());
+                var idleIds = List.copyOf(state.idleCardIds);
+                var idleItems = idle.guideCards(userId, idleIds);
+                long id = conversation.save(userId, sessionId, question, answer, references(state),
+                        List.copyOf(state.citations), state.actions.stream().map(ActivitySignupActions.Proposal::id).toList(),
+                        idleIds, state.searchedIdle, state.idleDrafts.stream().map(IdlePublishDrafts.Draft::id).toList());
                 return new Reply(answer, List.copyOf(state.toolsUsed), id, List.copyOf(state.citations), prompt.id(),
-                        List.copyOf(state.actions));
+                        List.copyOf(state.actions), idleItems, state.searchedIdle, List.copyOf(state.idleDrafts));
             }
             if (round == MAX_ROUNDS - 1 || attempted + calls.size() > MAX_TOOL_CALLS) {
                 throw new BizException(ResultCode.AI_INVOKE_FAIL, "校园查询超过工具调用上限，请缩小问题范围");
@@ -147,6 +165,14 @@ public class AgentService {
         }
         try {
             var args = json.reader().with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(arguments);
+            if (IdleAgentTools.DETAIL.equals(name) && args instanceof ObjectNode object && object.has("resultNumber")) {
+                var number = object.remove("resultNumber");
+                if (object.has("itemId") || !number.isIntegralNumber() || !number.canConvertToInt()
+                        || number.asInt() < 1 || number.asInt() > state.lastIdleSearch.size()) {
+                    return error("没有对应的闲置结果编号，请先搜索或说明要查看的物品");
+                }
+                object.put("itemId", state.lastIdleSearch.get(number.asInt() - 1));
+            }
             var result = tool.run(userId, args, deadline);
             state.toolsUsed.add(name);
             if ("search_knowledge".equals(name)) {
@@ -163,12 +189,70 @@ public class AgentService {
                 state.activities.add(result.path("activityId").asLong());
             } else if ("prepare_activity_signup".equals(name)) {
                 state.actions.add(json.treeToValue(result, ActivitySignupActions.Proposal.class));
+            } else if (IdleAgentTools.SEARCH.equals(name)) {
+                state.lastIdleSearch = idleIdsFromItems(result.path("items"));
+                state.searchedIdle = true;
+                state.idleCardIds.clear();
+                state.idleCardIds.addAll(state.lastIdleSearch);
+            } else if (IdleAgentTools.DETAIL.equals(name) && !state.searchedIdle) {
+                state.idleCardIds.add(result.path("itemId").asLong());
+            } else if (IdlePublishDrafts.PREPARE.equals(name)) {
+                state.idleDrafts.add(json.treeToValue(result, IdlePublishDrafts.Draft.class));
             }
             return result.toString();
         } catch (JsonProcessingException e) {
             return error("工具参数必须为有效的 JSON");
         } catch (BizException e) {
             return error(e.getMessage());
+        }
+    }
+
+    private List<Long> idleIdsFromItems(JsonNode items) {
+        List<Long> ids = new ArrayList<>();
+        items.forEach(item -> ids.add(item.path("itemId").asLong()));
+        return List.copyOf(ids);
+    }
+
+    private String references(RunState state) {
+        if (state.activities.isEmpty() && !state.searchedIdle) {
+            return "";
+        }
+        var context = json.createObjectNode();
+        context.set("activities", json.valueToTree(state.activities));
+        if (state.searchedIdle) {
+            context.set("idleSearch", json.valueToTree(state.lastIdleSearch));
+        }
+        return context.toString();
+    }
+
+    private void restoreActivities(String content, List<ObjectNode> messages) {
+        try {
+            var previous = json.readTree(content);
+            if (previous == null) {
+                return;
+            }
+            var activities = previous.isArray() ? previous : previous.path("activities");
+            if (activities.isArray() && !activities.isEmpty()) {
+                messages.add(message("assistant", "此前工具查到的活动 ID：" + activities));
+            }
+        } catch (JsonProcessingException e) {
+            log.warn("跳过无法解析的向导上下文");
+        }
+    }
+
+    private List<Long> restoreIdleSearch(String content) {
+        if (content.isEmpty()) return List.of();
+        try {
+            List<Long> ids = new ArrayList<>();
+            json.readTree(content).path("idleSearch").forEach(value -> {
+                if (value.isIntegralNumber() && value.canConvertToLong() && value.asLong() > 0) {
+                    ids.add(value.asLong());
+                }
+            });
+            return List.copyOf(ids);
+        } catch (JsonProcessingException e) {
+            log.warn("跳过无法解析的闲置搜索上下文");
+            return List.of();
         }
     }
 
@@ -192,11 +276,16 @@ public class AgentService {
         final LinkedHashSet<SourceVersion> evidence = new LinkedHashSet<>();
         final LinkedHashSet<Long> activities = new LinkedHashSet<>();
         final List<ActivitySignupActions.Proposal> actions = new ArrayList<>();
+        final LinkedHashSet<Long> idleCardIds = new LinkedHashSet<>();
+        final List<IdlePublishDrafts.Draft> idleDrafts = new ArrayList<>();
+        List<Long> lastIdleSearch = List.of();
+        boolean searchedIdle;
     }
 
     private record SourceVersion(long id, String version) {}
 
     public record Citation(long documentId, String fileName, int page) {}
     public record Reply(String answer, List<String> toolsUsed, long sessionId, List<Citation> citations, long promptVersion,
-                        List<ActivitySignupActions.Proposal> actions) {}
+                        List<ActivitySignupActions.Proposal> actions, List<IdleGuideCard> idleItems, boolean idleSearch,
+                        List<IdlePublishDrafts.Draft> idleDrafts) {}
 }

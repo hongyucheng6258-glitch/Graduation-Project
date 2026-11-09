@@ -2,6 +2,7 @@ package com.campus.platform.module.chat.service;
 
 import cn.hutool.core.util.StrUtil;
 import com.campus.platform.common.BizException;
+import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.idle.entity.IdleItem;
@@ -13,6 +14,8 @@ import com.campus.platform.module.lostfound.mapper.LostFoundMapper;
 import com.campus.platform.module.post.mapper.PostMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+
+import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
@@ -30,7 +33,10 @@ public class ChatContextValidator {
         return switch (contextType) {
             case "idle" -> {
                 IdleItem value = idleItemMapper.selectById(contextId);
-                requireTarget(value == null ? null : value.getUserId(), targetUserId);
+                if (value == null || !Objects.equals(value.getAuditStatus(), Constants.AUDIT_PASS)) {
+                    throw new BizException(ResultCode.NOT_FOUND, "闲置不存在或暂不可见");
+                }
+                requireTarget(value.getUserId(), targetUserId);
                 yield value.getTitle();
             }
             case "lostfound" -> {
