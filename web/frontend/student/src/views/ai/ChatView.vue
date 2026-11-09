@@ -59,6 +59,18 @@
         </el-button>
       </AssistantCard>
       <AssistantCitations :sources="m.citations" @open="openCitation" />
+      <AssistantCard v-for="draft in m.activityDrafts || []" :key="draft.id" class="activity-draft-card">
+        <strong>活动发布草稿</strong>
+        <p>{{ draft.title }}</p>
+        <p v-if="draft.location" class="section-sub">地点 {{ draft.location }}</p>
+        <template v-if="draft.state === 'SUBMITTED'">
+          <p role="status">{{ activityDraftStatus(draft.auditStatus) }}</p>
+          <p v-if="draft.auditStatus === 2 && draft.auditReason">{{ draft.auditReason }}</p>
+          <RouterLink :to="{ name: 'MySignup', query: { tab: 'published' } }">查看我的活动发布</RouterLink>
+        </template>
+        <p v-else-if="draft.state === 'EXPIRED'" role="status">草稿已过期，请重新生成。</p>
+        <RouterLink v-else :to="{ name: 'ActivityPublish', query: { draft: draft.id } }">编辑并提交活动</RouterLink>
+      </AssistantCard>
       <AssistantCard v-for="action in m.actions || []" :key="action.id">
         <strong>确认活动报名</strong>
         <p>{{ action.activityTitle }}</p>
@@ -238,6 +250,7 @@ async function switchSession(s) {
       idleItems: m.attachments?.idleItems,
       idleSearch: m.attachments?.idleSearch,
       idleDrafts: m.attachments?.idleDrafts,
+      activityDrafts: m.attachments?.activityDrafts,
       idleAppointments: m.attachments?.idleAppointments,
       resources: m.attachments?.resources,
       actions: m.attachments?.actions,
@@ -275,6 +288,7 @@ const quickPrompts = computed(() =>
     ? capabilities.value.enabled ? [
         '周末有哪些校园活动？',
         '我报名的活动有哪些？',
+        '我想发布一个校园活动',
         '找找可以用书交换的键盘',
         '我想发布一件闲置',
         '请查资料：活动报名有哪些要求？'
@@ -385,6 +399,7 @@ async function send() {
       msg.idleItems = answer?.idleItems
       msg.idleSearch = answer?.idleSearch
       msg.idleDrafts = answer?.idleDrafts
+      msg.activityDrafts = answer?.activityDrafts
       msg.idleAppointments = answer?.idleAppointments
       msg.resources = answer?.resources
       msg.actions = answer?.actions
@@ -578,6 +593,10 @@ async function refreshSessionList() {
 
 function scrollBottom() {
   assistantShell.value?.scrollToBottom()
+}
+
+function activityDraftStatus(status) {
+  return ['活动已提交，等待审核。', '活动已审核通过。', '活动审核未通过。'][status] || '活动已提交。'
 }
 </script>
 

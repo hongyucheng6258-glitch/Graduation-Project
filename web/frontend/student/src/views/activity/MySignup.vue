@@ -108,14 +108,14 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import { mySignups, myActivities, activityMembers, handleMember as handleMemberApi } from '../../api/activity'
 import { formatTime } from '../../utils/date'
 
 const router = useRouter()
-const tab = ref('signup')
+const tab = ref(useRoute().query.tab === 'published' ? 'published' : 'signup')
 const loading = ref(false)
 const signups = ref([])
 const signupPage = ref(1)

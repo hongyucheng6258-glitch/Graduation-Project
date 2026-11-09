@@ -89,6 +89,14 @@ export function confirmAgentAction(id) {
   return request.post(`/ai/agent/actions/${id}/confirm`, null, { silent: true })
 }
 
+export function loadActivityDraft(id) {
+  return request.get(`/ai/agent/activity-drafts/${encodeURIComponent(id)}`, { silent: true })
+}
+
+export function confirmActivityDraft(id, form) {
+  return request.post(`/ai/agent/activity-drafts/${encodeURIComponent(id)}/confirm`, form, { silent: true, timeout: 65000 })
+}
+
 export function loadIdleDraft(id) {
   return request.get(`/ai/agent/idle-drafts/${encodeURIComponent(id)}`, { silent: true })
 }

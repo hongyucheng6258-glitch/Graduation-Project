@@ -26,6 +26,7 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.ResultCode;
+import com.campus.platform.config.SystemConfigHolder;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
 import com.campus.platform.module.user.mapper.UserMapper;
@@ -56,9 +57,17 @@ public class ActivityService {
     private final SignTokenUtils signTokenUtils;
     private final SensitiveWordService sensitiveWordService;
     private final ContentAiAuditService contentAiAuditService;
+    private final SystemConfigHolder systemConfigHolder;
+
+    public void ensurePublishingEnabled() {
+        if (!systemConfigHolder.isActivityPublishEnabled()) {
+            throw new BizException(ResultCode.FORBIDDEN, "当前已关闭活动发布，请联系管理员");
+        }
+    }
 
     /** 发布活动（待审核） */
     public Activity publish(Long userId, ActivityPublishDTO dto) {
+        ensurePublishingEnabled();
         if (sensitiveWordService.contains(dto.getTitle()) || sensitiveWordService.contains(dto.getDescription())) {
             throw new BizException(ResultCode.SENSITIVE_WORD);
         }

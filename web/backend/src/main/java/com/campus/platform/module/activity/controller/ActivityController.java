@@ -12,12 +12,9 @@ import com.campus.platform.module.activity.dto.SignupDTO;
 import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.activity.vo.MemberVO;
 
-import com.campus.platform.common.BizException;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.R;
-import com.campus.platform.common.ResultCode;
 import com.campus.platform.common.UserContext;
-import com.campus.platform.config.SystemConfigHolder;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +27,6 @@ import java.util.List;
 public class ActivityController {
     private final ActivityService activityService;
     private final ActivityRecommendService activityRecommendService;
-    private final SystemConfigHolder systemConfigHolder;
 
     /** 活动 AI 智能推荐 */
     @PostMapping("/recommend")
@@ -40,9 +36,6 @@ public class ActivityController {
 
     @PostMapping
     public R<Activity> publish(@Valid @RequestBody ActivityPublishDTO dto) {
-        if (!systemConfigHolder.isActivityPublishEnabled()) {
-            throw new BizException(ResultCode.FORBIDDEN, "当前已关闭活动发布，请联系管理员");
-        }
         return R.ok(activityService.publish(UserContext.getUid(), dto));
     }
 

@@ -1,0 +1,107 @@
+const assert = require('node:assert/strict')
+const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright')
+
+const fixture = JSON.parse(process.env.CAMPUS_ACTIVITY_FIXTURE)
+const studentUrl = (process.env.CAMPUS_STUDENT_URL || 'http://127.0.0.1:5173').replace(/\/$/, '')
+const adminUrl = (process.env.CAMPUS_ADMIN_URL || 'http://127.0.0.1:5174').replace(/\/$/, '')
+
+async function result(response) {
+  const payload = await response.json()
+  assert.equal(payload.code, 200, payload.message)
+  return payload.data
+}
+
+async function main() {
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE })
+  try {
+    const student = await browser.newContext()
+    await student.addInitScript(token => {
+      localStorage.setItem('token', token)
+      localStorage.setItem('userInfo', JSON.stringify({ nickname: '活动验收学生' }))
+    }, fixture.studentToken)
+    const page = await student.newPage()
+    const capabilities = page.waitForResponse(r => r.url().endsWith('/api/ai/agent/capabilities'))
+    await page.goto(`${studentUrl}/ai/chat`)
+    assert.equal((await result(await capabilities)).enabled, true)
+    await page.getByRole('tab', { name: /校园向导/ }).click()
+    const asked = page.waitForResponse(r => r.url().endsWith('/api/ai/agent/ask'))
+    await page.locator('.ai-input input').fill(fixture.question)
+    await page.getByRole('button', { name: '发送' }).click()
+    const draft = (await result(await asked)).activityDrafts?.[0]
+    assert.ok(draft, 'The student assistant did not create an activity draft')
+    const draftLink = page.getByRole('link', { name: '编辑并提交活动' })
+    assert.equal(draft.title, fixture.originalTitle)
+    await draftLink.click()
+    await page.waitForURL(`${studentUrl}/activity/publish?draft=${draft.id}`)
+    const title = page.getByRole('textbox', { name: '活动标题' })
+    await page.reload()
+    await page.waitForFunction(expected => [...document.querySelectorAll('input')].some(input => input.value === expected), fixture.originalTitle)
+    assert.equal(await title.inputValue(), fixture.originalTitle)
+    assert.equal(await page.getByRole('textbox', { name: '地点', exact: true }).inputValue(), fixture.location)
+    assert.equal(await page.getByRole('spinbutton', { name: '人数上限', exact: true }).inputValue(), '20')
+    for (const date of [fixture.startTime, fixture.endTime]) {
+      assert.ok(await page.locator('input').evaluateAll((inputs, expected) => inputs.some(input => input.value === expected), date))
+    }
+    await title.fill(fixture.editedTitle)
+    if (fixture.adminToken) await page.getByRole('textbox', { name: '活动描述' }).fill('校园阅读交流，校外领取方式待核对')
+    const confirmed = page.waitForResponse(r => r.url().endsWith(`/activity-drafts/${draft.id}/confirm`))
+    await page.getByRole('button', { name: '提交审核' }).click()
+    const receipt = await result(await confirmed)
+    assert.equal(receipt.state, 'SUBMITTED')
+    assert.equal(receipt.title, fixture.editedTitle)
+    assert.equal(receipt.location, fixture.location)
+    assert.equal(receipt.maxMembers, 20)
+    assert.equal(receipt.startTime.replace('T', ' '), fixture.startTime)
+    assert.equal(receipt.endTime.replace('T', ' '), fixture.endTime)
+    assert.ok(!receipt.signupDeadline)
+    await page.waitForURL(url => url.pathname === '/activity/my-signup')
+    assert.equal(await page.getByRole('tab', { name: '我的发布' }).getAttribute('aria-selected'), 'true')
+    await page.getByText(fixture.editedTitle, { exact: true }).waitFor()
+    await page.goto(`${studentUrl}/ai/chat`)
+    await page.getByRole('tab', { name: /校园向导/ }).click()
+    await page.getByText(fixture.editedTitle, { exact: true }).waitFor()
+    assert.equal(await draftLink.count(), 0)
+    console.log('PASS student browser opens prefilled activity form, submits edits, and restores receipt')
+    if (fixture.adminToken) await reviewInBrowser(browser, page, receipt.activityId)
+  } finally {
+    await browser.close()
+  }
+}
+
+async function reviewInBrowser(browser, studentPage, activityId) {
+  const admin = await browser.newContext()
+  await admin.addInitScript(token => {
+    localStorage.setItem('admin_token', token)
+    localStorage.setItem('admin_info', JSON.stringify({ nickname: '活动验收审核员', role: 'audit' }))
+  }, fixture.adminToken)
+  const page = await admin.newPage()
+  await page.goto(`${adminUrl}/admin/assistant`)
+  const asked = page.waitForResponse(r => r.url().endsWith('/api/admin/assistant/ask'))
+  await page.getByRole('textbox', { name: '向管理助手提问' }).fill(`请查看待审核活动编号 ${activityId}`)
+  await page.getByRole('button', { name: '发送' }).click()
+  const turn = (await result(await asked)).turn
+  assert.equal(turn.records[0]?.id, String(activityId))
+  const evidence = page.getByRole('region', { name: '业务证据' })
+  const link = evidence.getByRole('link', { name: '打开活动审核记录' })
+  assert.equal(await link.getAttribute('href'), `/admin/audit/activity?record=${activityId}`)
+  await link.click()
+  await page.getByText(fixture.editedTitle, { exact: true }).waitFor()
+  await page.goBack()
+  await page.getByRole('button', { name: '准备审核' }).click()
+  const dialog = page.getByRole('dialog', { name: '准备活动审核' })
+  await dialog.getByText('驳回', { exact: true }).click()
+  await dialog.getByRole('textbox', { name: '审核理由' }).fill('请核对活动地点和校内安排')
+  await dialog.getByRole('button', { name: '生成确认卡' }).click()
+  const card = evidence.getByRole('region', { name: '审核确认与回执' })
+  await card.getByRole('button', { name: '确认执行审核' }).waitFor()
+  await page.reload()
+  await card.getByRole('button', { name: '确认执行审核' }).click()
+  await card.getByRole('status').filter({ hasText: '发布者已收到通知' }).waitFor()
+  await studentPage.reload()
+  await studentPage.getByRole('tab', { name: /校园向导/ }).click()
+  await studentPage.getByText('活动审核未通过。', { exact: true }).waitFor()
+  await studentPage.getByText('请核对活动地点和校内安排', { exact: true }).waitFor()
+  console.log('PASS same activity in two browsers: evidence, restored confirmation, rejection receipt and student status')
+}
+
+main().catch(error => { console.error(error.stack); process.exitCode = 1 })

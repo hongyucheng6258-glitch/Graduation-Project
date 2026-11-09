@@ -26,6 +26,7 @@ services:
       - ./web/backend/src/main/resources/db/2026-11-09-admin-assistant-review.sql:/migrations/07-admin-assistant-review.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-09-admin-assistant-notice.sql:/migrations/08-admin-assistant-notice.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-09-idle-audit-revision.sql:/migrations/09-idle-audit-revision.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-09-agent-activity-draft.sql:/migrations/10-activity-draft.sql:ro
     command:
       - /bin/sh
       - -ec

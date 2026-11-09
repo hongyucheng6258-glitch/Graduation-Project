@@ -4,6 +4,7 @@ import com.campus.platform.common.R;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.common.UserContext;
+import com.campus.platform.module.activity.dto.ActivityPublishDTO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -20,17 +21,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class AgentController {
     private final AgentService agent;
     private final ActivitySignupActions actions;
+    private final ActivityPublishDrafts activityDrafts;
     private final IdlePublishDrafts idleDrafts;
     private final IdleAppointmentActions idleAppointments;
     private final boolean enabled;
     private final boolean ragEnabled;
 
-    public AgentController(AgentService agent, ActivitySignupActions actions, IdlePublishDrafts idleDrafts,
+    public AgentController(AgentService agent, ActivitySignupActions actions, ActivityPublishDrafts activityDrafts,
+                           IdlePublishDrafts idleDrafts,
                            IdleAppointmentActions idleAppointments,
                            @Value("${campus.agent.enabled:false}") boolean enabled,
                            @Value("${campus.agent.rag.enabled:false}") boolean ragEnabled) {
         this.agent = agent;
         this.actions = actions;
+        this.activityDrafts = activityDrafts;
         this.idleDrafts = idleDrafts;
         this.idleAppointments = idleAppointments;
         this.enabled = enabled;
@@ -52,6 +56,19 @@ public class AgentController {
     public R<ActivitySignupActions.Confirmation> confirm(@PathVariable String id) {
         checkEnabled();
         return R.ok(actions.confirm(UserContext.getUid(), id));
+    }
+
+    @GetMapping("/activity-drafts/{id}")
+    public R<ActivityPublishDrafts.Draft> activityDraft(@PathVariable String id) {
+        checkEnabled();
+        return R.ok(activityDrafts.get(UserContext.getUid(), id));
+    }
+
+    @PostMapping("/activity-drafts/{id}/confirm")
+    public R<ActivityPublishDrafts.Draft> confirmActivityDraft(@PathVariable String id,
+                                                             @Valid @RequestBody ActivityPublishDTO request) {
+        checkEnabled();
+        return R.ok(activityDrafts.confirm(UserContext.getUid(), id, request));
     }
 
     @GetMapping("/idle-drafts/{id}")

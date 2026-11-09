@@ -28,14 +28,16 @@ public class AgentMessageAttachments {
     private final IdlePublishDrafts idleDrafts;
     private final IdleAppointmentActions idleAppointments;
     private final CampusResourceTools resources;
+    private final ActivityPublishDrafts activityDrafts;
 
     public void save(long messageId, List<AgentService.Citation> citations, List<String> actionIds) {
-        save(messageId, new Stored(citations, actionIds, List.of(), false, List.of(), List.of(), List.of()));
+        save(messageId, new Stored(citations, actionIds, List.of(), false, List.of(), List.of(), List.of(), List.of()));
     }
 
     void save(long messageId, Stored stored) {
         if (stored.citations().isEmpty() && stored.actionIds().isEmpty() && stored.idleIds().isEmpty()
-                && stored.idleDraftIds().isEmpty() && stored.idleAppointmentIds().isEmpty() && stored.resourceRefs().isEmpty()) {
+                && stored.idleDraftIds().isEmpty() && stored.idleAppointmentIds().isEmpty() && stored.resourceRefs().isEmpty()
+                && stored.activityDraftIds().isEmpty()) {
             return;
         }
         try {
@@ -65,8 +67,10 @@ public class AgentMessageAttachments {
                         : values.idleDraftIds().stream().map(id -> idleDrafts.find(uid, id)).filter(Objects::nonNull).toList();
                 var appointments = values.idleAppointmentIds() == null ? List.<IdleAppointmentActions.Card>of()
                         : values.idleAppointmentIds().stream().map(id -> idleAppointments.card(uid, id)).filter(Objects::nonNull).toList();
+                var activityCards = values.activityDraftIds() == null ? List.<ActivityPublishDrafts.Draft>of()
+                        : values.activityDraftIds().stream().map(id -> activityDrafts.find(uid, id)).filter(Objects::nonNull).toList();
                 message.setAttachments(new View(visible, cards, idleItems, values.idleSearch(), drafts, appointments,
-                        resources.cards(values.resourceRefs())));
+                        resources.cards(values.resourceRefs()), activityCards));
             } catch (JsonProcessingException e) {
                 log.warn("无法读取向导消息 {} 的附件", message.getId());
             }
@@ -87,8 +91,9 @@ public class AgentMessageAttachments {
 
     record Stored(List<AgentService.Citation> citations, List<String> actionIds, List<Long> idleIds,
                   boolean idleSearch, List<String> idleDraftIds, List<String> idleAppointmentIds,
-                  List<CampusResourceTools.Ref> resourceRefs) {}
+                  List<CampusResourceTools.Ref> resourceRefs, List<String> activityDraftIds) {}
     public record View(List<AgentService.Citation> citations, List<ActivitySignupActions.Card> actions,
                        List<IdleGuideCard> idleItems, boolean idleSearch, List<IdlePublishDrafts.Draft> idleDrafts,
-                       List<IdleAppointmentActions.Card> idleAppointments, List<CampusResourceTools.Card> resources) {}
+                       List<IdleAppointmentActions.Card> idleAppointments, List<CampusResourceTools.Card> resources,
+                       List<ActivityPublishDrafts.Draft> activityDrafts) {}
 }
