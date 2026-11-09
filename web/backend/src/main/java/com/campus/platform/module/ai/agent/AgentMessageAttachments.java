@@ -27,19 +27,20 @@ public class AgentMessageAttachments {
     private final IdleService idle;
     private final IdlePublishDrafts idleDrafts;
     private final IdleAppointmentActions idleAppointments;
+    private final CampusResourceTools resources;
 
     public void save(long messageId, List<AgentService.Citation> citations, List<String> actionIds) {
-        save(messageId, citations, actionIds, List.of(), false, List.of(), List.of());
+        save(messageId, new Stored(citations, actionIds, List.of(), false, List.of(), List.of(), List.of()));
     }
 
-    public void save(long messageId, List<AgentService.Citation> citations, List<String> actionIds, List<Long> idleIds,
-                     boolean idleSearch, List<String> idleDraftIds, List<String> idleAppointmentIds) {
-        if (citations.isEmpty() && actionIds.isEmpty() && idleIds.isEmpty() && idleDraftIds.isEmpty() && idleAppointmentIds.isEmpty()) {
+    void save(long messageId, Stored stored) {
+        if (stored.citations().isEmpty() && stored.actionIds().isEmpty() && stored.idleIds().isEmpty()
+                && stored.idleDraftIds().isEmpty() && stored.idleAppointmentIds().isEmpty() && stored.resourceRefs().isEmpty()) {
             return;
         }
         try {
             jdbc.update("INSERT INTO agent_message_attachment(message_id,body) VALUES(?,?)", messageId,
-                    json.writeValueAsString(new Stored(citations, actionIds, idleIds, idleSearch, idleDraftIds, idleAppointmentIds)));
+                    json.writeValueAsString(stored));
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("无法保存向导消息附件", e);
         }
@@ -64,7 +65,8 @@ public class AgentMessageAttachments {
                         : values.idleDraftIds().stream().map(id -> idleDrafts.find(uid, id)).filter(Objects::nonNull).toList();
                 var appointments = values.idleAppointmentIds() == null ? List.<IdleAppointmentActions.Card>of()
                         : values.idleAppointmentIds().stream().map(id -> idleAppointments.card(uid, id)).filter(Objects::nonNull).toList();
-                message.setAttachments(new View(visible, cards, idleItems, values.idleSearch(), drafts, appointments));
+                message.setAttachments(new View(visible, cards, idleItems, values.idleSearch(), drafts, appointments,
+                        resources.cards(values.resourceRefs())));
             } catch (JsonProcessingException e) {
                 log.warn("无法读取向导消息 {} 的附件", message.getId());
             }
@@ -83,9 +85,10 @@ public class AgentMessageAttachments {
         }
     }
 
-    private record Stored(List<AgentService.Citation> citations, List<String> actionIds, List<Long> idleIds,
-                          boolean idleSearch, List<String> idleDraftIds, List<String> idleAppointmentIds) {}
+    record Stored(List<AgentService.Citation> citations, List<String> actionIds, List<Long> idleIds,
+                  boolean idleSearch, List<String> idleDraftIds, List<String> idleAppointmentIds,
+                  List<CampusResourceTools.Ref> resourceRefs) {}
     public record View(List<AgentService.Citation> citations, List<ActivitySignupActions.Card> actions,
                        List<IdleGuideCard> idleItems, boolean idleSearch, List<IdlePublishDrafts.Draft> idleDrafts,
-                       List<IdleAppointmentActions.Card> idleAppointments) {}
+                       List<IdleAppointmentActions.Card> idleAppointments, List<CampusResourceTools.Card> resources) {}
 }

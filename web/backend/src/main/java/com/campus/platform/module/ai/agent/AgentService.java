@@ -35,7 +35,9 @@ public class AgentService {
             你是梧桐校园向导，用简体中文回答。
             查询当前活动、活动详情或学生自己的报名情况时，先调用可用的校园工具，再根据结果回答。
             校园规定、办事指南和文档内容使用知识库查询。一个问题涉及规则和实时数据时，两类信息分别查询后回答。
-            查询最近公告、失物或动态时使用 get_campus_updates。
+            查询最近公告或动态时使用 get_campus_updates。
+            查失物招领、学习搭子或校园互助问答时调用 search_campus_resources，kind 分别用 lost、partner、qa。
+            查询已有校园互助帖子使用 qa；询问校园政策或办事规定使用知识库。告诉学生可通过结果卡片打开原始页面。
             找闲置时使用 search_idle_items，物品关键词和期望换物分别传 keyword 和 exchange。
             查询某个闲置的情况或想联系发布者时先调用 get_idle_detail。
             用户说第几个时，传 resultNumber，按最近一次闲置搜索卡片的编号查详情。不要根据名称猜 ID。
@@ -61,11 +63,12 @@ public class AgentService {
     private final JdbcTemplate jdbc;
     private final ObjectProvider<KnowledgeService> knowledge;
     private final IdleService idle;
+    private final CampusResourceTools resources;
     private final Map<String, AgentTool> tools;
 
     public AgentService(AgentModelClient model, ObjectMapper json, AgentQuota quota, AgentConversation conversation,
                         AgentPromptService prompts, AiConfigHolder config, JdbcTemplate jdbc, List<AgentToolSource> sources,
-                        ObjectProvider<KnowledgeService> knowledge, IdleService idle) {
+                        ObjectProvider<KnowledgeService> knowledge, IdleService idle, CampusResourceTools resources) {
         this.model = model;
         this.json = json;
         this.quota = quota;
@@ -75,6 +78,7 @@ public class AgentService {
         this.jdbc = jdbc;
         this.knowledge = knowledge;
         this.idle = idle;
+        this.resources = resources;
         this.tools = sources.stream().flatMap(source -> source.tools().stream())
                 .collect(Collectors.toUnmodifiableMap(AgentTool::name, Function.identity()));
     }
@@ -135,13 +139,15 @@ public class AgentService {
                 String answer = assistant.path("content").asText();
                 var idleIds = List.copyOf(state.idleCardIds);
                 var idleItems = idle.guideCards(userId, idleIds);
-                long id = conversation.save(userId, sessionId, question, answer, references(state),
-                        List.copyOf(state.citations), state.actions.stream().map(ActivitySignupActions.Proposal::id).toList(),
-                        idleIds, state.searchedIdle, state.idleDrafts.stream().map(IdlePublishDrafts.Draft::id).toList(),
-                        state.idleAppointments.stream().map(IdleAppointmentActions.Card::id).toList());
+                var stored = new AgentMessageAttachments.Stored(List.copyOf(state.citations),
+                        state.actions.stream().map(ActivitySignupActions.Proposal::id).toList(), idleIds, state.searchedIdle,
+                        state.idleDrafts.stream().map(IdlePublishDrafts.Draft::id).toList(),
+                        state.idleAppointments.stream().map(IdleAppointmentActions.Card::id).toList(), List.copyOf(state.resources));
+                var resourceCards = resources.cards(stored.resourceRefs());
+                long id = conversation.save(userId, sessionId, question, answer, references(state), stored);
                 return new Reply(answer, List.copyOf(state.toolsUsed), id, List.copyOf(state.citations), prompt.id(),
                         List.copyOf(state.actions), idleItems, state.searchedIdle, List.copyOf(state.idleDrafts),
-                        List.copyOf(state.idleAppointments));
+                        List.copyOf(state.idleAppointments), resourceCards);
             }
             if (round == MAX_ROUNDS - 1 || attempted + calls.size() > MAX_TOOL_CALLS) {
                 throw new BizException(ResultCode.AI_INVOKE_FAIL, "校园查询超过工具调用上限，请缩小问题范围");
@@ -208,6 +214,9 @@ public class AgentService {
                 state.idleDrafts.add(json.treeToValue(result, IdlePublishDrafts.Draft.class));
             } else if (IdleAppointmentActions.PREPARE.equals(name)) {
                 state.idleAppointments.add(json.treeToValue(result, IdleAppointmentActions.Card.class));
+            } else if (CampusResourceTools.SEARCH.equals(name)) {
+                String kind = result.path("kind").asText();
+                result.path("items").forEach(row -> state.resources.add(new CampusResourceTools.Ref(kind, row.path("id").asLong())));
             }
             return result.toString();
         } catch (JsonProcessingException e) {
@@ -289,6 +298,7 @@ public class AgentService {
         final LinkedHashSet<Long> idleCardIds = new LinkedHashSet<>();
         final List<IdlePublishDrafts.Draft> idleDrafts = new ArrayList<>();
         final List<IdleAppointmentActions.Card> idleAppointments = new ArrayList<>();
+        final LinkedHashSet<CampusResourceTools.Ref> resources = new LinkedHashSet<>();
         List<Long> lastIdleSearch = List.of();
         boolean searchedIdle;
     }
@@ -298,5 +308,6 @@ public class AgentService {
     public record Citation(long documentId, String fileName, int page) {}
     public record Reply(String answer, List<String> toolsUsed, long sessionId, List<Citation> citations, long promptVersion,
                         List<ActivitySignupActions.Proposal> actions, List<IdleGuideCard> idleItems, boolean idleSearch,
-                        List<IdlePublishDrafts.Draft> idleDrafts, List<IdleAppointmentActions.Card> idleAppointments) {}
+                        List<IdlePublishDrafts.Draft> idleDrafts, List<IdleAppointmentActions.Card> idleAppointments,
+                        List<CampusResourceTools.Card> resources) {}
 }

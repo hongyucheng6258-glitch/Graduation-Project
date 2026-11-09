@@ -43,8 +43,7 @@ class AgentConversation {
 
     @Transactional
     long save(Long uid, Long sessionId, String question, String answer, String context,
-              List<AgentService.Citation> citations, List<String> actionIds, List<Long> idleIds, boolean idleSearch,
-              List<String> idleDraftIds, List<String> idleAppointmentIds) {
+              AgentMessageAttachments.Stored stored) {
         if (sessionId == null) {
             var session = new AiSession();
             session.setUserId(uid);
@@ -60,7 +59,7 @@ class AgentConversation {
         }
         memory.saveMessage(sessionId, "user", question, null);
         long messageId = memory.saveMessage(sessionId, "assistant", answer, null);
-        attachments.save(messageId, citations, actionIds, idleIds, idleSearch, idleDraftIds, idleAppointmentIds);
+        attachments.save(messageId, stored);
         if (!context.isEmpty()) {
             memory.saveMessage(sessionId, "context", context, null);
         }

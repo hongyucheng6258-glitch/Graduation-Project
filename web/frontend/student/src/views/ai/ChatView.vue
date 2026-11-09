@@ -70,6 +70,11 @@
               :nickname="userStore.userInfo?.nickname || '我'" :user-avatar="userStore.userInfo?.avatar" />
             <IdleGuideCards v-if="m.idleItems?.length" :items="m.idleItems" :contacting="contactingIdle" :numbered="m.idleSearch"
               @contact="contactIdle" />
+            <div v-for="resource in m.resources || []" :key="`${resource.kind}-${resource.id}`" class="ai-confirm resource-card">
+              <strong>{{ resource.title }}</strong>
+              <p class="section-sub">{{ resourceLabel(resource) }}<template v-if="resource.subtitle"> · {{ resource.subtitle }}</template></p>
+              <RouterLink :to="resourceRoute(resource)">{{ resource.kind === 'partner' ? '查看发布者主页' : '打开原帖' }}</RouterLink>
+            </div>
             <div v-for="draft in m.idleDrafts || []" :key="draft.id" class="ai-confirm idle-draft-card">
               <strong>闲置发布草稿</strong>
               <p>{{ draft.title }}</p>
@@ -291,6 +296,7 @@ async function switchSession(s) {
       idleSearch: m.attachments?.idleSearch,
       idleDrafts: m.attachments?.idleDrafts,
       idleAppointments: m.attachments?.idleAppointments,
+      resources: m.attachments?.resources,
       actions: m.attachments?.actions,
       streaming: false
     }))
@@ -437,6 +443,7 @@ async function send() {
       msg.idleSearch = answer?.idleSearch
       msg.idleDrafts = answer?.idleDrafts
       msg.idleAppointments = answer?.idleAppointments
+      msg.resources = answer?.resources
       msg.actions = answer?.actions
       if (answer?.sessionId) {
         currentSession.value = { id: answer.sessionId }
@@ -562,6 +569,18 @@ async function confirmAction(action) {
   } finally {
     action.sending = false
   }
+}
+
+function resourceLabel(resource) {
+  if (resource.kind === 'lost') return resource.status === 1 ? '拾物招领' : '寻物启事'
+  if (resource.kind === 'partner') return '学习搭子'
+  return resource.status === 1 ? '互助问答 · 已解决' : '互助问答 · 待回答'
+}
+
+function resourceRoute(resource) {
+  if (resource.kind === 'lost') return { name: 'LostFoundDetail', params: { id: resource.id } }
+  if (resource.kind === 'partner') return { name: 'UserHome', params: { id: resource.profileId } }
+  return { name: 'QaDetail', params: { id: resource.id } }
 }
 
 function appointmentStatus(status) {

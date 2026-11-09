@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import uuid
+from urllib.parse import urlsplit
 
 import pymysql
 
@@ -81,9 +82,12 @@ def verify(base, cfg, db, browser):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--browser", action="store_true")
+    parser.add_argument("--base", default="http://127.0.0.1:8080")
     args = parser.parse_args()
+    if urlsplit(args.base).hostname not in ("127.0.0.1", "localhost", "::1"):
+        raise SystemExit("Loopback backends only")
     config = local_config()
     with pymysql.connect(host="127.0.0.1", port=int(config.get("MYSQL_PORT", 3306)),
                          user=config.get("MYSQL_USER", "root"), password=config["MYSQL_PASSWORD"],
                          database=config.get("MYSQL_DB", "ai_campus_platform"), charset="utf8mb4") as connection:
-        verify(os.environ.get("CAMPUS_BACKEND_URL", "http://127.0.0.1:8080"), config, connection, args.browser)
+        verify(args.base.rstrip("/"), config, connection, args.browser)
