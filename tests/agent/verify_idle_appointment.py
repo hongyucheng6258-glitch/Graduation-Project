@@ -52,6 +52,14 @@ def verify(base, cfg, db, browser):
             cur.execute("SELECT COUNT(*) FROM idle_appointment WHERE item_id=%s", (item_id,))
             assert cur.fetchone()[0] == 0
             assert call(base, confirm, bearer=other_token)["code"] == 404
+            cur.execute("UPDATE idle_item SET expect_item='新的交换条件' WHERE id=%s", (item_id,))
+            db.commit()
+            assert call(base, confirm, bearer=bearer)["code"] != 200, "Old card accepted a modified offer"
+            history = ok(call(base, f"/api/ai/session/{session}/messages", bearer=bearer, method="GET"))
+            assert any(attachment["id"] == card["id"] and attachment["state"] == "CHANGED"
+                       for row in history["list"] for attachment in row.get("attachments", {}).get("idleAppointments", []))
+            cur.execute("UPDATE idle_item SET expect_item=NULL WHERE id=%s", (item_id,))
+            db.commit()
             with ThreadPoolExecutor(max_workers=2) as executor:
                 receipts = list(executor.map(lambda _: ok(call(base, confirm, bearer=bearer)), range(2)))
             assert receipts[0] == receipts[1] and receipts[0]["state"] == "SUBMITTED"

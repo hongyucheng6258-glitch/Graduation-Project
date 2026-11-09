@@ -148,6 +148,8 @@ def ok(response):
 
 
 def cleanup_student(cur, uid):
+    cur.execute("DELETE a FROM agent_message_attachment a JOIN ai_message m ON a.message_id=m.id "
+                "JOIN ai_session s ON m.session_id=s.id WHERE s.user_id=%s", (uid,))
     cur.execute("DELETE m FROM ai_message m JOIN ai_session s ON m.session_id=s.id WHERE s.user_id=%s", (uid,))
     cur.execute("DELETE FROM ai_session WHERE user_id=%s", (uid,))
     cur.execute("DELETE FROM agent_run WHERE user_id=%s", (uid,))

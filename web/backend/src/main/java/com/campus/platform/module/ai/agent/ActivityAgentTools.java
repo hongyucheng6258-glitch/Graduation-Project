@@ -36,14 +36,14 @@ public class ActivityAgentTools implements AgentToolSource {
                         Map.of("keyword", "string", "startDate", "string", "endDate", "string"), List.of(), this::search),
                 new AgentTool("get_activity_detail", "按活动 ID 查询实时详情、名额和当前登录用户的报名状态。",
                         Map.of("activityId", "integer"), List.of("activityId"), this::detail),
-                new AgentTool("get_campus_updates", "查询最新校园公告、闲置、失物或动态。category 取 notice、idle、lost、post。",
+                new AgentTool("get_campus_updates", "查询最新校园公告或动态。category 取 notice 或 post。",
                         Map.of("category", "string"), List.of("category"), this::updates)
         );
     }
 
     private JsonNode updates(Long uid, JsonNode args) {
         String category = args.path("category").asText();
-        if (!List.of("notice", "idle", "lost", "post").contains(category)) {
+        if (!List.of("notice", "post").contains(category)) {
             throw new BizException(ResultCode.BAD_REQUEST, "未知校园数据类别");
         }
         return json.createObjectNode().put("updates", abbreviate(legacyGuide.publicUpdates(category), 3600));

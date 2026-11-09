@@ -144,6 +144,9 @@ public class AgentService {
                         state.idleDrafts.stream().map(IdlePublishDrafts.Draft::id).toList(),
                         state.idleAppointments.stream().map(IdleAppointmentActions.Card::id).toList(), List.copyOf(state.resources));
                 var resourceCards = resources.cards(stored.resourceRefs());
+                if (resourceCards.size() != stored.resourceRefs().size()) {
+                    throw new BizException(ResultCode.AI_INVOKE_FAIL, "查询期间校园内容有更新，请重新查询");
+                }
                 long id = conversation.save(userId, sessionId, question, answer, references(state), stored);
                 return new Reply(answer, List.copyOf(state.toolsUsed), id, List.copyOf(state.citations), prompt.id(),
                         List.copyOf(state.actions), idleItems, state.searchedIdle, List.copyOf(state.idleDrafts),

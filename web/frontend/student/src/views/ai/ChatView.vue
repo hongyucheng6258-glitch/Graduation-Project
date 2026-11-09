@@ -89,6 +89,7 @@
               <p v-if="appointment.remark" class="section-sub">留言：{{ appointment.remark }}</p>
               <p v-if="appointment.state === 'SUBMITTED'" role="status">{{ appointmentStatus(appointment.appointmentStatus) }}</p>
               <p v-else-if="appointment.state === 'EXPIRED'" role="status">预约确认卡已过期，请重新发起。</p>
+              <p v-else-if="appointment.state === 'CHANGED'" role="status">物品信息或状态已变化，请重新查询。</p>
               <el-button v-else type="primary" :loading="appointment.sending" @click="confirmAppointment(appointment)">
                 确认预约
               </el-button>

@@ -44,7 +44,7 @@ class CampusResourceTools implements AgentToolSource {
             params.addValue("term", "%" + keyword.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%");
         }
         if (args.has("lostType")) {
-            int lostType = args.path("lostType").asInt(-1);
+            long lostType = args.path("lostType").asLong(-1);
             if (kind != Kind.LOST || (lostType != 0 && lostType != 1)) {
                 throw new BizException(ResultCode.BAD_REQUEST, "失物招领类型不合法");
             }
