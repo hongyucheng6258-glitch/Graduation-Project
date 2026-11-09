@@ -14,15 +14,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 class CampusResourceTools implements AgentToolSource {
     static final String SEARCH = "search_campus_resources";
+    private static final Pattern LOOKUP = Pattern.compile("^(?:请\\s*)?(?:帮我\\s*|我想\\s*)?(?:查|搜|找|看看|有没有|有人捡到|有人拾到)");
 
     private final NamedParameterJdbcTemplate jdbc;
     private final ObjectMapper json;
+
+    static String explicitLookupKind(String question) {
+        if (!LOOKUP.matcher(question).find()) return null;
+        boolean lost = question.contains("失物招领") || question.contains("寻物启事");
+        boolean partner = question.contains("学习搭子");
+        boolean qa = question.contains("互助问答") || question.contains("校园问答");
+        if ((lost ? 1 : 0) + (partner ? 1 : 0) + (qa ? 1 : 0) != 1) return null;
+        if (lost) return Kind.LOST.code;
+        if (partner) return Kind.PARTNER.code;
+        return Kind.QA.code;
+    }
 
     @Override
     public List<AgentTool> tools() {

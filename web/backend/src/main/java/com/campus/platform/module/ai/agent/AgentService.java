@@ -111,8 +111,11 @@ public class AgentService {
 
         long deadline = System.nanoTime() + BUDGET.toNanos();
         List<ObjectNode> messages = new ArrayList<>();
+        String requiredResourceKind = CampusResourceTools.explicitLookupKind(question);
+        String resourceInstruction = requiredResourceKind == null ? "" : "\n当前问题明确要求查询现有帖子。必须在本轮调用 "
+                + CampusResourceTools.SEARCH + "，kind 使用 " + requiredResourceKind + "，以工具结果为准。";
         messages.add(message("system", INSTRUCTIONS + "\n当前校园日期：" + today
-                + (prompt.content().isBlank() ? "" : "\n校园问答风格与术语：\n" + prompt.content())));
+                + (prompt.content().isBlank() ? "" : "\n校园问答风格与术语：\n" + prompt.content()) + resourceInstruction));
         for (var previous : conversation.history(userId, sessionId)) {
             String role = previous.getRole();
             if ("context".equals(role)) {
@@ -129,11 +132,22 @@ public class AgentService {
         messages.add(message("user", question));
         List<ObjectNode> definitions = tools.values().stream().map(tool -> tool.definition(json)).toList();
         int attempted = 0;
+        boolean retriedResourceSearch = false;
         for (int round = 0; round < MAX_ROUNDS; round++) {
             Duration remaining = Duration.ofNanos(deadline - System.nanoTime());
             var assistant = model.complete(messages, round == MAX_ROUNDS - 1 ? List.of() : definitions, remaining);
             var calls = assistant.path("tool_calls");
             if (calls.isEmpty()) {
+                if (requiredResourceKind != null && !state.searchedResourceKinds.contains(requiredResourceKind)) {
+                    if (retriedResourceSearch || round == MAX_ROUNDS - 1) {
+                        throw new BizException(ResultCode.AI_INVOKE_FAIL, "本次未能查询校园记录，请重试");
+                    }
+                    ObjectNode system = messages.get(0);
+                    system.put("content", system.path("content").asText() + "\n刚才未查询当前记录，丢弃未查证的回答。"
+                            + resourceInstruction);
+                    retriedResourceSearch = true;
+                    continue;
+                }
                 state.evidence.forEach(source -> knowledge.getObject().verifyVersion(userId, source.id(), source.version()));
                 checkDeadline(deadline);
                 String answer = assistant.path("content").asText();
@@ -147,6 +161,10 @@ public class AgentService {
                 if (resourceCards.size() != stored.resourceRefs().size()) {
                     throw new BizException(ResultCode.AI_INVOKE_FAIL, "查询期间校园内容有更新，请重新查询");
                 }
+                if (requiredResourceKind != null && resourceCards.stream().noneMatch(card -> requiredResourceKind.equals(card.kind()))) {
+                    answer = "没有查到符合条件的校园记录，可以换个关键词再试。";
+                }
+                checkDeadline(deadline);
                 long id = conversation.save(userId, sessionId, question, answer, references(state), stored);
                 return new Reply(answer, List.copyOf(state.toolsUsed), id, List.copyOf(state.citations), prompt.id(),
                         List.copyOf(state.actions), idleItems, state.searchedIdle, List.copyOf(state.idleDrafts),
@@ -219,6 +237,7 @@ public class AgentService {
                 state.idleAppointments.add(json.treeToValue(result, IdleAppointmentActions.Card.class));
             } else if (CampusResourceTools.SEARCH.equals(name)) {
                 String kind = result.path("kind").asText();
+                state.searchedResourceKinds.add(kind);
                 result.path("items").forEach(row -> state.resources.add(new CampusResourceTools.Ref(kind, row.path("id").asLong())));
             }
             return result.toString();
@@ -302,6 +321,7 @@ public class AgentService {
         final List<IdlePublishDrafts.Draft> idleDrafts = new ArrayList<>();
         final List<IdleAppointmentActions.Card> idleAppointments = new ArrayList<>();
         final LinkedHashSet<CampusResourceTools.Ref> resources = new LinkedHashSet<>();
+        final LinkedHashSet<String> searchedResourceKinds = new LinkedHashSet<>();
         List<Long> lastIdleSearch = List.of();
         boolean searchedIdle;
     }
