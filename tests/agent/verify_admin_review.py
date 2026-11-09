@@ -14,7 +14,7 @@ import pymysql
 from verify_live import ROOT, call, local_config, ok, token
 
 
-def verify(base, db, cfg, browser):
+def verify(base, db, cfg, browser, published_fixtures):
     path = "/api/admin/assistant"
     marker = "Review" + uuid.uuid4().hex[:8]
     admin_ids, item_ids = [], []
@@ -26,13 +26,20 @@ def verify(base, db, cfg, browser):
                 admin_ids.append(cur.lastrowid)
             cur.execute("INSERT INTO user(student_no,nickname) VALUES(%s,'审核验收学生')", (marker,))
             student_id = cur.lastrowid
+            db.commit()
+            student = token(cfg["JWT_SECRET"], student_id)
             for suffix in ("keyboard", "mouse"):
-                cur.execute("INSERT INTO idle_item(user_id,title,description,audit_status,status) VALUES(%s,%s,'成色九成新',0,0)",
-                            (student_id, f"{marker}{suffix}"))
-                item_ids.append(cur.lastrowid)
+                if published_fixtures:
+                    form = {"title": marker + suffix, "description": "成色九成新，校外领取方式待核对"}
+                    created = ok(call(base, "/api/idle", form, student))
+                    item_ids.append(created["id"])
+                    assert created["auditStatus"] == 0, "Use an isolated stack with default content audit rules"
+                else:
+                    cur.execute("INSERT INTO idle_item(user_id,title,description,audit_status,status) VALUES(%s,%s,'成色九成新',0,0)",
+                                (student_id, f"{marker}{suffix}"))
+                    item_ids.append(cur.lastrowid)
             db.commit()
             first, second = [token(cfg["JWT_SECRET"], uid, "admin") for uid in admin_ids]
-            student = token(cfg["JWT_SECRET"], student_id)
             item = item_ids[0]
             question = f"查找待审核闲置，标题关键词只用 {marker}keyboard。"
             if browser:
@@ -64,11 +71,20 @@ def verify(base, db, cfg, browser):
             assert call(base, prepare_path, {"sessionId": a, "itemId": str(item_ids[1]), "decision": "PASS"}, first)["code"] == 404
             assert call(base, prepare_path, {"sessionId": a, "itemId": str(item), "decision": "PASS"}, second)["code"] == 404
             stale = prepare(first, a)
-            cur.execute("UPDATE idle_item SET description='内容已变更' WHERE id=%s", (item,))
+            cur.execute("UPDATE idle_item SET description='内容已变更，校外' WHERE id=%s", (item,))
             db.commit()
             assert confirm(stale, first)["code"] != 200
             previous_edit = prepare(first, a)
-            cur.execute("UPDATE idle_item SET audit_revision=%s WHERE id=%s", (str(uuid.uuid4()), item))
+            if published_fixtures:
+                cur.execute("SELECT audit_revision FROM idle_item WHERE id=%s", (item,))
+                old_revision = cur.fetchone()[0]
+                db.commit()
+                form = {"title": marker + "keyboard", "description": "内容已变更，校外"}
+                assert ok(call(base, f"/api/idle/{item}", form, student, method="PUT"))["auditStatus"] == 0
+                cur.execute("SELECT audit_revision FROM idle_item WHERE id=%s", (item,))
+                assert cur.fetchone()[0] != old_revision
+            else:
+                cur.execute("UPDATE idle_item SET audit_revision=%s WHERE id=%s", (str(uuid.uuid4()), item))
             db.commit()
             assert confirm(previous_edit, first)["code"] != 200, "Re-submission with the same content accepted a stale card"
             expired = prepare(first, a)
@@ -152,6 +168,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--browser", action="store_true")
     parser.add_argument("--base", default="http://127.0.0.1:8080")
+    parser.add_argument("--published-fixtures", action="store_true")
     args = parser.parse_args()
     if urlsplit(args.base).hostname not in ("127.0.0.1", "localhost", "::1"):
         raise SystemExit("Loopback backends only")
@@ -159,4 +176,4 @@ if __name__ == "__main__":
     with pymysql.connect(host="127.0.0.1", port=int(config.get("MYSQL_PORT", 3306)),
                          user=config.get("MYSQL_USER", "root"), password=config["MYSQL_PASSWORD"],
                          database=config.get("MYSQL_DB", "ai_campus_platform"), charset="utf8mb4") as connection:
-        verify(args.base.rstrip("/"), connection, config, args.browser)
+        verify(args.base.rstrip("/"), connection, config, args.browser, args.published_fixtures)

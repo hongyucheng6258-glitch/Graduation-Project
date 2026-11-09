@@ -94,10 +94,23 @@ def verify(base, cfg, db, rag, browser):
             source = next(citation for citation in result["citations"] if citation["documentId"] == rule_id)
             assert source["page"] == 2 and source["version"]
             file_path = f'{rule}/{rule_id}/file?version={source["version"]}'
+            assert call(base, file_path, bearer=student, method="GET")["code"] == 403
             with urlopen(Request(base + file_path, headers={"Authorization": "Bearer " + auditor}), timeout=10) as response:
-                assert response.headers["Content-Type"] == "application/pdf" and response.read(5) == b"%PDF-"
+                content_type = response.headers["Content-Type"]
+                if not content_type.startswith("application/pdf"):
+                    raise AssertionError((content_type, response.read(200).decode("utf-8", errors="replace")))
+                assert response.read(5) == b"%PDF-"
             student_search = ok(call(base, "/api/ai/agent/ask", {"question": "请查资料，makerspace access identifier 是什么？"}, student))
             assert marker not in student_search["answer"] and all(row["documentId"] != rule_id for row in student_search["citations"])
+            ok(call(base, f"{rule}/{rule_id}/reindex", bearer=manager))
+            for _ in range(80):
+                with urlopen(Request(base + file_path, headers={"Authorization": "Bearer " + auditor}), timeout=10) as response:
+                    if response.headers["Content-Type"].startswith("application/json"):
+                        assert json.load(response)["code"] == 404
+                        break
+                time.sleep(1)
+            else:
+                raise AssertionError("Old citation remained valid after reindex")
             ok(call(base, f"{rule}/{rule_id}", bearer=manager, method="DELETE"))
             assert call(base, file_path, bearer=auditor, method="GET")["code"] == 404
             assert all(doc["id"] != rule_id for doc in ok(call(base, rule, bearer=auditor, method="GET")))

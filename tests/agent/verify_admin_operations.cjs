@@ -50,11 +50,11 @@ async function main() {
     await page.getByRole('textbox', { name: '规则问题' }).fill('What is the makerspace access identifier? Give the exact identifier.')
     await page.getByRole('button', { name: '查找规则' }).click()
     const reply = page.getByRole('article', { name: '规则答复' })
-    await reply.getByText(fixture.marker, { exact: false }).waitFor({ timeout: 60000 })
+    await reply.locator('.answer-text').filter({ hasText: fixture.marker }).waitFor({ timeout: 60000 })
     const popup = page.waitForEvent('popup')
     const pdf = page.waitForResponse(res => res.url().includes(`/assistant/rules/${doc.data.id}/file?`))
     await page.getByRole('button', { name: `${fixture.marker}.pdf · 第 2 页` }).click()
-    assert.equal((await pdf).headers()['content-type'], 'application/pdf')
+    assert.match((await pdf).headers()['content-type'], /^application\/pdf\b/)
     await (await popup).waitForURL(/^blob:.*#page=2$/)
     console.log('PASS browser uploads internal rules, queries and opens the exact PDF citation')
   } finally {
