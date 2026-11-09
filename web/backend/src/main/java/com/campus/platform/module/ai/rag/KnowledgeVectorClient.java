@@ -110,7 +110,7 @@ class KnowledgeVectorClient {
             privateAccess.add(condition("owner_id", userId));
         }
         if (docId != null) {
-            filter.putArray("must").add(condition("doc_id", docId));
+            filter.withArray("must").add(condition("doc_id", docId));
         }
         var response = request("POST", collectionUrl + "/points/query", body, "向量数据库", true, Set.of(), deadline);
         if (response == null) {

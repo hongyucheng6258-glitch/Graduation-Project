@@ -233,11 +233,16 @@ public class IdleService {
         item.setCategory(dto.getCategory());
         item.setAuditStatus(Constants.AUDIT_PENDING);
         item.setAuditReason(null);
+        item.setAiRiskLevel(null);
+        item.setAiAuditReason(null);
+        item.setAiAuditTime(null);
+        item.setAuditSource("manual");
         String revision = versionedAudit ? UUID.randomUUID().toString() : null;
         idleItemMapper.update(null, new UpdateWrapper<IdleItem>().eq("id", id).eq("user_id", userId)
                 .set("title", item.getTitle()).set("description", item.getDescription()).set("images", item.getImages())
                 .set("expect_item", item.getExpectItem()).set("category", item.getCategory())
                 .set("audit_status", Constants.AUDIT_PENDING).set("audit_reason", null)
+                .set("ai_risk_level", null).set("ai_audit_reason", null).set("ai_audit_time", null).set("audit_source", "manual")
                 .set(revision != null, "audit_revision", revision));
         auditIdle(item, revision);
         return item;
