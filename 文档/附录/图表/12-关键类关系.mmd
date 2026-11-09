@@ -1,0 +1,44 @@
+classDiagram
+  class ActivityController {
+    +publish()
+    +signup()
+    +handleMember()
+    +signin()
+  }
+  class ActivityService {
+    +signup()
+    +cancelSignup()
+    +handleMember()
+    +signin()
+  }
+  class ActivityMapper {
+    <<interface>>
+    +selectForUpdate()
+  }
+  class ActivityMemberMapper {
+    <<interface>>
+  }
+  class ActivitySigninMapper {
+    <<interface>>
+  }
+  class MessageService {
+    +send()
+  }
+  class Activity {
+    +Long id
+    +Long userId
+    +Integer maxMembers
+    +Integer status
+  }
+  class ActivityMember {
+    +Long activityId
+    +Long userId
+    +Integer status
+  }
+  ActivityController --> ActivityService : 调用
+  ActivityService --> ActivityMapper : 数据访问
+  ActivityService --> ActivityMemberMapper : 数据访问
+  ActivityService --> ActivitySigninMapper : 数据访问
+  ActivityService --> MessageService : 通知
+  ActivityMapper ..> Activity : 映射
+  ActivityMemberMapper ..> ActivityMember : 映射

@@ -40,7 +40,7 @@
           </div>
           <div class="ai-top__meta">
             <b>{{ tab === 'pdf' ? 'PDF 问答' : (tab === 'guide' ? '🏫 AI 校园向导' : 'AI 自由对话') }}</b>
-            <div class="section-sub" style="font-size: var(--fs-cap)">{{ tab === 'guide' ? '实时校园数据驱动 · 活动 / 闲置 / 失物 / 公告' : 'DeepSeek 驱动 · 上下文已记忆' }}</div>
+            <div class="section-sub" style="font-size: var(--fs-cap)">{{ tab === 'guide' ? (capabilities.enabled ? '查活动、报名与校园资料' : '实时校园数据问答') : '学习助手' }}</div>
           </div>
           <div class="ai-top__tools">
             <WtTabs v-model="tab" :options="sceneTabs" />
@@ -52,8 +52,10 @@
           <el-upload :show-file-list="false" :http-request="doPdfUpload" accept=".pdf">
             <el-button :loading="pdfUploading">上传PDF课件</el-button>
           </el-upload>
-          <span v-if="pdfDoc" class="pdf-info">✅ {{ pdfDoc.fileName }}（{{ pdfDoc.pageCount }}页，已解析）</span>
+          <span v-if="pdfDoc" class="pdf-info">{{ pdfDoc.fileName }}（{{ pdfDoc.pageCount }}页，{{ pdfIndexLabel }}）</span>
           <span v-else class="pdf-tip">上传文本型PDF后可针对文档内容提问</span>
+          <el-button v-if="pdfIndex?.state === 'FAILED'" text @click="startPdfIndex(pdfDoc)">重试索引</el-button>
+          <el-button v-else-if="pdfIndex?.state === 'READY'" text @click="startPdfIndex(pdfDoc, true)">重建索引</el-button>
         </div>
 
         <!-- 快捷问题（对齐原型 quick-prompts，空会话时展示） -->
@@ -63,15 +65,27 @@
 
         <!-- 消息区 -->
         <div ref="msgBox" class="ai-chat">
-          <ChatBubble
-            v-for="(m, i) in messages"
-            :key="i"
-            :role="m.role"
-            :content="m.content"
-            :streaming="m.streaming"
-            :nickname="userStore.userInfo?.nickname || '我'"
-            :user-avatar="userStore.userInfo?.avatar"
-          />
+          <template v-for="(m, i) in messages" :key="i">
+            <ChatBubble :role="m.role" :content="m.content" :streaming="m.streaming"
+              :nickname="userStore.userInfo?.nickname || '我'" :user-avatar="userStore.userInfo?.avatar" />
+            <div v-if="m.citations?.length" class="ai-sources" aria-label="检索到的资料">
+              <span>资料来源</span>
+              <button v-for="source in m.citations" :key="`${source.documentId}-${source.page}`"
+                type="button" @click="openCitation(source)">
+                {{ source.fileName }} · 第 {{ source.page }} 页
+              </button>
+            </div>
+            <div v-for="action in m.actions || []" :key="action.id" class="ai-confirm">
+              <strong>确认活动报名</strong>
+              <p>{{ action.activityTitle }}</p>
+              <p v-if="action.remark" class="section-sub">备注：{{ action.remark }}</p>
+              <p v-if="action.result === 'SUBMITTED'" role="status">报名已提交，等待审核。</p>
+              <p v-else-if="action.result === 'EXPIRED'" role="status">确认卡已过期，请重新发起报名。</p>
+              <el-button v-else type="primary" :loading="action.sending" @click="confirmAction(action)">
+                确认提交报名
+              </el-button>
+            </div>
+          </template>
           <WtEmptyState v-if="!messages.length" type="empty" title="开始提问吧" description="支持多轮上下文追问，AI 会记得聊过的内容" />
         </div>
 
@@ -83,7 +97,7 @@
             :placeholder="tab === 'pdf' ? '针对PDF文档内容提问…' : (tab === 'guide' ? '问问校园：周末有什么活动 / 我报名的活动 / 有失物招领吗' : '输入你的问题，回车发送，Shift+Enter 换行')"
             @keydown.enter.exact.prevent="send"
           />
-          <button class="send" :disabled="!question.trim() || asking" aria-label="发送" @click="send">
+          <button class="send" :disabled="!question.trim() || asking || switching" aria-label="发送" @click="send">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M22 2 11 13M22 2l-7 20-4-9-9-4z" />
             </svg>
@@ -137,6 +151,17 @@ const msgBox = ref()
 // PDF 问答状态
 const pdfUploading = ref(false)
 const pdfDoc = ref(null)
+const pdfIndex = ref(null)
+const capabilities = ref({ enabled: false, ragEnabled: false })
+const switching = ref(false)
+let viewRequest = 0
+let indexRequest = 0
+const pdfIndexLabel = computed(() => {
+  if (!capabilities.value.ragEnabled) return '已解析'
+  if (pdfIndex.value?.state === 'READY') return '可问答'
+  if (pdfIndex.value?.state === 'FAILED') return pdfIndex.value.error || '索引失败'
+  return '正在建立索引'
+})
 
 const sceneTabs = [
   { value: 'chat', label: '💬 AI答疑' },
@@ -144,11 +169,16 @@ const sceneTabs = [
   { value: 'pdf', label: '📄 PDF问答' }
 ]
 
-const sceneOf = () => (tab.value === 'pdf' ? 'pdf' : 'chat')
+const sceneOf = () => (tab.value === 'pdf' ? 'pdf' : tab.value === 'guide' && capabilities.value.enabled ? 'agent' : 'chat')
 
-onUnmounted(() => cancelStream())
+onUnmounted(() => {
+  viewRequest += 1
+  indexRequest += 1
+  cancelStream()
+})
 
 onMounted(async () => {
+  try { capabilities.value = await aiApi.agentCapabilities() } catch { /* 旧版后端继续使用原问答 */ }
   await loadSessions()
   const q = route.query.q
   if (q) {
@@ -159,20 +189,27 @@ onMounted(async () => {
 
 watch(tab, () => {
   cancelStream()
+  viewRequest += 1
+  switching.value = false
+  indexRequest += 1
   // 切换 Tab 重新加载对应场景会话，并清理另一场景的文档状态
   sessions.value = []
   currentSession.value = null
   messages.value = []
   pdfDoc.value = null
-  if (tab.value !== 'guide') loadSessions()
+  pdfIndex.value = null
+  loadSessions()
 })
 
 async function loadSessions() {
-  if (tab.value === 'guide') {
+  const view = viewRequest
+  if (tab.value === 'guide' && !capabilities.value.enabled) {
     sessions.value = []
     return
   }
-  sessions.value = await aiApi.listSessions(sceneOf())
+  const list = await aiApi.listSessions(sceneOf())
+  if (view !== viewRequest) return
+  sessions.value = list
   if (sessions.value.length && !currentSession.value) {
     await switchSession(sessions.value[0])
   } else if (tab.value === 'pdf' && !currentSession.value) {
@@ -180,36 +217,59 @@ async function loadSessions() {
   }
 }
 
-async function restorePdfDoc(session) {
+async function restorePdfDoc(session, view) {
   if (tab.value !== 'pdf' || !session?.docId) {
     pdfDoc.value = null
     return
   }
   try {
-    pdfDoc.value = await aiApi.pdfDoc(session.docId)
+    const doc = await aiApi.pdfDoc(session.docId)
+    if (view !== viewRequest) return
+    pdfDoc.value = doc
+    startPdfIndex(pdfDoc.value)
   } catch {
-    pdfDoc.value = null
+    if (view === viewRequest) pdfDoc.value = null
   }
 }
 
 async function newSession() {
+  if (tab.value === 'guide' && !capabilities.value.enabled) {
+    cancelStream()
+    messages.value = []
+    return
+  }
+  const view = viewRequest
   const s = await aiApi.createSession({ scene: sceneOf(), docId: pdfDoc.value?.docId })
+  if (view !== viewRequest) return
   sessions.value.unshift(s)
   await switchSession(s)
 }
 
 async function switchSession(s) {
   cancelStream()
+  const view = ++viewRequest
+  indexRequest += 1
+  pdfDoc.value = null
+  pdfIndex.value = null
+  messages.value = []
   currentSession.value = s
-  await restorePdfDoc(s)
-  const res = await aiApi.listMessages(s.id, 1, 50)
-  // 接口倒序返回，翻转为正序展示
-  messages.value = (res.list || []).reverse().map((m) => ({
-    role: m.role,
-    content: m.content,
-    streaming: false
-  }))
-  scrollBottom()
+  switching.value = true
+  try {
+    await restorePdfDoc(s, view)
+    if (view !== viewRequest) return
+    const res = await aiApi.listMessages(s.id, 1, 50)
+    if (view !== viewRequest) return
+    messages.value = (res.list || []).reverse().filter((m) => ['user', 'assistant'].includes(m.role)).map((m) => ({
+      role: m.role,
+      content: m.content,
+      citations: m.attachments?.citations,
+      actions: m.attachments?.actions,
+      streaming: false
+    }))
+    scrollBottom()
+  } finally {
+    if (view === viewRequest) switching.value = false
+  }
 }
 
 async function onSessionCmd(cmd, s) {
@@ -235,7 +295,11 @@ async function onSessionCmd(cmd, s) {
 /** 发送问题：chat/pdf 共用；chat 走 SSE 流式，pdf 走一次性返回 */
 const quickPrompts = computed(() =>
   tab.value === 'guide'
-    ? [
+    ? capabilities.value.enabled ? [
+        '周末有哪些校园活动？',
+        '我报名的活动有哪些？',
+        '请查资料：活动报名有哪些要求？'
+      ] : [
         '周末有哪些活动？',
         '我报名的活动有哪些？',
         '最近有失物招领吗？',
@@ -258,9 +322,13 @@ function askQuick(q) {
 
 async function send() {
   const q = question.value.trim()
-  if (!q || asking.value) return
+  if (!q || asking.value || switching.value) return
   if (tab.value === 'pdf' && !pdfDoc.value) {
     ElMessage.warning('请先上传PDF课件')
+    return
+  }
+  if (tab.value === 'pdf' && capabilities.value.ragEnabled && pdfIndex.value?.state !== 'READY') {
+    ElMessage.warning('请等待文档索引就绪')
     return
   }
   asking.value = true
@@ -329,9 +397,17 @@ async function send() {
   } else if (tab.value === 'guide') {
     // 校园向导：实时业务数据问答（复用 aiGuideAsk 统一错误策略，401/403/503 走 request 封装处理，避免裸 fetch）
     try {
-      const answer = await aiApi.aiGuideAsk(q)
+      const answer = capabilities.value.enabled
+        ? await aiApi.agentAsk(q, currentSession.value?.id, controller.signal)
+        : await aiApi.aiGuideAsk(q)
       if (!isCurrent()) return
-      msg.content = answer || '⚠️ 暂时没有检索到相关内容'
+      msg.content = (typeof answer === 'string' ? answer : answer.answer) || '暂时没有查到相关内容'
+      msg.citations = answer?.citations
+      msg.actions = answer?.actions
+      if (answer?.sessionId) {
+        currentSession.value = { id: answer.sessionId }
+        refreshSessionList().catch(() => {})
+      }
     } catch (e) {
       onError(e?.code || 1002, e?.message || 'AI服务调用失败')
     } finally {
@@ -343,13 +419,16 @@ async function send() {
   } else {
     // PDF 一次性返回
     try {
-      const res = await aiApi.pdfAsk({
+      const res = capabilities.value.ragEnabled
+        ? await aiApi.knowledgeAsk(pdfIndex.value.id, q, currentSession.value?.id, controller.signal)
+        : await aiApi.pdfAsk({
         docId: pdfDoc.value.docId,
         sessionId: currentSession.value?.id,
         question: q
       })
       if (!isCurrent()) return
       msg.content = typeof res === 'string' ? res : res.answer
+      msg.citations = res?.citations
       msg.streaming = false
       if (res?.sessionId) {
         currentSession.value = { ...currentSession.value, id: res.sessionId, docId: pdfDoc.value.docId }
@@ -369,21 +448,32 @@ async function send() {
 
 /** 上传 PDF 并解析 */
 async function doPdfUpload({ file }) {
+  cancelStream()
+  const view = ++viewRequest
+  indexRequest += 1
+  switching.value = false
+  pdfDoc.value = null
+  pdfIndex.value = null
   pdfUploading.value = true
   try {
-    pdfDoc.value = await aiApi.pdfUpload(file)
+    const doc = await aiApi.pdfUpload(file)
+    if (view !== viewRequest) return
     // 上传成功后使用已有会话创建接口绑定文档，兼容尚未重启的旧后端版本。
     // 保留旧会话及其历史消息，当前文档使用新的 PDF 会话承载。
     const session = await aiApi.createSession({
       scene: 'pdf',
-      docId: pdfDoc.value.docId,
+      docId: doc.docId,
       title: currentSession.value?.title || 'PDF问答'
     })
+    if (view !== viewRequest) return
+    pdfDoc.value = doc
+    startPdfIndex(doc)
     sessions.value.unshift(session)
     currentSession.value = session
     messages.value = []
-    ElMessage.success(`解析成功，共 ${pdfDoc.value.pageCount} 页，可以开始提问了`)
+    ElMessage.success(capabilities.value.ragEnabled ? 'PDF 已上传，正在建立索引' : '解析成功，可以开始提问')
   } catch (e) {
+    if (view !== viewRequest) return
     pdfDoc.value = null
     ElMessage.error(e.message || 'PDF上传或绑定失败')
   } finally {
@@ -391,9 +481,60 @@ async function doPdfUpload({ file }) {
   }
 }
 
+async function startPdfIndex(doc, rebuild = false) {
+  if (!capabilities.value.ragEnabled || !doc) return
+  const ticket = ++indexRequest
+  pdfIndex.value = null
+  try {
+    let status = await aiApi.indexPdf(doc.docId, rebuild)
+    for (let i = 0; i < 90 && ticket === indexRequest; i += 1) {
+      pdfIndex.value = status
+      if (['READY', 'FAILED'].includes(status.state)) return
+      await new Promise((resolve) => setTimeout(resolve, 1200))
+      if (ticket !== indexRequest) return
+      status = await aiApi.knowledgeStatus(status.id)
+    }
+    if (ticket === indexRequest) pdfIndex.value = { state: 'FAILED', error: '索引仍在处理中，可稍后重试' }
+  } catch (e) {
+    if (ticket === indexRequest) pdfIndex.value = { state: 'FAILED', error: e.message }
+  }
+}
+
+async function openCitation(source) {
+  const tab = window.open('about:blank', '_blank')
+  if (!tab) {
+    ElMessage.warning('请允许浏览器打开资料窗口')
+    return
+  }
+  tab.opener = null
+  try {
+    const url = URL.createObjectURL(await aiApi.knowledgeFile(source.documentId))
+    tab.location.replace(`${url}#page=${source.page}`)
+    setTimeout(() => URL.revokeObjectURL(url), 120000)
+  } catch (e) {
+    tab.close()
+    ElMessage.error(e.message)
+  }
+}
+
+async function confirmAction(action) {
+  if (action.sending || action.result === 'SUBMITTED') return
+  action.sending = true
+  try {
+    const result = await aiApi.confirmAgentAction(action.id)
+    action.result = result.status
+  } catch (e) {
+    ElMessage.error(e.message || '报名未能提交')
+  } finally {
+    action.sending = false
+  }
+}
+
 /** 首问后刷新会话列表（标题由后端自动更新） */
 async function refreshSessionList() {
+  const view = viewRequest
   const list = await aiApi.listSessions(sceneOf())
+  if (view !== viewRequest) return
   sessions.value = list
   if (currentSession.value) {
     const cur = list.find((x) => x.id === currentSession.value.id)
@@ -411,6 +552,33 @@ function scrollBottom() {
 </script>
 
 <style scoped>
+.ai-sources {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 9px;
+  margin: 0 0 12px 42px;
+  font-size: 12px;
+}
+.ai-sources button {
+  border: 1px solid var(--el-border-color);
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: var(--el-bg-color);
+  color: var(--el-color-primary);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.ai-confirm {
+  width: min(100% - 44px, 350px);
+  box-sizing: border-box;
+  margin: 0 0 12px 42px;
+  padding: 12px 14px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 8px;
+  background: var(--el-bg-color);
+}
+.ai-confirm p { margin: 6px 0; overflow-wrap: anywhere; }
 .quick-prompts {
   display: flex;
   flex-wrap: wrap;

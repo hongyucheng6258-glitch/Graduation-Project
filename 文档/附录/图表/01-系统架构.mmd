@@ -1,0 +1,15 @@
+flowchart TD
+  S[学生浏览器] --> V[Vue 学生端]
+  A[管理员浏览器] --> M[Vue 管理后台]
+  V --> D[Three.js 三维校园]
+  V --> B[Spring Boot 后端]
+  D --> B
+  M --> B
+  B --> C[鉴权与 Controller]
+  C --> L[Service]
+  L --> P[Mapper]
+  P --> Q[(MySQL)]
+  L --> R[(Redis)]
+  L --> G[统一 AI 网关]
+  G --> E[DeepSeek]
+  B --> W[私信与游戏 WebSocket]

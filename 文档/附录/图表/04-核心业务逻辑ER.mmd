@@ -1,0 +1,12 @@
+erDiagram
+  user ||--o{ activity : publishes
+  user ||--o{ activity_member : signs_up
+  activity ||--o{ activity_member : has
+  activity ||--o{ activity_signin : records
+  user ||--o{ activity_signin : attends
+  user ||--o{ idle_item : publishes
+  idle_item ||--o{ idle_appointment : receives
+  idle_appointment ||--o{ idle_review : receives
+  user ||--o{ lost_found : publishes
+  lost_found ||--o{ lost_found_claim : receives
+  user ||--o{ lost_found_claim : applies

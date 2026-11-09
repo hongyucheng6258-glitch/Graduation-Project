@@ -1,0 +1,20 @@
+sequenceDiagram
+  participant U as 学生
+  participant B as 业务服务
+  participant D as 业务数据库
+  participant G as AI 网关
+  participant E as 外部模型
+  U->>B: 提交场景请求
+  B->>D: 校验归属并准备上下文
+  B->>G: 场景 输入及参数
+  G->>E: 构造提示词和消息后调用
+  alt 调用成功
+    E-->>G: 文本或流式片段
+    G->>D: 记录调用结果
+    G-->>B: 回答或结构化结果
+    B->>B: 解析并校验业务输出
+    B-->>U: 展示结果
+  else 未配置或调用失败
+    G-->>B: 业务错误
+    B-->>U: 对应失败提示
+  end

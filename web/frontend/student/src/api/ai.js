@@ -77,6 +77,44 @@ export function aiGuideAsk(question) {
   return request.post('/ai/guide/ask', { question }, { silent: true, timeout: 120000 })
 }
 
+export function agentCapabilities() {
+  return request.get('/ai/agent/capabilities', { silent: true })
+}
+
+export function agentAsk(question, sessionId, signal) {
+  return request.post('/ai/agent/ask', { question, sessionId }, { silent: true, timeout: 40000, signal })
+}
+
+export function confirmAgentAction(id) {
+  return request.post(`/ai/agent/actions/${id}/confirm`, null, { silent: true })
+}
+
+export function indexPdf(pdfId, rebuild = false) {
+  return request.post(`/ai/knowledge/pdf/${pdfId}/index`, null, { params: { rebuild }, silent: true })
+}
+
+export function knowledgeStatus(id) {
+  return request.get(`/ai/knowledge/${id}`, { silent: true })
+}
+
+export function knowledgeAsk(id, question, sessionId, signal) {
+  return request.post(`/ai/knowledge/${id}/ask`, { question, sessionId }, { silent: true, timeout: 65000, signal })
+}
+
+export async function knowledgeFile(id) {
+  const response = await fetch(`/api/ai/knowledge/${id}/file`, {
+    headers: { Authorization: `Bearer ${getToken()}` }
+  })
+  if (!response.ok || !response.headers.get('content-type')?.startsWith('application/pdf')) {
+    throw new Error('资料暂时无法打开')
+  }
+  const file = await response.blob()
+  if (await file.slice(0, 5).text() !== '%PDF-') {
+    throw new Error('资料内容为空或已损坏')
+  }
+  return file
+}
+
 /**
  * Web 端 SSE 流式答疑（POST + fetch 流读取，EventSource 不支持 POST/自定义Header）。
  * 第11项修复：

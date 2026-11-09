@@ -143,6 +143,8 @@ flowchart TD
 
 ### 使用 Docker Compose
 
+包含校园向导、向量知识库与 PDF 问答的完整启动方式见 [部署说明](部署说明.md)。以下为基础演示环境的启动说明。
+
 需要安装 Git 和支持 Compose 的 Docker 环境。首次构建需要联网下载镜像与项目依赖。
 
 下面以 Windows PowerShell 为例：

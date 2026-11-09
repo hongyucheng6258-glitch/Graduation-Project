@@ -1,0 +1,12 @@
+erDiagram
+  chat_conversation ||--o{ chat_conversation_member : contains
+  user ||--o{ chat_conversation_member : joins
+  chat_conversation ||--o{ chat_message : contains
+  user ||--o{ chat_message : sends
+  upload_resource o|--o{ chat_message : attaches
+  user ||--o{ draw_game_room : owns
+  draw_game_room ||--o{ draw_game_member : contains
+  user ||--o{ draw_game_member : joins
+  draw_game_room ||--o{ draw_game_round : contains
+  user ||--o{ draw_game_round : draws
+  upload_resource o|--o{ draw_game_round : snapshot

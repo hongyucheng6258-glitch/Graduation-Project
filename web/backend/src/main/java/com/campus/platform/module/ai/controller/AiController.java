@@ -14,6 +14,8 @@ import com.campus.platform.module.ai.dto.AssistPolishDTO;
 import com.campus.platform.module.ai.dto.GuideAskDTO;
 import com.campus.platform.module.ai.service.AiAssistService;
 import com.campus.platform.module.ai.service.CampusGuideService;
+import com.campus.platform.module.ai.agent.AgentMessageAttachments;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.R;
@@ -33,6 +35,11 @@ public class AiController {
     private final AiChatService aiChatService;
     private final AiAssistService aiAssistService;
     private final CampusGuideService campusGuideService;
+    private final AgentMessageAttachments attachments;
+    @Value("${campus.agent.enabled:false}")
+    private boolean agentEnabled;
+    @Value("${campus.agent.rag.enabled:false}")
+    private boolean ragEnabled;
 
     @PostMapping("/session")
     public R<AiSession> createSession(@Valid @RequestBody SessionCreateDTO dto) {
@@ -67,7 +74,12 @@ public class AiController {
             @PathVariable Long id,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "20") Integer pageSize) {
-        return R.ok(aiChatService.listMessages(UserContext.getUid(), id, pageNum, pageSize));
+        Long uid = UserContext.getUid();
+        var page = aiChatService.listMessages(uid, id, pageNum, pageSize);
+        if (agentEnabled || ragEnabled) {
+            attachments.restore(uid, page.getList());
+        }
+        return R.ok(page);
     }
 
     @PostMapping("/chat/stream")

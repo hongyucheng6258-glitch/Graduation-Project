@@ -1,0 +1,12 @@
+erDiagram
+  user ||--o{ ai_session : owns
+  ai_session ||--o{ ai_message : contains
+  user ||--o{ pdf_document : uploads
+  pdf_document o|--o{ ai_session : supports
+  user ||--o{ wrong_question : owns
+  wrong_question ||--o{ wrong_question_review : reviewed
+  user ||--o{ wrong_question_generated : requests
+  user ||--o{ ai_call_log : invokes
+  user ||--o{ study_partner : publishes
+  user ||--o{ campus_question : asks
+  campus_question ||--o{ campus_answer : receives

@@ -54,6 +54,18 @@ public class CampusGuideService {
     @Resource private AiGatewayService aiGatewayService;
 
     /** 向导入口：识别意图 -> 检索业务数据 -> 注入上下文 -> AI 回答 */
+    public String publicUpdates(String category) {
+        StringBuilder context = new StringBuilder();
+        switch (category) {
+            case "notice" -> appendNotices(context);
+            case "idle" -> appendIdle(context);
+            case "lost" -> appendLost(context);
+            case "post" -> appendPosts(context);
+            default -> throw new IllegalArgumentException("未知校园数据类别");
+        }
+        return context.toString();
+    }
+
     public String ask(Long userId, String question) {
         String intent = detectIntent(question);
         StringBuilder ctx = new StringBuilder();

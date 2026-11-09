@@ -48,7 +48,7 @@ spring:
 # ---- 图形验证码（登录前验证） ----
 platform:
   captcha:
-    enabled: false         # false 时跳过验证（自动化测试/本地联调）
+    enabled: true          # false 时跳过验证（自动化测试/本地联调）
     expire-seconds: 300    # 验证码有效期（秒）
     math-ratio: 0.5        # 运算验证码出现比例(0~1)，其余为图形验证码
 

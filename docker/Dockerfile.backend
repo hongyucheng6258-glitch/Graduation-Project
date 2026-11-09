@@ -5,6 +5,8 @@ COPY web/backend/pom.xml ./pom.xml
 RUN mvn -B -DskipTests dependency:go-offline
 COPY web/backend/src ./src
 RUN mvn -B -DskipTests package
+COPY docker/HealthProbe.java /tmp/HealthProbe.java
+RUN javac --release 17 -d /health /tmp/HealthProbe.java
 
 FROM eclipse-temurin:17-jre
 
@@ -13,9 +15,7 @@ ARG BUILD_VERSION=dev
 ENV APP_VERSION=$BUILD_VERSION
 
 WORKDIR /app
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends wget \
-    && rm -rf /var/lib/apt/lists/*
 COPY --from=build /build/target/platform-server.jar ./app.jar
+COPY --from=build /health ./health
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

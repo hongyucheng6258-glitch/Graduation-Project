@@ -1,0 +1,13 @@
+flowchart LR
+  S[学生 localhost 15173] --> N1[student Nginx 80]
+  A[管理员 localhost 15174] --> N2[admin Nginx 80]
+  H[健康检查 localhost 8080] --> B[backend 8080]
+  subgraph C[Compose 容器网络]
+    N1 --> B
+    N2 --> B
+    B --> M[mysql 3306]
+    B --> R[redis 6379]
+  end
+  M --> MV[(mysql_data)]
+  R --> RV[(redis_data)]
+  B --> E[外部 AI 服务]

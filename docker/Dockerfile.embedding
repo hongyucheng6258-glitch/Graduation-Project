@@ -1,0 +1,12 @@
+# syntax=docker/dockerfile:1
+FROM python:3.11-slim
+ENV PYTHONUNBUFFERED=1
+WORKDIR /app
+RUN pip install --no-cache-dir numpy==2.2.6 onnxruntime==1.23.2 tokenizers==0.22.2
+ADD --checksum=sha256:15b717c382bcb518ba457b93ea6850ede7f4f1cd8937454aa06972366cd19bcc https://modelscope.cn/models/Xenova/bge-small-zh-v1.5/resolve/master/onnx/model_quantized.onnx?download=true /models/model.onnx
+ADD --checksum=sha256:48cea5d44424912a6fd1ea647bf4fe50b55ab8b1e5879c3275f80e339e8fae26 https://huggingface.co/Xenova/bge-small-zh-v1.5/resolve/75c43b069aac4d136ba6bc1122f995fedcfd2781/tokenizer.json /models/tokenizer.json
+COPY docker/embedding/server.py .
+RUN chmod 0444 /models/model.onnx /models/tokenizer.json
+USER 10001
+EXPOSE 11434
+CMD ["python", "server.py"]

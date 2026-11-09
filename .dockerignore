@@ -1,6 +1,12 @@
 .git
 .gitignore
 .dockerignore
+.env
+.env.*
+.worktrees
+**/*.pem
+**/*.key
+**/__pycache__
 **/node_modules
 **/dist
 **/target

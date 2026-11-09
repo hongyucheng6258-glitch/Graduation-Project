@@ -100,8 +100,11 @@ public class AiChatService {
     }
 
     /** 删除会话（含消息） */
+    @org.springframework.transaction.annotation.Transactional
     public void deleteSession(Long userId, Long sessionId) {
-        checkOwner(userId, sessionId);
+        var session = aiSessionMapper.selectOne(new LambdaQueryWrapper<AiSession>()
+                .eq(AiSession::getId, sessionId).last("FOR UPDATE"));
+        verifyOwner(userId, session);
         chatMemoryService.deleteBySession(sessionId);
         aiSessionMapper.deleteById(sessionId);
     }
@@ -489,7 +492,10 @@ public class AiChatService {
 
     /** 校验会话归属当前用户 */
     private AiSession checkOwner(Long userId, Long sessionId) {
-        AiSession session = aiSessionMapper.selectById(sessionId);
+        return verifyOwner(userId, aiSessionMapper.selectById(sessionId));
+    }
+
+    private AiSession verifyOwner(Long userId, AiSession session) {
         if (session == null) {
             throw new BizException(ResultCode.NOT_FOUND, "会话不存在");
         }

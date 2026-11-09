@@ -18,13 +18,14 @@ public class ChatMemoryService {
     private final AiMessageMapper aiMessageMapper;
 
     /** 保存一条消息 */
-    public void saveMessage(Long sessionId, String role, String content, Integer tokens) {
+    public Long saveMessage(Long sessionId, String role, String content, Integer tokens) {
         AiMessage msg = new AiMessage();
         msg.setSessionId(sessionId);
         msg.setRole(role);
         msg.setContent(content);
         msg.setTokens(tokens);
         aiMessageMapper.insert(msg);
+        return msg.getId();
     }
 
     /** 加载会话历史消息（按时间正序，供上下文拼接） */

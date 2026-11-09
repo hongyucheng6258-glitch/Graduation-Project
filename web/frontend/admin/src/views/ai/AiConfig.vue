@@ -92,16 +92,28 @@
         <el-button type="primary" @click="savePrompt">保存</el-button>
       </template>
     </el-dialog>
+    <AgentWorkspace v-if="agentEnabled" :rag-enabled="ragEnabled" />
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
+import AgentWorkspace from './AgentWorkspace.vue'
+import request from '../../api/request'
 import { ElMessage } from 'element-plus'
 import { getAiConfig, updateAiConfig, listPrompts, createPrompt, updatePrompt } from '../../api/aiConfig'
 
 const loading = ref(false)
+const agentEnabled = ref(false)
+const ragEnabled = ref(false)
+onMounted(async () => {
+  try {
+    const features = await request.get('/ai/agent/capabilities', { silent: true })
+    agentEnabled.value = features.enabled
+    ragEnabled.value = features.ragEnabled
+  } catch { /* 旧版后端无需加载向导面板 */ }
+})
 const saving = ref(false)
 const configs = reactive({})
 const prompts = ref([])

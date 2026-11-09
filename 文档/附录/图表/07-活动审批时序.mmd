@@ -1,0 +1,20 @@
+sequenceDiagram
+  participant P as 发布者
+  participant C as ActivityController
+  participant S as ActivityService
+  participant D as MySQL
+  participant M as 消息服务
+  P->>C: 审批报名
+  C->>S: handleMember
+  S->>D: 开始事务并锁活动父行
+  S->>D: 重读报名记录
+  S->>S: 校验发布者 状态 时间和名额
+  alt 可以处理
+    S->>D: 按待审批条件更新记录
+    S->>D: 按需更新满员状态
+    S->>M: 创建结果通知
+    S->>D: 提交事务
+    S-->>P: 成功
+  else 不满足条件
+    S-->>P: 业务错误
+  end

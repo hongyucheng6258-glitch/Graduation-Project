@@ -1,0 +1,19 @@
+sequenceDiagram
+  participant U as 学生
+  participant S as 三维场景
+  participant W as CampusWorkspace
+  participant R as 内存路由
+  participant P as 原学生业务页面
+  participant A as 后端
+  U->>S: 进入房间并点击服务台
+  S->>W: 打开服务 ID
+  W->>R: 创建房间路由
+  R->>P: 挂载原页面
+  P->>A: 原业务 API
+  A-->>P: 业务结果
+  U->>P: 查看详情并返回
+  P->>R: 房间内导航
+  R-->>P: 恢复列表状态
+  U->>W: 返回房间
+  W->>W: 卸载应用及清理资源
+  W-->>S: 保持场景位置

@@ -130,6 +130,11 @@ public class ActivityService {
 
     /** 列表检索（公开，仅审核通过；已结束的活动不展示） */
     public PageResult<ActivityVO> list(String keyword, String category, int pageNum, int pageSize) {
+        return list(keyword, category, pageNum, pageSize, null, null);
+    }
+
+    public PageResult<ActivityVO> list(String keyword, String category, int pageNum, int pageSize,
+                                      LocalDateTime startInclusive, LocalDateTime endExclusive) {
         LocalDateTime now = LocalDateTime.now();
         Page<Activity> page = activityMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<Activity>()
@@ -143,6 +148,8 @@ public class ActivityService {
                                 .like(Activity::getTitle, keyword)
                                 .or().like(Activity::getDescription, keyword))
                         .eq(StrUtil.isNotBlank(category), Activity::getCategory, category)
+                        .ge(startInclusive != null, Activity::getStartTime, startInclusive)
+                        .lt(endExclusive != null, Activity::getStartTime, endExclusive)
                         .orderByDesc(Activity::getId));
         return PageResult.of(page, this::toVO);
     }

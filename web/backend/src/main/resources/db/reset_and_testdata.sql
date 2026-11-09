@@ -7,6 +7,49 @@ USE ai_campus_platform;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+-- Remove optional Agent state before the legacy reset reuses user, PDF and activity IDs.
+-- Keep knowledge AUTO_INCREMENT values so vector payload IDs are not recycled.
+SET @agent_cleanup = IF(EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='agent_message_attachment'),
+    'DELETE FROM `agent_message_attachment`', 'DO 0');
+PREPARE agent_cleanup_stmt FROM @agent_cleanup;
+EXECUTE agent_cleanup_stmt;
+DEALLOCATE PREPARE agent_cleanup_stmt;
+SET @agent_cleanup = IF(EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='agent_action'),
+    'DELETE FROM `agent_action`', 'DO 0');
+PREPARE agent_cleanup_stmt FROM @agent_cleanup;
+EXECUTE agent_cleanup_stmt;
+DEALLOCATE PREPARE agent_cleanup_stmt;
+SET @agent_cleanup = IF(EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='agent_run'),
+    'DELETE FROM `agent_run`', 'DO 0');
+PREPARE agent_cleanup_stmt FROM @agent_cleanup;
+EXECUTE agent_cleanup_stmt;
+DEALLOCATE PREPARE agent_cleanup_stmt;
+SET @agent_cleanup = IF(EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='agent_prompt_active'),
+    'DELETE FROM `agent_prompt_active`', 'DO 0');
+PREPARE agent_cleanup_stmt FROM @agent_cleanup;
+EXECUTE agent_cleanup_stmt;
+DEALLOCATE PREPARE agent_cleanup_stmt;
+SET @agent_cleanup = IF(EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='agent_prompt_version'),
+    'DELETE FROM `agent_prompt_version`', 'DO 0');
+PREPARE agent_cleanup_stmt FROM @agent_cleanup;
+EXECUTE agent_cleanup_stmt;
+DEALLOCATE PREPARE agent_cleanup_stmt;
+SET @agent_cleanup = IF(EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='kb_index_job'),
+    'DELETE FROM `kb_index_job`', 'DO 0');
+PREPARE agent_cleanup_stmt FROM @agent_cleanup;
+EXECUTE agent_cleanup_stmt;
+DEALLOCATE PREPARE agent_cleanup_stmt;
+SET @agent_cleanup = IF(EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='kb_chunk'),
+    'DELETE FROM `kb_chunk`', 'DO 0');
+PREPARE agent_cleanup_stmt FROM @agent_cleanup;
+EXECUTE agent_cleanup_stmt;
+DEALLOCATE PREPARE agent_cleanup_stmt;
+SET @agent_cleanup = IF(EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='kb_document'),
+    'DELETE FROM `kb_document`', 'DO 0');
+PREPARE agent_cleanup_stmt FROM @agent_cleanup;
+EXECUTE agent_cleanup_stmt;
+DEALLOCATE PREPARE agent_cleanup_stmt;
+
 -- ==================== 1. 清空所有表数据 ====================
 TRUNCATE TABLE `chat_message`;
 TRUNCATE TABLE `chat_conversation_member`;

@@ -1,0 +1,33 @@
+@startuml
+left to right direction
+actor "访客" as Visitor
+actor "学生" as Student
+actor "内容发布者" as Publisher
+actor "审核员" as Auditor
+actor "超级管理员" as Super
+Student --|> Visitor
+Publisher --|> Student
+Super --|> Auditor
+rectangle "三维交互式智慧校园服务平台" {
+  usecase "浏览校园信息" as Read
+  usecase "发布与参与活动" as Activity
+  usecase "预约与认领物品" as Life
+  usecase "学习互助与 AI 学习" as Learn
+  usecase "私信与多人游戏" as Social
+  usecase "进入三维服务房间" as Space
+  usecase "处理本人参与申请" as Handle
+  usecase "审核内容与处理举报" as Audit
+  usecase "公告与运营管理" as Operate
+  usecase "系统配置与管理员管理" as Config
+}
+Visitor --> Read
+Visitor --> Space
+Student --> Activity
+Student --> Life
+Student --> Learn
+Student --> Social
+Publisher --> Handle
+Auditor --> Audit
+Auditor --> Operate
+Super --> Config
+@enduml

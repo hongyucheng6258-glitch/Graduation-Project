@@ -14,12 +14,23 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api/admin/ai")
 @RequiredArgsConstructor
 public class AdminAiController {
     private final AiAdminService aiAdminService;
+    @Value("${campus.agent.enabled:false}")
+    private boolean agentEnabled;
+    @Value("${campus.agent.rag.enabled:false}")
+    private boolean ragEnabled;
+
+    @GetMapping("/agent/capabilities")
+    public R<Map<String, Boolean>> agentCapabilities() {
+        return R.ok(Map.of("enabled", agentEnabled, "ragEnabled", ragEnabled));
+    }
 
     @GetMapping("/config")
     public R<List<AiConfig>> listConfigs() {
