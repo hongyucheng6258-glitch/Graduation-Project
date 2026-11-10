@@ -107,7 +107,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
@@ -115,7 +115,9 @@ import { mySignups, myActivities, activityMembers, handleMember as handleMemberA
 import { formatTime } from '../../utils/date'
 
 const router = useRouter()
-const tab = ref(useRoute().query.tab === 'published' ? 'published' : 'signup')
+const route = useRoute()
+const tab = ref('signup')
+watch(() => route.query.tab, value => { tab.value = value === 'published' ? 'published' : 'signup' }, { immediate: true })
 const loading = ref(false)
 const signups = ref([])
 const signupPage = ref(1)

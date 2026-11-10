@@ -19,7 +19,9 @@ test('notification destinations cover every business module', () => {
 
 test('audit notifications route to my-content pages instead of business detail', () => {
   assert.equal(messageTarget({ bizType: 'idle', bizId: 9, type: 'audit' }), '/profile?tab=idle')
-  assert.equal(messageTarget({ bizType: 'activity', bizId: 12, type: 'audit' }), '/activity/my-signup')
+  assert.equal(messageTarget({ bizType: 'activity', bizId: 12, type: 'audit' }), '/activity/my-signup?tab=published')
+  assert.equal(messageTarget({ bizType: 'activity', bizId: 12, type: 'audit', title: '报名已通过' }), '/activity/my-signup')
+  assert.equal(messageTarget({ bizType: 'activity', bizId: 12, type: 'audit', title: '报名未通过' }), '/activity/my-signup')
   assert.equal(messageTarget({ bizType: 'lostfound', bizId: 5, type: 'audit' }), '/lostfound')
   assert.equal(messageTarget({ bizType: 'post', bizId: 7, type: 'audit' }), '/social')
   assert.equal(messageTarget({ bizType: 'partner', bizId: 4, type: 'audit' }), '/partner')

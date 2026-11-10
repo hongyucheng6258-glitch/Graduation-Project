@@ -16,7 +16,8 @@ export function messageTarget(message) {
       case 'idle':
         return '/profile?tab=idle'
       case 'activity':
-        return '/activity/my-signup'
+        if (message?.title === '报名已通过' || message?.title === '报名未通过') return '/activity/my-signup'
+        return '/activity/my-signup?tab=published'
       case 'lostfound':
         return '/lostfound'
       case 'post':

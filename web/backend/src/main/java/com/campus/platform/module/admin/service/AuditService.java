@@ -90,6 +90,12 @@ public class AuditService {
         return item;
     }
 
+    public Activity activityDetail(Long id) {
+        var activity = activityMapper.selectById(id);
+        if (activity == null) throw new BizException(ResultCode.NOT_FOUND, "未找到活动记录");
+        return activity;
+    }
+
     /** 全量内容列表：自动通过、人工通过、待审核、已驳回均可管理。 */
     public PageResult<?> allList(String type, int pageNum, int pageSize) {
         return switch (type) {
@@ -116,6 +122,10 @@ public class AuditService {
             reviewIdle(id, Constants.AUDIT_PASS, null, false);
             return;
         }
+        if (Constants.BIZ_ACTIVITY.equals(type)) {
+            reviewActivity(id, Constants.AUDIT_PASS, null, false);
+            return;
+        }
         AuditedTarget target = doAudit(type, id, Constants.AUDIT_PASS, null);
         notifyAuthor(target, true, null);
     }
@@ -127,6 +137,10 @@ public class AuditService {
             reviewIdle(id, Constants.AUDIT_REJECT, reason, false);
             return;
         }
+        if (Constants.BIZ_ACTIVITY.equals(type)) {
+            reviewActivity(id, Constants.AUDIT_REJECT, reason, false);
+            return;
+        }
         AuditedTarget target = doAudit(type, id, Constants.AUDIT_REJECT, reason);
         notifyAuthor(target, false, reason);
     }
@@ -136,6 +150,26 @@ public class AuditService {
         int decision = pass ? Constants.AUDIT_PASS : Constants.AUDIT_REJECT;
         reviewIdle(id, decision, pass ? null : reason, true);
         return decision;
+    }
+
+    @Transactional
+    public int reviewPendingActivity(Long id, boolean pass, String reason) {
+        int decision = pass ? Constants.AUDIT_PASS : Constants.AUDIT_REJECT;
+        reviewActivity(id, decision, pass ? null : reason, true);
+        return decision;
+    }
+
+    private void reviewActivity(Long id, int decision, String reason, boolean pendingOnly) {
+        var activity = activityMapper.selectForUpdate(id);
+        if (activity == null) throw new BizException(ResultCode.NOT_FOUND, "内容不存在");
+        if (pendingOnly && !Objects.equals(activity.getAuditStatus(), Constants.AUDIT_PENDING)) {
+            throw new BizException(ResultCode.DUPLICATE_OPERATION, "该活动已处理，请刷新");
+        }
+        if (Objects.equals(activity.getAuditStatus(), decision) && Objects.equals(activity.getAuditReason(), reason)) return;
+        String source = activity.getAiRiskLevel() == null ? "manual" : "ai_manual";
+        activityMapper.updateAuditDecision(id, decision, reason, source);
+        notifyAuthor(new AuditedTarget(activity.getUserId(), "活动「" + activity.getTitle() + "」", Constants.BIZ_ACTIVITY, id),
+                decision == Constants.AUDIT_PASS, reason);
     }
 
     private void reviewIdle(Long id, int decision, String reason, boolean pendingOnly) {
@@ -154,17 +188,6 @@ public class AuditService {
     /** 各类型统一更新审核状态，返回作者与可回跳的业务目标 */
     private AuditedTarget doAudit(String type, Long id, int auditStatus, String reason) {
         switch (type) {
-            case Constants.BIZ_ACTIVITY -> {
-                Activity activity = activityMapper.selectById(id);
-                if (activity == null) {
-                    throw new BizException(ResultCode.NOT_FOUND, "内容不存在");
-                }
-                activity.setAuditStatus(auditStatus);
-                activity.setAuditReason(reason);
-                activity.setAuditSource(activity.getAiRiskLevel() == null ? "manual" : "ai_manual");
-                activityMapper.updateById(activity);
-                return new AuditedTarget(activity.getUserId(), "活动「" + activity.getTitle() + "」", Constants.BIZ_ACTIVITY, activity.getId());
-            }
             case Constants.BIZ_LOSTFOUND -> {
                 LostFound lf = lostFoundMapper.selectById(id);
                 if (lf == null) {

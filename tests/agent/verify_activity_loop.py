@@ -109,15 +109,43 @@ def verify_review(base, cfg, db, marker, student_id, student, activity_id, activ
         db.commit()
         route = '/api/admin/assistant'
         turn = ok(call(base, route + '/ask', {'question': f'请查看待审核活动编号 {activity_id}'}, admin))
-        assert any(row['kind'] == 'activity' and row['id'] == activity_id for row in turn['turn']['records'])
-        form = {'sessionId': turn['sessionId'], 'kind': 'activity', 'itemId': activity_id, 'decision': 'PASS'}
+        evidence, = turn['turn']['records']
+        assert evidence['kind'] == 'activity' and evidence['id'] == activity_id
+        assert evidence['activity']['location'] == activity_form['location'] and evidence['activity']['maxMembers'] == 20
+        keyword = ok(call(base, route + '/ask', {'question': f'找出待审核活动，标题关键词只用 {marker}。'}, admin))
+        assert [row['id'] for row in keyword['turn']['records']] == [activity_id]
+        detail = f'/api/admin/audit/activity/{activity_id}'
+        assert call(base, detail, bearer=student, method='GET')['code'] in (401, 403)
+        assert ok(call(base, detail, bearer=admin, method='GET'))['title'] == activity_form['title']
+        direct = ok(call(base, route + '/ask', {'question': f'请直接审核通过活动编号 {activity_id}，执行并给我审核回执。'}, admin))
+        assert [row['id'] for row in direct['turn']['records']] == [activity_id]
+        assert '确认' in direct['turn']['answer']
+        padded = ok(call(base, route + '/ask', {'question': f'请查询活动编号 000{activity_id}'}, admin))
+        assert [row['id'] for row in padded['turn']['records']] == [activity_id]
+        ambiguous = {'question': f'请查看活动编号 {activity_id}，也可能是编号 {int(activity_id) + 1}。'}
+        assert call(base, route + '/ask', ambiguous, admin)['code'] != 200
+        ambiguous = {'question': f'请查看活动 {activity_id}，活动 {int(activity_id) + 1} 也看看。'}
+        assert call(base, route + '/ask', ambiguous, admin)['code'] != 200
+        assert ok(call(base, detail, bearer=admin, method='GET'))['auditStatus'] == 0
+        form = {'sessionId': turn['sessionId'], 'kind': 'activity', 'itemId': activity_id, 'decision': 'PASS',
+                'version': evidence['activity']['version']}
         prepare = route + '/reviews/prepare'
+        assert call(base, prepare, form, student)['code'] in (401, 403)
         assert call(base, prepare, {**form, 'kind': 'idle'}, admin)['code'] == 404
         assert call(base, prepare, {**form, 'decision': 'REJECT'}, admin)['code'] != 200
+        expired = ok(call(base, prepare, form, admin))
+        cur.execute('UPDATE admin_assistant_review SET expires_at=DATE_SUB(NOW(6), INTERVAL 1 MINUTE) WHERE id=%s',
+                    (expired['id'],))
+        db.commit()
+        assert call(base, route + f'/reviews/{expired["id"]}/confirm', bearer=admin)['code'] != 200
         stale = ok(call(base, prepare, form, admin))
         ok(call(base, f'/api/activity/{activity_id}', activity_form, student, method='PUT'))
         assert call(base, route + f'/reviews/{stale["id"]}/confirm', bearer=admin)['code'] != 200
+        assert call(base, prepare, form, admin)['code'] != 200
         db.commit()
+        refreshed = ok(call(base, route + '/ask', {'question': f'请查看待审核活动编号 {activity_id}',
+                                                   'sessionId': turn['sessionId']}, admin))
+        form['version'] = refreshed['turn']['records'][0]['activity']['version']
         prepared = ok(call(base, prepare, form, admin))
         assert prepared['state'] == 'PENDING'
         cur.execute('SELECT audit_status FROM activity WHERE id=%s', (activity_id,))
@@ -127,6 +155,8 @@ def verify_review(base, cfg, db, marker, student_id, student, activity_id, activ
         with ThreadPoolExecutor(max_workers=2) as pool:
             a, b = pool.map(lambda _: ok(call(base, confirm, bearer=admin)), range(2))
         assert a == b and a['state'] == 'APPLIED' and a['auditStatus'] == 1
+        assert call(base, f'/api/admin/audit/activity/{activity_id}/reject?pendingOnly=true',
+                    {'reason': '另一审核窗口'}, admin, method='PUT')['code'] != 200
         cur.execute("SELECT COUNT(*) FROM message WHERE user_id=%s AND biz_type='activity' AND biz_id=%s", (student_id, activity_id))
         assert cur.fetchone()[0] == 1
         history = ok(call(base, history_path, bearer=student, method='GET'))['list']

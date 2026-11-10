@@ -32,6 +32,7 @@ import com.campus.platform.module.ai.gateway.SensitiveWordService;
 import com.campus.platform.module.user.mapper.UserMapper;
 import com.campus.platform.utils.SignTokenUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
@@ -39,6 +40,7 @@ import org.springframework.transaction.annotation.Isolation;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -59,6 +61,9 @@ public class ActivityService {
     private final ContentAiAuditService contentAiAuditService;
     private final SystemConfigHolder systemConfigHolder;
 
+    @Value("${CAMPUS_ADMIN_ASSISTANT_ENABLED:false}")
+    private boolean versionedAudit;
+
     public void ensurePublishingEnabled() {
         if (!systemConfigHolder.isActivityPublishEnabled()) {
             throw new BizException(ResultCode.FORBIDDEN, "当前已关闭活动发布，请联系管理员");
@@ -66,6 +71,7 @@ public class ActivityService {
     }
 
     /** 发布活动（待审核） */
+    @Transactional
     public Activity publish(Long userId, ActivityPublishDTO dto) {
         ensurePublishingEnabled();
         if (sensitiveWordService.contains(dto.getTitle()) || sensitiveWordService.contains(dto.getDescription())) {
@@ -95,8 +101,9 @@ public class ActivityService {
     }
 
     /** 编辑活动（仅发布者本人；已结束不可编辑；编辑后重新进入 AI 审核） */
+    @Transactional
     public Activity update(Long userId, Long id, ActivityPublishDTO dto) {
-        Activity activity = activityMapper.selectById(id);
+        Activity activity = activityMapper.selectForUpdate(id);
         if (activity == null) {
             throw new BizException(ResultCode.NOT_FOUND, "活动不存在");
         }
@@ -133,6 +140,9 @@ public class ActivityService {
         activity.setAuditStatus(Constants.AUDIT_PENDING);
         activity.setAuditReason(null);
         activityMapper.updateById(activity);
+        if (versionedAudit) {
+            activityMapper.updateAuditRevision(id, UUID.randomUUID().toString());
+        }
         contentAiAuditService.audit(Constants.BIZ_ACTIVITY, activity, userId, dto.getTitle(), dto.getDescription());
         return activity;
     }
@@ -253,11 +263,7 @@ public class ActivityService {
         }
         memberMapper.deleteById(member.getId());
         // 人数回退：已报满 -> 恢复报名中
-        Activity target = activityMapper.selectById(activityId);
-        if (target != null && target.getStatus() != null && target.getStatus() == Constants.ACTIVITY_FULL) {
-            target.setStatus(Constants.ACTIVITY_SIGNING);
-            activityMapper.updateById(target);
-        }
+        activityMapper.replaceStatus(activityId, Constants.ACTIVITY_FULL, Constants.ACTIVITY_SIGNING);
         messageService.send(activity.getUserId(), Constants.MSG_INTERACT,
                 "报名已取消",
                 String.format("有同学取消了活动「%s」的报名。", activity.getTitle()),

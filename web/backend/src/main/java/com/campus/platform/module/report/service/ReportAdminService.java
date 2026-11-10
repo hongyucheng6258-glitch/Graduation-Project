@@ -102,13 +102,7 @@ public class ReportAdminService {
             case Constants.BIZ_IDLE -> {
                 idleItemMapper.updateAvailability(targetId, Constants.IDLE_OFF_SHELF, null, false);
             }
-            case Constants.BIZ_ACTIVITY -> {
-                Activity activity = activityMapper.selectById(targetId);
-                if (activity != null) {
-                    activity.setStatus(Constants.ACTIVITY_OFF);
-                    activityMapper.updateById(activity);
-                }
-            }
+            case Constants.BIZ_ACTIVITY -> activityMapper.updateStatus(targetId, Constants.ACTIVITY_OFF);
             case Constants.BIZ_LOSTFOUND -> {
                 LostFound lf = lostFoundMapper.selectById(targetId);
                 if (lf != null) {

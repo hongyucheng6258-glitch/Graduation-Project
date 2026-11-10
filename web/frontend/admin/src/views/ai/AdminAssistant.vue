@@ -11,7 +11,7 @@
       <p v-if="error" class="assistant-error" role="alert">{{ error }}</p>
       <div v-if="!turns.length && !busy && available" class="starter">
         <h2>从今天的待办开始</h2>
-        <p class="muted">可以查询待办数量、待审核闲置和指定举报的证据。</p>
+        <p class="muted">可以查询待办数量、待审核活动或闲置，以及指定举报的证据。</p>
       </div>
       <template v-for="(turn, index) in turns" :key="index">
         <AssistantBubble role="user" :content="turn.question" :nickname="nickname" />
@@ -31,38 +31,45 @@
           </section>
         </AssistantCard>
         <section v-if="turn.records.length" aria-label="业务证据">
-          <template v-for="record in turn.records" :key="`${record.kind}-${record.id}`">
+          <template v-for="record in turn.records" :key="recordKey(record.kind, record.id)">
             <AssistantCard wide>
               <article class="evidence-card results">
                 <header><strong>{{ record.title }}</strong><span class="muted">{{ recordStatus(record) }}</span></header>
                 <p v-if="record.excerpt">内容节选　{{ record.excerpt }}</p>
+                <div v-if="record.activity" class="record-details muted">
+                  <span v-if="record.activity.location">地点 {{ record.activity.location }}</span>
+                  <span v-if="record.activity.startTime">开始 {{ formatActivityTime(record.activity.startTime) }}</span>
+                  <span v-if="record.activity.endTime">结束 {{ formatActivityTime(record.activity.endTime) }}</span>
+                  <span v-if="record.activity.signupDeadline">报名截止 {{ formatActivityTime(record.activity.signupDeadline) }}</span>
+                  <span v-if="record.activity.maxMembers != null">人数上限 {{ record.activity.maxMembers || '不限' }}</span>
+                </div>
                 <p v-if="record.riskReason" class="muted">预审提示　{{ record.riskReason }}</p>
                 <template v-if="record.target">
                   <p class="muted">举报理由　{{ record.reason || '未填写' }}</p>
                   <p>被举报内容　{{ record.target.title || '原记录暂不可用' }}</p>
                   <p v-if="record.target.excerpt">被举报内容节选　{{ record.target.excerpt }}</p>
                 </template>
-                <RouterLink :to="recordRoute(record)">{{ record.kind === 'idle' ? '打开闲置审核记录' : '打开举报记录' }}</RouterLink>
-                <RouterLink v-if="record.target?.kind === 'idle' && record.target.title" class="target-link"
-                  :to="recordRoute(record.target)">查看被举报闲置</RouterLink>
-                <el-button v-if="record.kind === 'idle' && record.status === 0 && lastEvidenceTurn.get(record.id) === index"
+                <RouterLink :to="recordRoute(record)">{{ reviewKindNames[record.kind] ? `打开${reviewKindNames[record.kind]}审核记录` : '打开举报记录' }}</RouterLink>
+                <RouterLink v-if="record.target?.title && reviewKindNames[record.target.kind]" class="target-link"
+                  :to="recordRoute(record.target)">查看被举报{{ reviewKindNames[record.target.kind] }}</RouterLink>
+                <el-button v-if="reviewKindNames[record.kind] && record.status === 0 && isLatestEvidence(record, index)"
                   text :disabled="busy"
                   @click="openReview(record)">准备审核</el-button>
               </article>
             </AssistantCard>
-            <AdminReviewCards v-if="record.kind === 'idle' && lastEvidenceTurn.get(record.id) === index"
-              :cards="reviewsByItem.get(record.id) || []" :busy="busy" @confirm="confirmReview" />
+            <AdminReviewCards v-if="reviewKindNames[record.kind] && isLatestEvidence(record, index)"
+              :cards="reviewsByItem.get(recordKey(record.kind, record.id)) || []" :busy="busy" @confirm="confirmReview" />
           </template>
         </section>
       </template>
-      <AdminReviewCards :cards="reviewsWithoutEvidence" :busy="busy" @confirm="confirmReview" />
+      <AdminReviewCards :cards="reviewsWithoutEvidence" :busy="busy" show-record-link @confirm="confirmReview" />
       <AssistantBubble v-if="sending" role="user" :content="pendingQuestion" :nickname="nickname" />
       <p v-if="initializing || loading || sending" class="muted" role="status">{{ sending ? '正在查询待办…' : '正在加载会话…' }}</p>
     </template>
     <AdminAssistantOperations v-else-if="available" :key="workspace" :mode="workspace"
       :can-manage-rules="canManageRules" :nickname="nickname" />
   </AssistantShell>
-  <el-dialog v-model="reviewVisible" title="准备闲置审核" width="min(460px, 92vw)">
+  <el-dialog v-model="reviewVisible" :title="`准备${reviewKindNames[reviewTarget?.kind] || '闲置'}审核`" width="min(460px, 92vw)">
     <p><strong>{{ reviewTarget?.title }}</strong></p>
     <el-radio-group v-model="reviewDecision" aria-label="审核决定">
       <el-radio value="PASS">通过</el-radio>
@@ -70,6 +77,7 @@
     </el-radio-group>
     <el-input v-model="reviewReason" aria-label="审核理由" type="textarea" maxlength="255" :rows="3"
       :placeholder="reviewDecision === 'REJECT' ? '填写给发布者的驳回理由' : '可填写审核备注'" />
+    <p v-if="reviewError" class="assistant-error" role="alert">{{ reviewError }}</p>
     <template #footer>
       <el-button @click="reviewVisible = false">取消</el-button>
       <el-button type="primary" :loading="reviewing" :disabled="reviewDecision === 'REJECT' && !reviewReason.trim()"
@@ -85,6 +93,7 @@ import AssistantBubble from '../../../../shared/assistant/AssistantBubble.vue'
 import AssistantCard from '../../../../shared/assistant/AssistantCard.vue'
 import AdminReviewCards from './AdminReviewCards.vue'
 import { useAdminStore } from '../../store/admin'
+import { formatTime as formatActivityTime } from '../../utils/date'
 import AdminAssistantOperations from './AdminAssistantOperations.vue'
 import { askAssistant, assistantCapabilities, assistantHistory, assistantReviews, assistantSessions,
   confirmAssistantReview, prepareAssistantReview } from '../../api/assistant'
@@ -99,7 +108,9 @@ const destinations = {
   report: { label: '待处理举报', route: { path: '/report', query: { view: 'pending' } } },
   ai: { label: 'AI 预审风险提示', route: '/ai/audit' }
 }
-const suggestions = ['现在有哪些待办？', '找出待审核闲置，优先显示有风险提示的记录', '有多少待处理举报？']
+const suggestions = ['现在有哪些待办？', '找出待审核活动', '找出待审核闲置，优先显示有风险提示的记录', '有多少待处理举报？']
+const reviewKindNames = { idle: '闲置', activity: '活动' }
+const recordKey = (kind, id) => `${kind || 'idle'}-${id}`
 const sessions = ref([])
 const turns = ref([])
 const reviews = ref([])
@@ -107,6 +118,7 @@ const reviewVisible = ref(false)
 const reviewTarget = ref(null)
 const reviewDecision = ref('PASS')
 const reviewReason = ref('')
+const reviewError = ref('')
 const reviewing = ref(false)
 const assistantShell = ref(null)
 const pendingQuestion = ref('')
@@ -133,27 +145,29 @@ const lastEvidenceTurn = computed(() => {
   const placements = new Map()
   turns.value.forEach((turn, index) => {
     for (const record of turn.records) {
-      if (record.kind === 'idle') placements.set(record.id, index)
+      if (reviewKindNames[record.kind]) placements.set(recordKey(record.kind, record.id), index)
     }
   })
   return placements
 })
+const isLatestEvidence = (record, index) => lastEvidenceTurn.value.get(recordKey(record.kind, record.id)) === index
 const reviewsByItem = computed(() => {
   const grouped = new Map()
   for (const card of reviews.value) {
-    if (!grouped.has(card.itemId)) grouped.set(card.itemId, [])
-    grouped.get(card.itemId).push(card)
+    const key = recordKey(card.kind, card.itemId)
+    if (!grouped.has(key)) grouped.set(key, [])
+    grouped.get(key).push(card)
   }
   return grouped
 })
-const reviewsWithoutEvidence = computed(() => reviews.value.filter(card => !lastEvidenceTurn.value.has(card.itemId)))
+const reviewsWithoutEvidence = computed(() => reviews.value.filter(card => !lastEvidenceTurn.value.has(recordKey(card.kind, card.itemId))))
 const scrollToBottom = () => assistantShell.value?.scrollToBottom()
 const clock = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'short', timeStyle: 'medium' })
 const formatTime = value => clock.format(new Date(value))
 const recordStatus = record => record.kind === 'report'
   ? (record.status === 0 ? '待处理' : '已处理')
   : (['待审核', '已通过', '已驳回'][record.status] || '状态待确认')
-const recordRoute = record => ({ path: record.kind === 'idle' ? '/audit/idle' : '/report', query: { record: record.id } })
+const recordRoute = record => ({ path: reviewKindNames[record.kind] ? `/audit/${record.kind}` : '/report', query: { record: record.id } })
 
 onMounted(async () => {
   try {
@@ -208,20 +222,22 @@ function openReview(record) {
   reviewTarget.value = record
   reviewDecision.value = 'PASS'
   reviewReason.value = ''
+  reviewError.value = ''
   reviewVisible.value = true
 }
 
 async function prepareReview() {
   if (busy.value || !activeId.value || !reviewTarget.value) return
   reviewing.value = true
-  error.value = ''
+  reviewError.value = ''
   try {
     const card = await prepareAssistantReview({ sessionId: activeId.value, itemId: reviewTarget.value.id,
+      kind: reviewTarget.value.kind, version: reviewTarget.value.activity?.version,
       decision: reviewDecision.value, reason: reviewReason.value.trim() })
     reviews.value.unshift(card)
     reviewVisible.value = false
   } catch (e) {
-    error.value = e.message
+    reviewError.value = e.message
   } finally {
     reviewing.value = false
   }
@@ -234,9 +250,10 @@ async function confirmReview(card) {
   try {
     const receipt = await confirmAssistantReview(card.id)
     Object.assign(card, receipt)
+    const key = recordKey(card.kind, card.itemId)
     for (const turn of turns.value) {
       for (const record of turn.records) {
-        if (record.kind === 'idle' && record.id === card.itemId) record.status = receipt.auditStatus
+        if (recordKey(record.kind, record.id) === key) record.status = receipt.auditStatus
       }
     }
   } catch (e) {
@@ -279,6 +296,7 @@ async function send(text) {
 .task-link:hover, .evidence-card a { color: var(--brand-strong); }
 .task-link strong { font-variant-numeric: tabular-nums; }
 .evidence-card p { margin: 6px 0; }
+.record-details { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 6px 0; }
 .target-link { margin-left: 12px; }
 .assistant-error { color: var(--danger, #ae2929); }
 </style>

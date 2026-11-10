@@ -7,7 +7,7 @@
         <p class="desc">{{ cfg.desc }}</p>
       </div>
       <div class="page-head-actions">
-        <RouterLink v-if="focusedId" class="btn btn-ghost btn-sm" to="/audit/idle?view=pending">返回待审列表</RouterLink>
+        <RouterLink v-if="focusedId" class="btn btn-ghost btn-sm" :to="{ path: `/audit/${props.type}`, query: { view: 'pending' } }">返回待审列表</RouterLink>
         <el-radio-group v-else v-model="viewMode" @change="handleViewChange">
           <el-radio-button value="all">全部内容</el-radio-button>
           <el-radio-button value="pending">待人工审核</el-radio-button>
@@ -20,7 +20,7 @@
     </div>
 
     <!-- 审核卡片列表 -->
-    <div v-loading="loading" class="review-list">
+    <div v-loading="loading" class="review-list" :class="{ 'review-list--focused': focusedId }">
       <div v-for="row in list" :key="row.id" class="review-card" :class="{ 'no-cover': props.type === 'partner' }">
         <!-- 封面（搭子无图片，不展示封面区） -->
         <div v-if="props.type !== 'partner'" class="review-cover">
@@ -46,6 +46,14 @@
               {{ sourceText[row.auditSource] || '人工' }}
             </span>
             <span>#{{ row.id }}</span>
+          </div>
+          <div v-if="props.type === 'activity'" class="review-meta">
+            <span v-if="row.category">分类 {{ row.category }}</span>
+            <span v-if="row.location">地点 {{ row.location }}</span>
+            <span v-if="row.startTime">开始 {{ formatTime(row.startTime) }}</span>
+            <span v-if="row.endTime">结束 {{ formatTime(row.endTime) }}</span>
+            <span v-if="row.signupDeadline">报名截止 {{ formatTime(row.signupDeadline) }}</span>
+            <span v-if="row.maxMembers != null">人数上限 {{ row.maxMembers || '不限' }}</span>
           </div>
           <p v-if="displayDesc(row)" class="review-desc">{{ displayDesc(row) }}</p>
 
@@ -100,7 +108,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { auditAll, auditList, auditPass, auditReject, idleAuditDetail } from '../../api/audit'
+import { auditAll, auditList, auditPass, auditReject, auditRecordDetail } from '../../api/audit'
 import { formatTime } from '../../utils/date'
 import { normalizeImages, firstValidImage } from '../../utils/image'
 
@@ -108,7 +116,7 @@ const props = defineProps({
   type: { type: String, required: true }
 })
 const route = useRoute()
-const focusedId = computed(() => props.type === 'idle' && typeof route.query.record === 'string'
+const focusedId = computed(() => ['idle', 'activity'].includes(props.type) && typeof route.query.record === 'string'
   && /^[1-9]\d*$/.test(route.query.record) ? route.query.record : null)
 let requestVersion = 0
 
@@ -177,7 +185,7 @@ async function load() {
   if (recordId) list.value = []
   try {
     const requestFn = viewMode.value === 'all' ? auditAll : auditList
-    const res = recordId ? { list: [{ ...await idleAuditDetail(recordId), id: recordId }], total: 1 }
+    const res = recordId ? { list: [{ ...await auditRecordDetail(props.type, recordId), id: recordId }], total: 1 }
       : await requestFn({ type: props.type, pageNum: pageNum.value, pageSize })
     if (version !== requestVersion) return
     list.value = res.list
@@ -294,6 +302,7 @@ watch([() => props.type, () => route.query.view, focusedId], ([, view], [, previ
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.review-list--focused .review-desc { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
 .review-actions { display: flex; flex-direction: column; gap: var(--s-2); justify-content: center; }
 .review-actions .btn { min-width: 92px; }
 

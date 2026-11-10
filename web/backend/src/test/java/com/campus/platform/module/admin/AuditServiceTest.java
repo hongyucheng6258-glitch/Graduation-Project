@@ -141,12 +141,11 @@ class AuditServiceTest {
             activity.setUserId(6L);
             activity.setTitle("周末篮球局");
             activity.setAuditStatus(Constants.AUDIT_PENDING);
-            when(activityMapper.selectById(20L)).thenReturn(activity);
+            when(activityMapper.selectForUpdate(20L)).thenReturn(activity);
 
             auditService.pass(Constants.BIZ_ACTIVITY, 20L);
 
-            assertThat(activity.getAuditStatus()).isEqualTo(Constants.AUDIT_PASS);
-            verify(activityMapper).updateById(activity);
+            verify(activityMapper).updateAuditDecision(20L, Constants.AUDIT_PASS, null, "manual");
             verify(messageService).send(eq(6L), eq(Constants.MSG_AUDIT), eq("审核通过"),
                     anyString(), anyString(), any());
         }
@@ -158,12 +157,11 @@ class AuditServiceTest {
             activity.setId(20L);
             activity.setUserId(6L);
             activity.setTitle("违规活动");
-            when(activityMapper.selectById(20L)).thenReturn(activity);
+            when(activityMapper.selectForUpdate(20L)).thenReturn(activity);
 
             auditService.reject(Constants.BIZ_ACTIVITY, 20L, "活动信息不完整");
 
-            assertThat(activity.getAuditStatus()).isEqualTo(Constants.AUDIT_REJECT);
-            assertThat(activity.getAuditReason()).isEqualTo("活动信息不完整");
+            verify(activityMapper).updateAuditDecision(20L, Constants.AUDIT_REJECT, "活动信息不完整", "manual");
         }
     }
 

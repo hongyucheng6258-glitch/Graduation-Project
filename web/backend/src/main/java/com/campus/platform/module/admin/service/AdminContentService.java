@@ -142,8 +142,7 @@ public class AdminContentService {
         if (a == null) {
             throw new BizException(ResultCode.NOT_FOUND, "活动不存在");
         }
-        a.setStatus(status);
-        activityMapper.updateById(a);
+        activityMapper.updateStatus(id, status);
     }
 
     private void setIdleStatus(Long id, int status) {

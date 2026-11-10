@@ -6,6 +6,7 @@ import com.campus.platform.module.admin.dto.AuditDTO;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.R;
+import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.idle.entity.IdleItem;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,11 @@ public class AdminAuditController {
         return R.ok(auditService.idleDetail(id));
     }
 
+    @GetMapping("/activity/{id}")
+    public R<Activity> activityDetail(@PathVariable Long id) {
+        return R.ok(auditService.activityDetail(id));
+    }
+
     @GetMapping("/all")
     public R<PageResult<?>> all(
             @RequestParam String type,
@@ -43,6 +49,7 @@ public class AdminAuditController {
     public R<Void> pass(@PathVariable String type, @PathVariable Long id,
                         @RequestParam(defaultValue = "false") boolean pendingOnly) {
         if (pendingOnly && Constants.BIZ_IDLE.equals(type)) auditService.reviewPendingIdle(id, true, null);
+        else if (pendingOnly && Constants.BIZ_ACTIVITY.equals(type)) auditService.reviewPendingActivity(id, true, null);
         else auditService.pass(type, id);
         return R.ok();
     }
@@ -51,6 +58,7 @@ public class AdminAuditController {
     public R<Void> reject(@PathVariable String type, @PathVariable Long id, @Valid @RequestBody AuditDTO dto,
                           @RequestParam(defaultValue = "false") boolean pendingOnly) {
         if (pendingOnly && Constants.BIZ_IDLE.equals(type)) auditService.reviewPendingIdle(id, false, dto.getReason());
+        else if (pendingOnly && Constants.BIZ_ACTIVITY.equals(type)) auditService.reviewPendingActivity(id, false, dto.getReason());
         else auditService.reject(type, id, dto.getReason());
         return R.ok();
     }
