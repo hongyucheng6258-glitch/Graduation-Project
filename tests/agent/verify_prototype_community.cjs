@@ -160,6 +160,61 @@ async function checkNotice(browser) {
   console.log('PASS 校园公告真实列表、键盘查看及公告正文')
 }
 
+async function checkProfile(browser) {
+  const author = await signIn(browser, fixture.visitorId, fixture.visitorToken, 1440)
+  await author.goto(base + '/profile')
+  await author.getByRole('navigation', { name: '个人中心快捷入口' }).waitFor()
+  const recent = author.getByRole('region', { name: '我的近期发布' })
+  await recent.getByRole('link', { name: new RegExp(fixture.postText) }).waitFor()
+  await recent.getByRole('link', { name: new RegExp(fixture.activityTitle) }).waitFor()
+  await capture(author, '个人中心-桌面')
+
+  const reader = await signIn(browser, fixture.studentId, fixture.studentToken, 390)
+  await reader.goto(base + '/profile?tab=favorite')
+  const entry = reader.getByRole('link', { name: fixture.postText, exact: true })
+  await entry.waitFor()
+  await checkWidth(reader)
+  await entry.click()
+  await reader.waitForURL(base + '/social?post=' + fixture.postId)
+  console.log('PASS 个人中心真实近期内容、手机布局和收藏直达')
+}
+
+async function checkChat(browser) {
+  const sender = await signIn(browser, fixture.studentId, fixture.studentToken, 1440)
+  const receiver = await signIn(browser, fixture.visitorId, fixture.visitorToken, 390)
+  const response = await sender.request.post(base + '/api/chat/conversations', {
+    headers: { Authorization: 'Bearer ' + fixture.studentToken },
+    data: { targetUserId: fixture.spareId },
+  })
+  const created = await response.json()
+  assert.equal(created.code, 200, created.message)
+  const inbox = '/chat'
+  await sender.goto(base + inbox)
+  await sender.getByRole('link', { name: /Browser Visitor/ }).click()
+  await sender.waitForURL(/\/chat\/\d+$/)
+  const conversationUrl = sender.url()
+  const sidebar = sender.getByRole('navigation', { name: '私信会话' })
+  await sidebar.getByRole('link', { name: /备用同学/ }).click()
+  await sender.waitForURL(base + inbox + '/' + created.data.id)
+  await sender.getByRole('heading', { name: '备用同学', exact: true }).waitFor()
+  await sidebar.getByRole('link', { name: /Browser Visitor/ }).click()
+  await sender.waitForURL(conversationUrl)
+  await receiver.goto(conversationUrl)
+  await receiver.getByRole('heading', { name: 'Browser Student', exact: true }).waitFor()
+  for (const page of [sender, receiver]) {
+    await page.getByText('实时连接中', { exact: true }).waitFor()
+    await page.getByRole('log', { name: '私信消息' }).getByText('没有更早的消息了').waitFor()
+  }
+  const message = '原型验收的实时私信'
+  await sender.getByPlaceholder(/输入消息/).fill(message)
+  await sender.getByRole('button', { name: '发送', exact: true }).click()
+  await receiver.getByRole('log', { name: '私信消息' }).getByText(message, { exact: true }).waitFor()
+  assert.equal(await receiver.getByRole('navigation', { name: '私信会话' }).count(), 0)
+  await checkWidth(receiver)
+  await capture(sender, '私信-桌面')
+  console.log('PASS 私信双栏、两条会话切换、双方实时收发和手机布局')
+}
+
 async function main() {
   const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE })
   try {
@@ -168,6 +223,8 @@ async function main() {
     await checkSocial(browser)
     await checkQuestions(browser)
     await checkNotice(browser)
+    await checkProfile(browser)
+    await checkChat(browser)
   } finally {
     await browser.close()
   }

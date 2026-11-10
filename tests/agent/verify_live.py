@@ -320,11 +320,10 @@ def verify_combined(base, cfg, db):
                 cur.execute("DELETE FROM message WHERE biz_type='lostfound' AND biz_id=%s", (lost,))
                 cur.execute("DELETE FROM lost_found WHERE id=%s", (lost,))
             if partner:
-                cur.execute("DELETE m FROM chat_conversation_member m JOIN chat_conversation c ON c.id=m.conversation_id "
-                            "WHERE c.user1_id=LEAST(%s,%s) AND c.user2_id=GREATEST(%s,%s)",
-                            (student, visitor, student, visitor))
-                cur.execute("DELETE FROM chat_conversation WHERE user1_id=LEAST(%s,%s) AND user2_id=GREATEST(%s,%s)",
-                            (student, visitor, student, visitor))
+                for table in ("chat_message", "chat_conversation_member"):
+                    cur.execute(f"DELETE m FROM {table} m JOIN chat_conversation c ON c.id=m.conversation_id "
+                                "WHERE c.user1_id=%s OR c.user2_id=%s", (student, student))
+                cur.execute("DELETE FROM chat_conversation WHERE user1_id=%s OR user2_id=%s", (student, student))
                 cur.execute("DELETE FROM study_partner WHERE id=%s", (partner,))
             if post:
                 cur.execute("DELETE FROM post_like WHERE post_id=%s", (post,))
@@ -337,7 +336,7 @@ def verify_combined(base, cfg, db):
                 cur.execute("DELETE FROM campus_question WHERE id=%s", (question,))
             if notice:
                 cur.execute("DELETE FROM notice WHERE id=%s", (notice,))
-            for uid in (student, visitor):
+            for uid in (student, visitor, spare):
                 if uid:
                     cleanup_student(cur, uid)
             if admin:
@@ -410,7 +409,7 @@ def verify_actions(base, cfg, db):
 
 def verify_browser(base, cfg, db, script):
     suffix = uuid.uuid4().hex[:10]
-    student = visitor = admin = activity = idle = lost = partner = post = question = notice = None
+    student = visitor = spare = admin = activity = idle = lost = partner = post = question = notice = None
     title = "BrowserActivity" + suffix
     identifier = "Makerspace-" + suffix
     idle_title = "BrowserIdle" + suffix
@@ -439,6 +438,8 @@ def verify_browser(base, cfg, db, script):
                             (visitor, idle_title))
                 idle = cur.lastrowid
             if script == "verify_prototype_community.cjs":
+                cur.execute("INSERT INTO user(student_no,nickname) VALUES(%s,'备用同学')", ("BC" + suffix,))
+                spare = cur.lastrowid
                 cur.execute("INSERT INTO lost_found(user_id,type,title,location,audit_status) VALUES(%s,1,%s,'图书馆',1)",
                             (visitor, lost_title))
                 lost = cur.lastrowid
@@ -466,7 +467,7 @@ def verify_browser(base, cfg, db, script):
                 fixture.update(idleId=idle, idleTitle=idle_title)
             if lost:
                 fixture.update(lostId=lost, lostTitle=lost_title, partnerSubject=subject, postId=post, postText=post_text,
-                               questionId=question, questionTitle=question_title, noticeId=notice, noticeTitle=notice_title)
+                               questionId=question, questionTitle=question_title, noticeId=notice, noticeTitle=notice_title, spareId=spare)
             subprocess.run(["node", str(ROOT / "tests/agent" / script)],
                            env={**os.environ, "CAMPUS_BROWSER_FIXTURE": json.dumps(fixture)},
                            timeout=165, check=True)
@@ -505,7 +506,7 @@ def verify_browser(base, cfg, db, script):
                 cur.execute("DELETE FROM campus_question WHERE id=%s", (question,))
             if notice:
                 cur.execute("DELETE FROM notice WHERE id=%s", (notice,))
-            for uid in (student, visitor):
+            for uid in (student, visitor, spare):
                 if uid:
                     cleanup_student(cur, uid)
             if admin:
