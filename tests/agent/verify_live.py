@@ -415,9 +415,10 @@ def verify_browser(base, cfg, db, script):
                 VALUES(%s,%s,'Test Room',DATE_ADD(NOW(),INTERVAL 1 DAY),DATE_ADD(NOW(),INTERVAL 25 HOUR),1,3)
                 """, (visitor, title))
             activity = cur.lastrowid
-            if script == "verify_prototype_student.cjs":
-                cur.execute("INSERT INTO idle_item(user_id,title,audit_status,status) VALUES(%s,%s,1,0)",
-                            (visitor, idle_title))
+            if script in ("verify_prototype_student.cjs", "verify_assistant_layout.cjs"):
+                audit_status = 1 if script == "verify_prototype_student.cjs" else 0
+                cur.execute("INSERT INTO idle_item(user_id,title,audit_status,status) VALUES(%s,%s,%s,0)",
+                            (visitor, idle_title, audit_status))
                 idle = cur.lastrowid
             if script == "verify_admin_prototype.cjs":
                 cur.execute("INSERT INTO idle_item(user_id,title,description,audit_status,status,ai_risk_level,ai_audit_reason,audit_source) "

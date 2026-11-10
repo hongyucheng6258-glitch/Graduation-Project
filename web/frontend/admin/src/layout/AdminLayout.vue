@@ -2,53 +2,44 @@
   <div class="admin-shell">
     <!-- ===================== 深色侧栏 ===================== -->
     <aside class="sidebar">
-      <div class="brand" @click="$router.push('/dashboard')">
-        <div class="brand-mark">梧</div>
-        <div>
-          <div class="brand-name">梧桐校园</div>
-          <div class="brand-sub">Admin Console</div>
-        </div>
-      </div>
-
-      <div v-for="(group, groupIndex) in visibleGroups" :key="group.label" class="nav-group">
-        <button
-          type="button"
-          class="nav-label nav-group-toggle"
-          :aria-expanded="expandedGroup === group.label"
-          :aria-controls="`nav-group-items-${groupIndex}`"
-          @click="toggleGroup(group.label)"
-        >
-          <span>{{ group.label }}</span>
-          <svg class="nav-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
-            <path d="m7 10 5 5 5-5" />
+      <RouterLink to="/dashboard" class="brand" aria-label="梧桐校园 · 后台">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" fill="currentColor" focusable="false">
+            <path d="M4 5h13a3 3 0 0 1 3 3v12H8a4 4 0 0 1-4-4Z" />
+            <path d="M23 4h13v12a4 4 0 0 1-4 4H23Z" opacity=".65" />
+            <path d="M4 23h16v13H8a4 4 0 0 1-4-4Z" opacity=".65" />
+            <path d="M23 23h13v13H23Z" opacity=".3" />
           </svg>
-        </button>
-        <div
-          :id="`nav-group-items-${groupIndex}`"
-          class="nav-group-items"
-          :class="{ 'is-collapsed': expandedGroup !== group.label }"
-        >
-          <router-link
+        </span>
+        <b class="brand-name">梧桐校园 · 后台</b>
+      </RouterLink>
+
+      <nav class="side-nav" aria-label="管理导航">
+        <div v-for="group in visibleGroups" :key="group.label" class="nav-group">
+          <h2 class="nav-group-label">{{ group.label }}</h2>
+          <RouterLink
             v-for="item in group.items"
             :key="item.to"
             :to="item.to"
             class="nav-item"
             :class="{ active: isActive(item.to) }"
+            :aria-current="isActive(item.to) ? 'page' : undefined"
+            :aria-label="item.label"
+            :title="item.label"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" v-html="ICONS[item.icon]"></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true" focusable="false" v-html="ICONS[item.icon]"></svg>
             <span>{{ item.label }}</span>
-            <em v-if="item.countKey !== undefined" class="nav-count" :class="{ gold: item.gold }">{{ counts[item.countKey] ?? 0 }}</em>
-          </router-link>
+            <em v-if="item.countKey && counts[item.countKey] > 0" class="nav-count">{{ counts[item.countKey] }}</em>
+          </RouterLink>
         </div>
-      </div>
+      </nav>
 
       <div class="sidebar-foot">
-        <div class="side-user" @click="$router.push('/system/config')">
-          <div class="side-avatar">{{ adminStore.adminInfo?.nickname?.charAt(0) || 'A' }}</div>
-          <div class="side-user-meta">
-            <b>{{ adminStore.adminInfo?.nickname || '管理员' }}</b>
-            <span>{{ roleText }}</span>
-          </div>
+        <span class="side-avatar" aria-hidden="true">{{ adminStore.isSuper ? '管' : roleText.charAt(0) }}</span>
+        <div class="side-user-meta">
+          <b>{{ roleText }}</b>
+          <span v-if="adminAccount">{{ adminAccount }}</span>
         </div>
       </div>
     </aside>
@@ -86,16 +77,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '../store/admin'
 import { statsPendingCounts } from '../api/stats'
-import {
-  findNavigationGroup,
-  matchesNavigationPath,
-  syncExpandedGroupForRoute,
-  toggleExpandedGroup
-} from './adminSidebarNavigation.mjs'
+import { matchesNavigationPath } from './adminSidebarNavigation.mjs'
 
 const router = useRouter()
 const route = useRoute()
@@ -107,30 +93,26 @@ const countError = ref(false)
 let countTimer = null
 
 const ICONS = {
-  dashboard: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
-  calendar: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
-  bag: '<path d="M3 7h18l-2 13H5z"/><path d="M8 11v6M12 11v6M16 11v6"/>',
-  lost: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
-  chat: '<path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/>',
-  spark: '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3"/>',
-  users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
-  warn: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/>',
-  bell: '<path d="M3 11l18-5v12L3 13zM11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
-  admin: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="m16 11 2 2 4-4"/>',
-  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
-  log: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>',
-  config: '<path d="M12 2 2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>'
+  dashboard: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>',
+  audit: '<path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/>',
+  spark: '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/><circle cx="12" cy="12" r="3"/>',
+  users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3.87-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  warn: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
+  bell: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+  admin: '<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>',
+  log: '<path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/>'
 }
 
 const auditTypes = [
-  { key: 'activity', icon: 'calendar', to: '/audit/activity', label: '活动审核', countKey: 'activity' },
-  { key: 'idle', icon: 'bag', to: '/audit/idle', label: '闲置审核', countKey: 'idle' },
-  { key: 'lostfound', icon: 'lost', to: '/audit/lostfound', label: '失物招领审核', countKey: 'lostfound' },
-  { key: 'post', icon: 'chat', to: '/audit/post', label: '动态审核', countKey: 'post' },
-  { key: 'partner', icon: 'users', to: '/audit/partner', label: '搭子审核', countKey: 'partner' }
+  { key: 'activity', icon: 'audit', to: '/audit/activity', label: '活动审核', countKey: 'activity' },
+  { key: 'idle', icon: 'audit', to: '/audit/idle', label: '闲置审核', countKey: 'idle' },
+  { key: 'lostfound', icon: 'audit', to: '/audit/lostfound', label: '失物招领审核', countKey: 'lostfound' },
+  { key: 'post', icon: 'audit', to: '/audit/post', label: '动态审核', countKey: 'post' },
+  { key: 'partner', icon: 'audit', to: '/audit/partner', label: '搭子审核', countKey: 'partner' }
 ]
 
-const navGroups = computed(() => [
+const navGroups = [
   {
     label: '概览',
     items: [
@@ -142,7 +124,7 @@ const navGroups = computed(() => [
     label: '内容审核',
     items: [
       ...auditTypes,
-      { to: '/ai/audit', label: 'AI 内容审核', icon: 'spark', countKey: 'ai', gold: true }
+      { to: '/ai/audit', label: 'AI 内容审核', icon: 'spark', countKey: 'ai' }
     ]
   },
   {
@@ -164,28 +146,19 @@ const navGroups = computed(() => [
       { to: '/notice', label: '系统公告', icon: 'bell' },
       { to: '/ai/config', label: 'AI 配置', icon: 'gear' },
       { to: '/ai/logs', label: '调用日志', icon: 'log' },
-      { to: '/system/config', label: '系统配置', icon: 'config', superOnly: true },
+      { to: '/system/config', label: '系统配置', icon: 'gear', superOnly: true },
       { to: '/system', label: '管理员账号', icon: 'admin', superOnly: true }
     ]
   }
-])
+]
 
 const visibleGroups = computed(() =>
-  navGroups.value
+  navGroups
     .map((g) => ({ ...g, items: g.items.filter((m) => !m.superOnly || adminStore.isSuper) }))
     .filter((g) => g.items.length > 0)
 )
 
-const activeGroupLabel = computed(() => findNavigationGroup(visibleGroups.value, route.path))
-const expandedGroup = ref(activeGroupLabel.value)
-
-watch(activeGroupLabel, (label, previousLabel) => {
-  expandedGroup.value = syncExpandedGroupForRoute(expandedGroup.value, previousLabel, label)
-}, { immediate: true })
-
-function toggleGroup(label) {
-  expandedGroup.value = toggleExpandedGroup(expandedGroup.value, label)
-}
+const adminAccount = computed(() => adminStore.adminInfo?.username || adminStore.adminInfo?.nickname || '')
 
 const roleText = computed(() => {
   const role = adminStore.adminInfo?.role
@@ -286,151 +259,78 @@ onUnmounted(() => {
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   z-index: 30;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 20px 12px 16px;
   background: var(--side-bg);
   color: var(--side-ink);
-  overflow-y: auto;
-  overflow-x: hidden;
 }
 .brand {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 10px;
-  padding: 6px 8px;
-  margin-bottom: 14px;
-  cursor: pointer;
+  padding: 22px 20px 18px;
 }
-.brand-mark {
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1.15rem;
-  color: #fff;
-  background: linear-gradient(140deg, var(--brand), var(--brand-deep));
-  box-shadow: 0 2px 8px oklch(0% 0 0 / .3);
-}
-.brand-name {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1.05rem;
-  line-height: 1.15;
-  color: #fff;
-  white-space: nowrap;
-}
-.brand-sub {
-  font-size: var(--fs-cap);
+.brand-mark { width: 32px; height: 32px; flex: none; color: #fff; }
+.brand-name { color: #fff; font-size: 1.15rem; letter-spacing: .5px; white-space: nowrap; }
+.side-nav { flex: 1; min-height: 0; overflow: auto; padding: 6px 12px; }
+.nav-group { margin: 16px 0 6px; }
+.nav-group-label {
+  margin-bottom: 6px;
+  padding: 0 10px;
   color: var(--side-ink-3);
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  font-size: .6875rem;
+  font-weight: 400;
+  letter-spacing: .1em;
 }
-.nav-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  border: 0;
-  border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--side-ink-3);
-  font-family: inherit;
-  font-size: var(--fs-sm);
-  line-height: inherit;
-  letter-spacing: normal;
-  padding: 14px 10px 5px;
-  white-space: nowrap;
-  text-align: left;
-  cursor: pointer;
-  transition: background .18s, color .18s;
-}
-.nav-label:hover { background: var(--side-hover); color: var(--side-ink); }
-.nav-label:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.nav-group { display: flex; flex-direction: column; gap: 2px; }
-.nav-group-items { display: flex; flex-direction: column; gap: 2px; }
-.nav-group-items.is-collapsed { display: none; }
-.nav-group-chevron { width: 14px; height: 14px; flex: none; transition: transform .18s ease; }
-.nav-group-toggle[aria-expanded="true"] .nav-group-chevron { transform: rotate(180deg); }
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 11px;
-  width: 100%;
-  padding: 9px 10px;
+  gap: 10px;
+  margin: 2px 0;
+  padding: 10px;
   border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--side-ink-3);
-  text-decoration: none;
-  transition: background .18s, color .18s;
-  cursor: pointer;
-  position: relative;
+  color: var(--side-ink);
+  font-size: .9375rem;
   white-space: nowrap;
 }
-.nav-item svg { width: 18px; height: 18px; flex: none; }
-.nav-item:hover { background: var(--side-hover); color: var(--side-ink); }
+.nav-item svg { width: 17px; height: 17px; flex: none; }
+.nav-item:hover { background: var(--side-hover); color: #fff; }
 .nav-item.active { background: var(--side-active); color: #fff; font-weight: 600; }
-.nav-item.active::before {
-  content: "";
-  position: absolute;
-  left: -12px;
-  top: 20%;
-  bottom: 20%;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--accent);
-}
+.sidebar a:focus-visible { outline-color: #fff; outline-offset: -2px; }
 .nav-count {
   margin-left: auto;
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-size: 10px;
-  font-weight: 700;
-  min-width: 18px;
-  height: 17px;
-  padding: 0 5px;
+  padding: 1px 8px;
   border-radius: var(--r-pill);
-  display: grid;
-  place-items: center;
+  background: rgba(255, 255, 255, .16);
+  font-size: 10px;
+  font-style: normal;
 }
-.nav-count.gold { background: var(--gold); color: oklch(24% 0.06 75); }
 .sidebar-foot {
-  margin-top: auto;
-  padding-top: 12px;
+  display: flex;
+  flex: none;
+  gap: 10px;
+  align-items: center;
+  padding: 16px 20px;
   border-top: 1px solid var(--side-line);
 }
-.side-user {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  transition: background .18s;
-}
-.side-user:hover { background: var(--side-hover); }
 .side-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(140deg, var(--purple), var(--info));
-  color: #fff;
+  width: 36px;
+  height: 36px;
+  flex: none;
   display: grid;
   place-items: center;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
   font-weight: 600;
-  font-size: var(--fs-xs);
-  flex: none;
 }
-.side-user-meta { line-height: 1.2; min-width: 0; }
-.side-user-meta b { display: block; font-size: var(--fs-sm); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.side-user-meta span { font-size: var(--fs-cap); color: var(--side-ink-3); }
+.side-user-meta { min-width: 0; }
+.side-user-meta b, .side-user-meta span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-user-meta b { color: #fff; font-size: .8125rem; }
+.side-user-meta span { color: var(--side-ink-3); font-size: .6875rem; }
 
 /* —— 主区 —— */
 .main { display: flex; flex-direction: column; min-width: 0; }
@@ -494,14 +394,11 @@ onUnmounted(() => {
 /* —— 响应式 —— */
 @media (max-width: 920px) {
   .admin-shell { grid-template-columns: 64px minmax(0, 1fr); }
-  .sidebar { padding: 16px 10px; }
-  .brand-name, .brand-sub, .nav-label, .nav-item span, .nav-count, .side-user-meta { display: none; }
-  .nav-group, .nav-group-items { display: contents; }
-  .nav-group-items.is-collapsed { display: contents; }
-  .nav-item { justify-content: center; padding: 11px 0; }
-  .nav-item.active::before { left: -10px; }
-  .brand { justify-content: center; padding: 6px 0; }
-  .side-user { justify-content: center; padding: 8px 0; }
+  .side-nav { padding: 4px 8px; }
+  .brand-name, .nav-group-label, .nav-item span, .nav-count, .side-user-meta { display: none; }
+  .nav-group { margin: 5px 0; }
+  .nav-item { justify-content: center; padding: 10px 0; }
+  .brand, .sidebar-foot { justify-content: center; padding: 12px 0; }
   .crumbs { display: none; }
 }
 @media (max-width: 780px) {
@@ -509,8 +406,5 @@ onUnmounted(() => {
   .topbar { padding: 0 var(--s-4); }
   .topbar-search { display: none; }
   .topbar-search + .top-actions { margin-left: auto; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .nav-group-chevron { transition: none; }
 }
 </style>

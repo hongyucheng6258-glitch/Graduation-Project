@@ -6,12 +6,50 @@ const fixture = JSON.parse(process.env.CAMPUS_BROWSER_FIXTURE)
 const studentUrl = process.env.CAMPUS_STUDENT_URL || 'http://127.0.0.1:5173'
 const adminUrl = process.env.CAMPUS_ADMIN_URL || 'http://127.0.0.1:5174'
 
+const adminGroupLabels = ['概览', '内容审核', '内容管理', '用户与社区', '系统']
+const adminLinks = [
+  '数据看板', '管理智能助手', '活动审核', '闲置审核', '失物招领审核', '动态审核', '搭子审核',
+  'AI 内容审核', '内容管理', '用户管理', '举报处理', '系统公告', 'AI 配置', '调用日志', '系统配置', '管理员账号',
+]
+
+async function checkAdminSidebar(page, width) {
+  const sidebar = page.locator('.sidebar')
+  const navigation = sidebar.getByRole('navigation', { name: '管理导航' })
+  assert.equal(await sidebar.getByRole('button', { name: '内容审核', exact: true }).count(), 0,
+    '管理侧栏仍在折叠审核组')
+  await navigation.waitFor({ timeout: 2500 })
+  for (const name of adminLinks) {
+    await navigation.getByRole('link', { name, exact: true }).waitFor()
+  }
+  assert.equal(await navigation.getByRole('link').count(), adminLinks.length)
+  const idle = navigation.getByRole('link', { name: '闲置审核', exact: true })
+  if (width === 1440) {
+    assert.deepEqual(await navigation.locator('.nav-group-label').allTextContents(), adminGroupLabels)
+    await sidebar.getByRole('link', { name: '梧桐校园 · 后台' }).waitFor()
+    assert.equal(Math.round((await sidebar.locator('.brand-mark').boundingBox()).width), 32)
+    await sidebar.getByText('布局验收账号', { exact: true }).waitFor()
+    await idle.locator('.nav-count').getByText('1', { exact: true }).waitFor()
+    assert.equal(await navigation.getByRole('link', { name: '活动审核', exact: true }).locator('.nav-count').count(), 0)
+    const screenshotDir = process.env.CAMPUS_PROTOTYPE_SCREENSHOTS
+    if (screenshotDir) {
+      await page.setViewportSize({ width: 1440, height: 1120 })
+      await sidebar.screenshot({ path: join(screenshotDir, '管理端侧栏.png'), animations: 'disabled' })
+    }
+    await idle.press('Enter')
+  } else {
+    assert.equal(Math.round((await sidebar.boundingBox()).width), 64)
+    await idle.click()
+  }
+  await page.waitForURL(`${adminUrl}/admin/audit/idle`)
+  assert.equal(await idle.getAttribute('aria-current'), 'page')
+}
+
 async function check(browser, width, admin) {
   const context = await browser.newContext({ viewport: { width, height: 880 } })
   try {
     await context.addInitScript(({ isAdmin, token }) => {
       localStorage.setItem(isAdmin ? 'admin_token' : 'token', token)
-      localStorage.setItem(isAdmin ? 'admin_info' : 'userInfo', JSON.stringify({ nickname: '布局验收', role: 'super' }))
+      localStorage.setItem(isAdmin ? 'admin_info' : 'userInfo', JSON.stringify({ nickname: '布局验收', username: '布局验收账号', role: 'super' }))
     }, { isAdmin: admin, token: admin ? fixture.adminToken : fixture.studentToken })
     const page = await context.newPage()
     await page.goto(admin ? `${adminUrl}/admin/assistant` : `${studentUrl}/ai/chat`)
@@ -86,6 +124,7 @@ async function check(browser, width, admin) {
       if (screenshotDir && width === 1440) {
         await page.screenshot({ path: join(screenshotDir, 'admin-dashboard.png'), fullPage: true })
       }
+      await checkAdminSidebar(page, width)
     }
     if (!admin && width <= 820) {
       assert.equal(shell.navWidth, 0)

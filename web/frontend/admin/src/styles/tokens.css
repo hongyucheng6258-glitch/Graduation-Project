@@ -65,7 +65,7 @@
   /* —— 深蓝侧栏（管理端特征，双主题恒定） —— */
   --side-bg:  #16233F;
   --side-ink: #B9C4DA;
-  --side-ink-3: oklch(66% 0.02 255);
+  --side-ink-3: #6E7E9E;
   --side-line: oklch(100% 0 0 / .08);
   --side-active: #2E5BFF;
   --side-hover: oklch(100% 0 0 / .06);
