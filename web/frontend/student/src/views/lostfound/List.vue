@@ -1,40 +1,38 @@
 <template>
   <div v-if="loadError" class="load-error" role="alert"><span>{{ loadError }}</span><button type="button" class="text-btn" @click="load">重新加载</button></div>
-  <WtPageHeader title="失物招领" subtitle="遗失与拾获，都在这里相遇" eyebrow="校园服务" />
+  <WtPageHeader title="失物招领" subtitle="遗失物品别着急，先在这里找一找。">
+    <el-button type="primary" @click="goPublish">＋ 登记信息</el-button>
+  </WtPageHeader>
 
   <div class="lf-list">
     <div class="toolbar">
       <div class="chips">
-        <span class="chip" :class="{ active: type === undefined }" @click="selectType(undefined)">全部</span>
-        <span class="chip" :class="{ active: type === 0 }" @click="selectType(0)">寻物</span>
-        <span class="chip" :class="{ active: type === 1 }" @click="selectType(1)">招领</span>
+        <button type="button" class="chip" :aria-pressed="type === undefined" @click="selectType(undefined)">全部</button>
+        <button type="button" class="chip" :aria-pressed="type === 0" @click="selectType(0)">我要寻物</button>
+        <button type="button" class="chip" :aria-pressed="type === 1" @click="selectType(1)">我拾到物品</button>
       </div>
       <el-input v-model="keyword" placeholder="搜索…" clearable style="width: 240px" @keyup.enter="search" @clear="search">
         <template #append><el-button @click="search">搜索</el-button></template>
       </el-input>
-      <div class="spacer" />
-      <el-button type="primary" @click="goPublish">＋ 发布信息</el-button>
     </div>
 
     <div class="grid" v-loading="loading">
-      <ItemCard
-        v-for="lf in list"
-        :key="lf.id"
-        :cover="firstContentImage(lf, 'lost')"
-        :title="lf.title"
-        :desc="lf.description"
-        :time="lf.createTime"
-        @click="$router.push(`/lostfound/detail/${lf.id}`)"
-      >
-        <template #badge>
-          <span class="badge-tag" :class="lf.type === 0 ? 'tag-error' : 'tag-success'">{{ lf.type === 0 ? '寻物' : '招领' }}</span>
-        </template>
-        <template #footer>
-          <div class="card-footer">
-            <span>📍 {{ lf.location || '未知地点' }}</span>
-          </div>
-        </template>
-      </ItemCard>
+      <RouterLink v-for="lf in list" :key="lf.id" class="lost-card" :to="`/lostfound/detail/${lf.id}`">
+        <ItemCard :cover="firstContentImage(lf, 'lost')" :title="lf.title" module="lost">
+          <template #badge>
+            <span class="badge-tag" :class="lf.type === 0 ? 'tag-seeking' : 'tag-found'">{{ lf.type === 0 ? '寻物' : '拾到' }}</span>
+          </template>
+          <template #labels>
+            <span class="badge-tag status-tag">{{ lf.type === 0 ? '寻物中' : '待认领' }}</span>
+          </template>
+          <template #footer>
+            <div class="card-footer">
+              <span>📍 {{ lf.location || '未知地点' }}</span>
+              <span v-if="lf.happenTime || lf.createTime">{{ fromNow(lf.happenTime || lf.createTime) }}</span>
+            </div>
+          </template>
+        </ItemCard>
+      </RouterLink>
     </div>
     <EmptyBox v-if="!loadError && !loading && !list.length" description="暂无信息" />
     <el-pagination v-model:current-page="pageNum" :total="total" :page-size="12"
@@ -52,6 +50,7 @@ import ItemCard from '../../components/ItemCard.vue'
 import EmptyBox from '../../components/EmptyBox.vue'
 import { listLostFound } from '../../api/lostfound'
 import { useUserStore } from '../../store/user'
+import { fromNow } from '../../utils/date'
 import { firstContentImage } from '../../utils/content-assets.mjs'
 
 const route = useRoute()
@@ -122,13 +121,10 @@ watch(
   flex-wrap: wrap;
   align-items: center;
 }
-.spacer {
-  flex: 1;
-}
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
   margin-bottom: 16px;
 }
 .chips {
@@ -151,7 +147,7 @@ watch(
 .chip:hover {
   border-color: var(--brand-line);
 }
-.chip.active {
+.chip[aria-pressed='true'] {
   background: var(--brand-soft);
   color: var(--brand-strong);
   border-color: var(--brand-line);
@@ -165,13 +161,28 @@ watch(
   font-weight: 600;
   letter-spacing: 0.02em;
 }
-.tag-error { background: var(--error-soft); color: var(--error); }
-.tag-success { background: var(--success-soft); color: var(--success); }
+.tag-seeking { background: var(--brand-soft); color: var(--brand-strong); }
+.tag-found { background: var(--success-soft); color: var(--success); }
+.status-tag { margin-bottom: 6px; background: var(--surface-2); color: var(--ink-2); }
 .card-footer {
   display: flex;
-  justify-content: space-between;
+  gap: 4px 10px;
+  flex-wrap: wrap;
   align-items: center;
   font-size: 12px;
   color: var(--ink-3);
+}
+.lost-card { min-width: 0; color: inherit; text-decoration: none; border-radius: var(--r-md); }
+.lost-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.lost-card :deep(.item-card) { height: 100%; border-radius: var(--r-md); border-color: var(--line); }
+.lost-card :deep(.cover) { height: 140px; }
+.lost-card :deep(.body) { padding: 16px; }
+.lost-card :deep(.desc:empty) { display: none; }
+.lost-card :deep(.title) { min-height: 0; overflow-wrap: anywhere; }
+@media (max-width: 1000px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
 }
 </style>

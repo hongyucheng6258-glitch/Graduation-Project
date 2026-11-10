@@ -12,6 +12,7 @@
       <span v-if="$slots.badge" class="cover-badge"><slot name="badge" /></span>
     </div>
     <div class="body">
+      <slot name="labels" />
       <div class="title">{{ title }}</div>
       <div class="desc">{{ desc }}</div>
       <div class="footer">

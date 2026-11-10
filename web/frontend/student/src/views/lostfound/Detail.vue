@@ -1,11 +1,10 @@
 <template>
-  <WtPageHeader title="招领详情" subtitle="查看失物信息并联系失主" eyebrow="校园服务" />
-
   <div class="detail" v-loading="loading">
+    <RouterLink to="/lostfound" class="text-btn detail-back">返回失物招领</RouterLink>
     <el-card v-if="lf">
       <div class="layout">
         <div class="gallery">
-          <el-carousel v-if="detailImages.length" height="340px" :arrow="detailImages.length > 1 ? 'hover' : 'never'">
+          <el-carousel v-if="detailImages.length" height="clamp(200px, 40vw, 340px)" :arrow="detailImages.length > 1 ? 'hover' : 'never'">
             <el-carousel-item v-for="img in detailImages" :key="img">
               <el-image :src="img" fit="contain" style="width:100%;height:100%" :preview-src-list="detailImages" />
             </el-carousel-item>
@@ -13,13 +12,11 @@
           <el-empty v-else description="无图片" :image-size="80" />
         </div>
         <div class="info">
-          <h2>
-            <el-tag :type="lf.type === 0 ? 'danger' : 'success'" style="margin-right: 8px">
-              {{ lf.type === 0 ? '失物' : '招领' }}
-            </el-tag>
-            {{ lf.title }}
-          </h2>
-          <el-tag v-if="lf.status === 1" type="info">✅ 已完成</el-tag>
+          <div class="detail-tags">
+            <el-tag :type="lf.type === 0 ? 'primary' : 'success'">{{ lf.type === 0 ? '寻物' : '拾到' }}</el-tag>
+            <el-tag v-if="lf.status === 1" type="info">已完成</el-tag>
+          </div>
+          <h1>{{ lf.title }}</h1>
           <div class="kv">📍 地点：{{ lf.location || '未填写' }}</div>
           <div class="kv">🕐 时间：{{ formatTime(lf.happenTime) || '未填写' }}</div>
           <div class="desc">{{ lf.description }}</div>
@@ -126,7 +123,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { lostFoundDetail, finishLostFound, updateLostFound, claimLostFound,
@@ -286,12 +282,20 @@ onMounted(load)
 <style scoped>
 .layout {
   display: grid;
-  grid-template-columns: 440px 1fr;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: start;
   gap: 24px;
 }
+.detail-back { display: inline-block; margin-bottom: 16px; }
+.detail :deep(.el-card) { border-color: var(--line); border-radius: var(--r-md); }
+.detail :deep(.el-dialog) { max-width: calc(100% - 32px); }
+.info { min-width: 0; overflow-wrap: anywhere; }
+.info h1 { margin: 10px 0; font-size: var(--fs-h1); }
+.detail-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .gallery {
   background: var(--surface-2);
-  border-radius: 8px;
+  border-radius: var(--r-md);
+  overflow: hidden;
 }
 .kv {
   color: var(--ink-2);
@@ -322,8 +326,10 @@ onMounted(load)
   gap: 10px;
   flex-wrap: wrap;
 }
-</style>
+.actions :deep(.el-button + .el-button) { margin-left: 0; }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
 
-<style scoped>
 .claim-pager { display: flex; justify-content: center; margin-top: 12px; }
 </style>

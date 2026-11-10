@@ -1,17 +1,48 @@
 <template>
   <div v-if="loadError" class="load-error" role="alert"><span>{{ loadError }}</span><button type="button" class="text-btn" @click="load">重新加载</button></div>
-  <WtPageHeader title="校园动态" subtitle="同学们都在聊些什么" eyebrow="同辈圈" />
+  <WtPageHeader title="校园动态" subtitle="记录今天，也认识身边有趣的人。">
+    <el-button type="primary" aria-controls="post-composer" :aria-expanded="composerOpen" @click="toggleComposer">
+      ＋ 发动态
+    </el-button>
+  </WtPageHeader>
 
   <div class="square">
-    <div class="square-main">
     <div class="post-search">
       <el-input v-model="keyword" placeholder="搜索校园动态…" clearable @keyup.enter="search" @clear="search">
         <template #append><el-button @click="search">搜索</el-button></template>
       </el-input>
     </div>
 
+    <details v-if="hotTopics.length || hotPosts.length" class="square-discover">
+      <summary>热门话题和动态</summary>
+      <div class="discover-grid">
+        <div v-if="hotTopics.length" class="rail-card card card-hover">
+          <div class="rail-title">🔥 热门话题</div>
+          <div class="topic-list">
+            <button v-for="(t, i) in hotTopics" :key="t.tag" type="button" class="topic-row" @click="searchTopic(t.tag)">
+              <span class="topic-rank" :class="{ top: i < 3 }">{{ i + 1 }}</span>
+              <span class="topic-tag"># {{ t.tag }}</span>
+              <span class="topic-count">{{ t.count }} 讨论</span>
+            </button>
+          </div>
+        </div>
+        <div v-if="hotPosts.length" class="rail-card card card-hover">
+          <div class="rail-title">🔥 热门动态</div>
+          <div class="hot-list">
+            <button v-for="p in hotPosts" :key="p.id" type="button" class="hot-row" @click="openPost(p)">
+              <el-avatar :size="30" :src="p.avatar">{{ p.nickname?.charAt(0) }}</el-avatar>
+              <div class="hot-main">
+                <div class="hot-text">{{ p.content }}</div>
+                <div class="hot-meta">❤️ {{ p.likeCount }} · 💬 {{ p.commentCount }}</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </details>
+
     <!-- 发布框 -->
-    <el-card class="publish-box" v-if="userStore.isLoggedIn">
+    <el-card id="post-composer" v-show="composerOpen" class="publish-box">
       <AiAssistPanel :type="'post'" type-name="动态" @fill="applyAssist" />
       <el-input v-model="newPost" type="textarea" :rows="3" placeholder="分享校园生活…" maxlength="2000" />
       <div class="publish-ops">
@@ -36,7 +67,7 @@
     <div v-loading="loading">
       <el-card v-for="p in displayed" :key="p.id" class="post-card">
         <div class="post-head">
-          <el-avatar :size="40" :src="p.avatar" style="cursor:pointer" @click="goUser(p.userId)">{{ p.nickname?.charAt(0) }}</el-avatar>
+          <el-avatar :size="42" :src="p.avatar" style="cursor:pointer" @click="goUser(p.userId)">{{ p.nickname?.charAt(0) }}</el-avatar>
           <div>
             <div class="nick" style="cursor:pointer" @click="goUser(p.userId)">{{ p.nickname }}</div>
             <div class="time">{{ fromNow(p.createTime) }}</div>
@@ -47,56 +78,32 @@
           </div>
         </div>
         <div class="post-content">{{ p.content }}</div>
-        <div v-if="postImages(p).length" class="post-images">
+        <div v-if="postImages(p).length" class="post-images" :class="{ 'post-images--single': postImages(p).length === 1 }">
           <el-image v-for="img in postImages(p)" :key="img" :src="img" fit="contain"
                     class="post-img" :preview-src-list="postImages(p)" lazy @error="onImgError($event)" />
         </div>
         <div class="post-ops">
-          <span class="op" :class="{ liked: p.liked }" @click="toggleLike(p)">
+          <button type="button" class="op" :class="{ liked: p.liked }" :aria-pressed="!!p.liked"
+            :aria-label="p.liked ? '取消点赞' : '点赞'" @click="toggleLike(p)">
             {{ p.liked ? '❤️' : '🤍' }} {{ p.likeCount }}
-          </span>
-          <span class="op" @click="toggleComments(p)">💬 {{ p.commentCount }}</span>
-          <span class="op" :class="{ liked: p.favorited }" @click="toggleFavorite(p)">
-            {{ p.favorited ? '★' : '☆' }} 收藏
-          </span>
-          <span class="op" @click="sharePost(p)">🔗 分享</span>
+          </button>
+          <button type="button" class="op" :aria-expanded="expandedPostId === p.id"
+            :aria-label="expandedPostId === p.id ? '收起评论' : '查看评论'" @click="toggleComments(p)">💬 {{ p.commentCount }}</button>
+          <button type="button" class="op" :class="{ liked: p.favorited }" :aria-pressed="!!p.favorited"
+            :aria-label="p.favorited ? '取消收藏' : '收藏'" @click="toggleFavorite(p)">
+            {{ p.favorited ? '★ 已收藏' : '☆ 收藏' }}
+          </button>
+          <button type="button" class="op" @click="sharePost(p)">🔗 分享</button>
         </div>
         <!-- 评论区 -->
         <div v-if="expandedPostId === p.id" class="comment-area">
           <CommentList :post-id="p.id" @count-changed="(t) => (p.commentCount = t)" />
         </div>
       </el-card>
-      <EmptyBox v-if="!loadError && !loading && !list.length" description="还没有动态，来发第一条吧" />
+      <EmptyBox v-if="!loadError && !loading && !displayed.length" description="还没有动态，来发第一条吧" />
     </div>
     <el-pagination v-model:current-page="pageNum" :total="total" :page-size="10"
                    layout="prev, pager, next" @current-change="load" />
-    </div>
-
-    <!-- 右栏：热门话题 + 热门动态 -->
-    <aside class="square-rail">
-      <div v-if="hotTopics.length" class="rail-card card card-hover">
-        <div class="rail-title">🔥 热门话题</div>
-        <div class="topic-list">
-          <button v-for="(t, i) in hotTopics" :key="t.tag" type="button" class="topic-row" @click="searchTopic(t.tag)">
-            <span class="topic-rank" :class="{ top: i < 3 }">{{ i + 1 }}</span>
-            <span class="topic-tag"># {{ t.tag }}</span>
-            <span class="topic-count">{{ t.count }} 讨论</span>
-          </button>
-        </div>
-      </div>
-      <div v-if="hotPosts.length" class="rail-card card card-hover">
-        <div class="rail-title">🔥 热门动态</div>
-        <div class="hot-list">
-          <button v-for="p in hotPosts" :key="p.id" type="button" class="hot-row" @click="openPost(p)">
-            <el-avatar :size="30" :src="p.avatar">{{ p.nickname?.charAt(0) }}</el-avatar>
-            <div class="hot-main">
-              <div class="hot-text">{{ p.content }}</div>
-              <div class="hot-meta">❤️ {{ p.likeCount }} · 💬 {{ p.commentCount }}</div>
-            </div>
-          </button>
-        </div>
-      </div>
-    </aside>
 
     <!-- 举报弹窗 -->
     <el-dialog v-model="reportVisible" title="举报该动态" width="440px">
@@ -143,13 +150,16 @@ const total = ref(0)
 const loading = ref(false)
 const loadError = ref('')
 const restoredListState = useListState('social', { pageNum, keyword })
+const composerOpen = ref(false)
 const newPost = ref('')
 const newImages = ref([])
 const publishing = ref(false)
 const expandedPostId = ref(null)
 const targetPost = ref(null)
 const targetError = ref('')
-const displayed = computed(() => (targetPost.value ? [targetPost.value, ...list.value] : list.value))
+const displayed = computed(() => targetPost.value
+  ? [targetPost.value, ...list.value.filter(p => String(p.id) !== String(targetPost.value.id))]
+  : list.value)
 const reportVisible = ref(false)
 const reportReasonType = ref('违规')
 const reportReason = ref('')
@@ -189,8 +199,12 @@ const hotPosts = computed(() =>
 
 function searchTopic(tag) {
   keyword.value = tag
+  search()
 }
 
+function toggleComments(post) {
+  expandedPostId.value = expandedPostId.value === post.id ? null : post.id
+}
 
 function openPost(p) {
   // 展开评论区：评论数据由 CommentList 组件内自包含分页加载
@@ -225,6 +239,14 @@ async function load() {
   }
 }
 
+function toggleComposer() {
+  if (!userStore.isLoggedIn) {
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  composerOpen.value = !composerOpen.value
+}
+
 function applyAssist(data) {
   if (data.content) newPost.value = data.content
 }
@@ -240,6 +262,7 @@ async function publish() {
     ElMessage.success('已提交，待管理员审核后公开')
     newPost.value = ''
     newImages.value = []
+    composerOpen.value = false
   } finally {
     publishing.value = false
   }
@@ -347,24 +370,21 @@ function closeShare() {
 </script>
 
 <style scoped>
-.square {
+.square { max-width: 720px; }
+.square-discover {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  color: var(--ink-2);
+  background: var(--surface);
+}
+.square-discover summary { cursor: pointer; font-size: var(--fs-sm); }
+.discover-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: var(--s-5);
-  align-items: start;
-}
-.square-main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
-  min-width: 0;
-}
-.square-rail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
-  position: sticky;
-  top: var(--s-6);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+  padding-top: 12px;
 }
 .rail-card {
   padding: var(--s-5);
@@ -463,21 +483,13 @@ function closeShare() {
   color: #fff;
   font-weight: 600;
 }
-.square-rail :deep(.el-avatar) {
+.square-discover :deep(.el-avatar) {
   background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%);
   color: #fff;
   font-weight: 600;
   flex: none;
 }
 
-@media (max-width: 1080px) {
-  .square {
-    grid-template-columns: 1fr;
-  }
-  .square-rail {
-    position: static;
-  }
-}
 .post-search { width: min(420px, 100%); margin-bottom: 16px; }
 .publish-box {
   margin-bottom: 16px;
@@ -490,7 +502,12 @@ function closeShare() {
 }
 .post-card {
   margin-bottom: 16px;
+  border-color: var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
 }
+.square :deep(.el-dialog) { max-width: calc(100% - 32px); }
+.post-head > :deep(.el-avatar) { flex: none; }
 .post-head {
   display: flex;
   gap: 10px;
@@ -512,6 +529,7 @@ function closeShare() {
   margin: 12px 0;
   line-height: 1.8;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .post-images {
   display: grid;
@@ -519,10 +537,11 @@ function closeShare() {
   align-items: start;
   gap: 8px;
 }
+.post-images--single { grid-template-columns: minmax(0, 1fr); }
 .post-img {
   width: 100%;
   height: auto;
-  max-height: 480px;
+  max-height: 300px;
   aspect-ratio: auto;
   border-radius: 6px;
   background: var(--surface-2);
@@ -531,30 +550,40 @@ function closeShare() {
 .post-img :deep(.el-image__inner) {
   width: 100%;
   height: auto;
-  max-height: 480px;
+  max-height: 300px;
   object-fit: contain;
 }
 .post-ops {
   display: flex;
-  gap: 24px;
-  margin-top: 12px;
+  gap: 8px 22px;
+  flex-wrap: wrap;
+  margin-top: 14px;
   color: var(--ink-3);
 }
 .op {
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--fs-sm);
   cursor: pointer;
-  user-select: none;
 }
+.op:hover, .op:focus-visible { color: var(--brand-strong); }
 .op.liked {
   color: var(--error);
 }
 .comment-area {
   margin-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--line);
   padding-top: 12px;
 }
-</style>
-
-<style scoped>
+@media (max-width: 480px) {
+  .post-head { flex-wrap: wrap; }
+  .post-head-actions { margin-left: 0; }
+  .post-ops { column-gap: 14px; }
+  .publish-ops { flex-wrap: wrap; gap: 12px; }
+}
 .share-banner {
   display: flex;
   justify-content: space-between;
@@ -562,7 +591,7 @@ function closeShare() {
   gap: 12px;
   padding-bottom: 10px;
   margin-bottom: 4px;
-  border-bottom: 1px dashed #e5e7eb;
+  border-bottom: 1px dashed var(--line);
   color: var(--brand-strong);
   font-size: 13px;
   font-weight: 600;

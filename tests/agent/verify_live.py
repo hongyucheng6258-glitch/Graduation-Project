@@ -315,6 +315,23 @@ def verify_combined(base, cfg, db):
                 cur.execute("DELETE FROM pdf_document WHERE id=%s", (pdf,))
             if activity:
                 cur.execute("DELETE FROM activity WHERE id=%s", (activity,))
+            if lost:
+                cur.execute("DELETE FROM lost_found_claim WHERE lost_found_id=%s", (lost,))
+                cur.execute("DELETE FROM message WHERE biz_type='lostfound' AND biz_id=%s", (lost,))
+                cur.execute("DELETE FROM lost_found WHERE id=%s", (lost,))
+            if partner:
+                cur.execute("DELETE m FROM chat_conversation_member m JOIN chat_conversation c ON c.id=m.conversation_id "
+                            "WHERE c.user1_id=LEAST(%s,%s) AND c.user2_id=GREATEST(%s,%s)",
+                            (student, visitor, student, visitor))
+                cur.execute("DELETE FROM chat_conversation WHERE user1_id=LEAST(%s,%s) AND user2_id=GREATEST(%s,%s)",
+                            (student, visitor, student, visitor))
+                cur.execute("DELETE FROM study_partner WHERE id=%s", (partner,))
+            if post:
+                cur.execute("DELETE FROM post_like WHERE post_id=%s", (post,))
+                cur.execute("DELETE FROM post_comment WHERE post_id=%s", (post,))
+                cur.execute("DELETE FROM favorite WHERE target_type='post' AND target_id=%s", (post,))
+                cur.execute("DELETE FROM message WHERE biz_type='post' AND (user_id=%s OR user_id=%s)", (student, visitor))
+                cur.execute("DELETE FROM post WHERE user_id=%s OR user_id=%s", (student, visitor))
             for uid in (student, visitor):
                 if uid:
                     cleanup_student(cur, uid)
@@ -388,10 +405,13 @@ def verify_actions(base, cfg, db):
 
 def verify_browser(base, cfg, db, script):
     suffix = uuid.uuid4().hex[:10]
-    student = visitor = admin = activity = idle = None
+    student = visitor = admin = activity = idle = lost = partner = post = None
     title = "BrowserActivity" + suffix
     identifier = "Makerspace-" + suffix
     idle_title = "BrowserIdle" + suffix
+    lost_title = "BrowserLost" + suffix
+    subject = "高等数学 " + suffix
+    post_text = "图书馆午后 #校园 " + suffix
     with db.cursor() as cur:
         try:
             for code, nickname in (("BS", "Browser Student"), ("BV", "Browser Visitor")):
@@ -411,6 +431,16 @@ def verify_browser(base, cfg, db, script):
                 cur.execute("INSERT INTO idle_item(user_id,title,audit_status,status) VALUES(%s,%s,1,0)",
                             (visitor, idle_title))
                 idle = cur.lastrowid
+            if script == "verify_prototype_community.cjs":
+                cur.execute("INSERT INTO lost_found(user_id,type,title,location,audit_status) VALUES(%s,1,%s,'图书馆',1)",
+                            (visitor, lost_title))
+                lost = cur.lastrowid
+                cur.execute("INSERT INTO study_partner(user_id,subject,goal,schedule,audit_status) "
+                            "VALUES(%s,%s,'一起复习微积分','周末上午',1)", (visitor, subject))
+                partner = cur.lastrowid
+                cur.execute("INSERT INTO post(user_id,content,images,audit_status) VALUES(%s,%s,%s,1)",
+                            (visitor, post_text, json.dumps(["/images/home-campus.webp"])))
+                post = cur.lastrowid
             db.commit()
             fixture = {
                 "studentToken": token(cfg["JWT_SECRET"], student),
@@ -421,6 +451,8 @@ def verify_browser(base, cfg, db, script):
             }
             if idle:
                 fixture.update(idleId=idle, idleTitle=idle_title)
+            if lost:
+                fixture.update(lostId=lost, lostTitle=lost_title, partnerSubject=subject, postId=post, postText=post_text)
             subprocess.run(["node", str(ROOT / "tests/agent" / script)],
                            env={**os.environ, "CAMPUS_BROWSER_FIXTURE": json.dumps(fixture)},
                            timeout=165, check=True)
@@ -437,6 +469,23 @@ def verify_browser(base, cfg, db, script):
                 cur.execute("DELETE FROM activity WHERE id=%s", (activity,))
             if idle:
                 cur.execute("DELETE FROM idle_item WHERE id=%s", (idle,))
+            if lost:
+                cur.execute("DELETE FROM lost_found_claim WHERE lost_found_id=%s", (lost,))
+                cur.execute("DELETE FROM message WHERE biz_type='lostfound' AND biz_id=%s", (lost,))
+                cur.execute("DELETE FROM lost_found WHERE id=%s", (lost,))
+            if partner:
+                cur.execute("DELETE m FROM chat_conversation_member m JOIN chat_conversation c ON c.id=m.conversation_id "
+                            "WHERE c.user1_id=LEAST(%s,%s) AND c.user2_id=GREATEST(%s,%s)",
+                            (student, visitor, student, visitor))
+                cur.execute("DELETE FROM chat_conversation WHERE user1_id=LEAST(%s,%s) AND user2_id=GREATEST(%s,%s)",
+                            (student, visitor, student, visitor))
+                cur.execute("DELETE FROM study_partner WHERE id=%s", (partner,))
+            if post:
+                cur.execute("DELETE FROM post_like WHERE post_id=%s", (post,))
+                cur.execute("DELETE FROM post_comment WHERE post_id=%s", (post,))
+                cur.execute("DELETE FROM favorite WHERE target_type='post' AND target_id=%s", (post,))
+                cur.execute("DELETE FROM message WHERE biz_type='post' AND (user_id=%s OR user_id=%s)", (student, visitor))
+                cur.execute("DELETE FROM post WHERE user_id=%s OR user_id=%s", (student, visitor))
             for uid in (student, visitor):
                 if uid:
                     cleanup_student(cur, uid)
@@ -449,7 +498,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default="http://127.0.0.1:18088")
     browser_scripts = {"browser": "verify_browser.cjs", "layout": "verify_assistant_layout.cjs",
-                       "prototype": "verify_prototype_student.cjs", "game": "verify_prototype_game.cjs"}
+                       "prototype": "verify_prototype_student.cjs", "game": "verify_prototype_game.cjs",
+                       "community": "verify_prototype_community.cjs"}
     parser.add_argument("--stage", choices=("tools", "rag", "combined", "actions", *browser_scripts), default="tools")
     args = parser.parse_args()
     base = args.base.rstrip("/")
