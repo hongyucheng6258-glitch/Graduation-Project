@@ -6,23 +6,23 @@
    ============================================================ */
 :root {
   /* —— 中性 / 表面（云白偏蓝） —— */
-  --paper:        oklch(98.2% 0.005 250);
-  --surface:      oklch(100% 0 0);
-  --surface-2:    oklch(96.8% 0.006 250);
-  --surface-3:    oklch(94.5% 0.008 250);
-  --ink:          oklch(25% 0.04 265);
-  --ink-2:        oklch(42% 0.03 260);
-  --ink-3:        oklch(56% 0.025 255);
-  --line:         oklch(90% 0.01 250);
-  --line-strong:  oklch(82% 0.015 250);
+  --paper:        #F5F7FB;
+  --surface:      #FFFFFF;
+  --surface-2:    #F1F4FA;
+  --surface-3:    #E9EEF6;
+  --ink:          #1B2437;
+  --ink-2:        #46536B;
+  --ink-3:        #77839B;
+  --line:         #E5EAF2;
+  --line-strong:  #CBD6E4;
 
   /* —— 品牌：校园蓝（智慧 / 连接） —— */
-  --brand:        oklch(56% 0.19 265);
-  --brand-strong: oklch(48% 0.18 265);
-  --brand-deep:   oklch(40% 0.17 265);
-  --brand-ink:    oklch(99% 0.005 265);
-  --brand-soft:   oklch(95.5% 0.02 265);
-  --brand-line:   oklch(87% 0.045 265);
+  --brand:        #2E5BFF;
+  --brand-strong: #1E47D6;
+  --brand-deep:   #1737A8;
+  --brand-ink:    #FFFFFF;
+  --brand-soft:   #EDF1FF;
+  --brand-line:   #C4D2FF;
 
   /* —— 强调：杏色（温暖 / 高亮） —— */
   --accent:        oklch(86% 0.055 65);
@@ -67,7 +67,7 @@
   --s-6:32px; --s-7:48px; --s-8:64px; --s-9:96px;
 
   /* —— 圆角 —— */
-  --r-xs:6px; --r-sm:9px; --r-md:13px; --r-lg:18px; --r-xl:24px; --r-pill:999px;
+  --r-xs:6px; --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:24px; --r-pill:999px;
 
   /* —— 字体（V2：中文优先、无衬线，取消衬线展示字） —— */
   --font-sans: "Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
@@ -75,8 +75,8 @@
   --font-mono: ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
 
   /* —— 字阶（产品 UI 固定值） —— */
-  --fs-display:2.5rem; --fs-h1:1.75rem; --fs-h2:1.375rem; --fs-h3:1.125rem;
-  --fs-body:1rem; --fs-sm:0.875rem; --fs-xs:0.75rem; --fs-cap:0.6875rem;
+  --fs-display:2.25rem; --fs-h1:1.75rem; --fs-h2:1.375rem; --fs-h3:1.125rem;
+  --fs-body:.9375rem; --fs-sm:.8125rem; --fs-xs:0.75rem; --fs-cap:0.6875rem;
 
   /* —— 阴影（克制） —— */
   --shadow-sm: 0 1px 2px oklch(25% 0.04 265 / .05), 0 1px 3px oklch(25% 0.04 265 / .04);

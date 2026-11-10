@@ -45,6 +45,35 @@ async function check(browser, width, admin) {
     assert.equal(layout.horizontalOverflow, false, `${admin ? 'admin' : 'student'} assistant overflows at ${width}px`)
     assert.equal(layout.stacked, width <= 820)
     if (width > 820) assert.equal(layout.side, 240)
+    const shell = await page.evaluate(isAdmin => {
+      const root = getComputedStyle(document.documentElement)
+      const top = document.querySelector(isAdmin ? '.topbar' : '.campus-header')
+      const sidebar = document.querySelector(isAdmin ? '.admin-shell > .sidebar' : '.desktop-nav')
+      return { brand: root.getPropertyValue('--brand').trim().toLowerCase(),
+        paper: root.getPropertyValue('--paper').trim().toLowerCase(),
+        topHeight: Math.round(top.getBoundingClientRect().height),
+        navWidth: Math.round(sidebar.getBoundingClientRect().width), overflow: document.documentElement.scrollWidth > innerWidth + 1 }
+    }, admin)
+    assert.equal(shell.overflow, false, `${admin ? 'admin' : 'student'} page overflows at ${width}px`)
+    assert.equal(shell.brand, '#2e5bff')
+    assert.equal(shell.paper, '#f5f7fb')
+    if (width === 1440) {
+      assert.equal(shell.topHeight, admin ? 64 : 72)
+      if (admin) assert.equal(shell.navWidth, 248)
+      else await page.getByRole('navigation', { name: '校园导航' }).getByRole('link', { name: '学习搭子' }).waitFor()
+      await page.getByRole('button', { name: admin ? '切换主题' : '切换为深色', exact: true }).click()
+      await page.locator('html[data-theme="dark"]').waitFor()
+      const darkPaper = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--paper').trim().toLowerCase())
+      assert.notEqual(darkPaper, shell.paper)
+    }
+    if (!admin && width <= 820) {
+      assert.equal(shell.navWidth, 0)
+      const menu = page.getByRole('button', { name: '切换导航' })
+      await menu.click()
+      await page.getByRole('navigation', { name: '全部功能' }).getByRole('link', { name: '3D校园' }).waitFor()
+      await page.getByRole('button', { name: '关闭导航' }).press('Escape')
+      assert.equal(await menu.getAttribute('aria-expanded'), 'false')
+    }
   } finally {
     await context.close()
   }

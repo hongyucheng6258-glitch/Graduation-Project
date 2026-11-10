@@ -1,13 +1,14 @@
 <template>
   <div class="app">
     <!-- ===================== 移动端抽屉导航 ===================== -->
-    <aside class="sidebar student-drawer" :class="{ open: drawerOpen }" aria-hidden="!drawerOpen">
+    <aside id="student-navigation" class="sidebar student-drawer" :class="{ open: drawerOpen }"
+      :inert="!drawerOpen" :aria-hidden="!drawerOpen" @keydown.esc.stop.prevent="closeNavigation">
       <div class="drawer-brand">
         <a class="brand" @click="go('/')">
           <span class="brand-symbol" v-html="BRAND_MARK"></span>
           <span><b>梧桐校园</b></span>
         </a>
-        <button class="icon-btn mobile-menu" aria-label="关闭导航" @click="drawerOpen = false">
+        <button ref="drawerClose" class="icon-btn mobile-menu" aria-label="关闭导航" @click="closeNavigation">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
       </div>
@@ -37,14 +38,14 @@
         </router-link>
       </div>
     </aside>
-    <button v-if="drawerOpen" class="drawer-scrim" aria-label="收起导航" @click="drawerOpen = false"></button>
+    <button v-if="drawerOpen" class="drawer-scrim" aria-label="收起导航" @click="closeNavigation"></button>
 
     <!-- ===================== 主区 ===================== -->
     <div class="main">
-      <!-- V2 顶部导航（88px） -->
       <header class="campus-header">
         <div class="header-inner">
-          <button class="icon-btn mobile-menu" aria-label="切换导航" @click="drawerOpen = true">
+          <button ref="drawerToggle" class="icon-btn mobile-menu" aria-label="切换导航"
+            aria-controls="student-navigation" :aria-expanded="drawerOpen" @click="openNavigation">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
 
@@ -100,9 +101,9 @@
             </el-badge>
 
             <el-dropdown v-if="userStore.isLoggedIn" trigger="click" @command="onPublishCommand">
-              <button class="btn primary header-publish">
+              <button class="btn primary header-publish" aria-label="发布">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                发布
+                <span>发布</span>
               </button>
               <template #dropdown>
                 <el-dropdown-menu>
@@ -140,7 +141,8 @@
         </div>
         <div class="utility-links">
           <a class="text-btn" @click="go('/notice')">校园公告</a>
-          <a class="text-btn" @click="go('/chat')">私信</a>
+          <RouterLink class="text-btn" to="/campus-3d">3D 校园</RouterLink>
+          <RouterLink class="text-btn" to="/draw-guess">你画我猜</RouterLink>
           <a class="text-btn" @click="go('/ai/wrong')">我的错题</a>
           <a class="text-btn" @click="go('/profile')">我的主页</a>
         </div>
@@ -166,7 +168,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../store/user'
@@ -181,6 +183,20 @@ const userStore = useUserStore()
 const messageStore = useMessageStore()
 const chatStore = useChatStore()
 const drawerOpen = ref(false)
+const drawerToggle = ref(null)
+const drawerClose = ref(null)
+
+async function openNavigation() {
+  drawerOpen.value = true
+  await nextTick()
+  drawerClose.value?.focus()
+}
+
+async function closeNavigation() {
+  drawerOpen.value = false
+  await nextTick()
+  drawerToggle.value?.focus()
+}
 const keyword = ref('')
 const searchType = ref('all')
 const searchRoutes = {
@@ -217,13 +233,14 @@ const ICONS = {
 
 const desktopNav = [
   { to: '/', label: '首页' },
-  { to: '/campus-3d', label: '3D校园' },
   { to: '/activity', label: '校园活动' },
   { to: '/idle', label: '闲置互换' },
   { to: '/lostfound', label: '失物招领' },
-  { to: '/social', label: '校园动态' },
-  { to: '/draw-guess', label: '你画我猜' },
-  { to: '/ai/chat', label: 'AI 学习', ai: true }
+  { to: '/partner', label: '学习搭子' },
+  { to: '/qa', label: '互助问答' },
+  { to: '/social', label: '动态广场' },
+  { to: '/ai/chat', label: 'AI 学习', ai: true },
+  { to: '/chat', label: '私信' }
 ]
 
 const navGroups = [
@@ -373,7 +390,7 @@ onUnmounted(() => {
 
 /* ===================== V2 顶部导航 ===================== */
 .campus-header {
-  height: 88px;
+  height: 72px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
   position: relative;
@@ -381,12 +398,12 @@ onUnmounted(() => {
 }
 .header-inner {
   height: 100%;
-  max-width: 1440px;
-  padding: 0 40px;
+  max-width: 1320px;
+  padding: 0 24px;
   margin: auto;
   display: flex;
   align-items: center;
-  gap: 30px;
+  gap: 22px;
 }
 .brand {
   display: inline-flex;
@@ -396,8 +413,8 @@ onUnmounted(() => {
   cursor: pointer;
 }
 .brand-symbol {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   color: var(--brand);
   display: inline-flex;
 }
@@ -407,7 +424,7 @@ onUnmounted(() => {
   fill: currentColor;
 }
 .brand b {
-  font-size: 23px;
+  font-size: 22px;
   letter-spacing: .5px;
   font-weight: 750;
   white-space: nowrap;
@@ -416,8 +433,7 @@ onUnmounted(() => {
 .desktop-nav {
   display: flex;
   align-items: center;
-  gap: 28px;
-  margin-left: 28px;
+  gap: 15px;
   height: 100%;
 }
 .desktop-link {
@@ -448,7 +464,7 @@ onUnmounted(() => {
   height: 5px;
   position: absolute;
   right: -8px;
-  top: 28px;
+  top: 23px;
   border-radius: 50%;
 }
 .top-actions {
@@ -475,7 +491,7 @@ onUnmounted(() => {
 /* 顶栏搜索 */
 .header-search {
   display: grid;
-  grid-template-columns: 80px minmax(140px, 220px) auto;
+  grid-template-columns: 57px minmax(90px, 132px) auto;
   align-items: center;
   height: 38px;
   border: 1px solid var(--line);
@@ -570,9 +586,9 @@ onUnmounted(() => {
 
 /* ===================== 内容与页脚 ===================== */
 .content {
-  max-width: 1376px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 0 40px 25px;
+  padding: 0 24px 25px;
   min-height: calc(100vh - 260px);
 }
 .footer {
@@ -660,44 +676,37 @@ onUnmounted(() => {
 .mobile-menu { display: none; }
 
 /* ===================== 响应式 ===================== */
-@media (min-width: 1600px) {
-  .header-inner { max-width: 1540px; padding: 0 50px; }
-  .content { max-width: 1480px; padding-left: 50px; padding-right: 50px; }
-}
 @media (max-width: 1250px) {
-  .header-inner { gap: 20px; padding: 0 28px; }
-  .desktop-nav { gap: 20px; margin-left: 14px; }
+  .header-inner { gap: 18px; }
+  .desktop-nav { gap: 14px; }
   .desktop-link { font-size: 13px; }
   .top-actions { gap: 7px; }
-  .content { padding-left: 30px; padding-right: 30px; }
-  .header-search { grid-template-columns: 70px minmax(110px, 170px) auto; }
-}
-@media (max-width: 1080px) {
-  .brand b { font-size: 20px; }
-  .brand-symbol { height: 33px; width: 33px; }
-  .desktop-nav { gap: 18px; margin-left: 4px; }
-  .header-inner { gap: 12px; padding: 0 22px; }
-  .top-actions { gap: 5px; }
   .header-search { display: none; }
   .search-link { display: inline-grid; }
+}
+@media (max-width: 1100px) {
+  .mobile-menu { display: inline-grid; }
+  .desktop-nav { display: none; }
+  .brand b { font-size: 20px; }
+  .brand-symbol { height: 33px; width: 33px; }
+  .header-inner { gap: 12px; padding: 0 22px; }
+  .top-actions { gap: 5px; }
   .footer { align-items: flex-start; }
   .footer-links { gap: 13px; }
   .footer-links > span { width: 100%; }
 }
 @media (max-width: 760px) {
-  .mobile-menu { display: inline-grid; }
-  .campus-header { height: 72px; }
   .header-inner { padding: 0 17px; gap: 9px; }
   .header-inner > .brand { gap: 7px; }
   .header-inner .brand-symbol { height: 29px; width: 29px; }
   .header-inner .brand b { font-size: 20px; }
-  .desktop-nav { display: none; }
   .header-inner > .mobile-menu { min-width: 25px; padding: 4px; margin-right: 2px; }
   .top-actions { gap: 6px; }
-  .header-publish { min-height: 34px; font-size: 12px; padding: 0 11px; }
+  .header-publish { width: 34px; min-height: 34px; padding: 0; justify-content: center; }
+  .header-publish span { display: none; }
   .header-publish svg { width: 15px; }
+  .header-avatar { padding-left: 0; border-left: 0; }
   .top-actions .icon-btn { min-width: 30px; min-height: 32px; }
-  .top-actions > .icon-btn:nth-child(2) { display: none; }
   .content { padding: 0 20px 24px; }
   .utility-bar { height: 54px; }
   .utility-links { gap: 15px; }

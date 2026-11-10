@@ -277,7 +277,7 @@ onUnmounted(() => {
 <style scoped>
 .admin-shell {
   display: grid;
-  grid-template-columns: 232px 1fr;
+  grid-template-columns: 248px minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -440,17 +440,16 @@ onUnmounted(() => {
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: var(--s-4);
-  height: 60px;
-  padding: 0 var(--s-6);
-  background: color-mix(in srgb, var(--paper) 85%, transparent);
-  backdrop-filter: blur(14px);
+  gap: 18px;
+  height: 64px;
+  padding: 0 28px;
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
 }
 .crumbs { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--ink-3); }
 .crumbs b { color: var(--ink); font-weight: 600; }
 .crumbs .sep { opacity: .5; }
-.topbar-search { flex: 1; max-width: 420px; position: relative; }
+.topbar-search { flex: 1; max-width: 260px; min-width: 0; margin-left: auto; position: relative; }
 .topbar-search svg {
   position: absolute; left: 12px; top: 50%; width: 16px; height: 16px;
   transform: translateY(-50%); color: var(--ink-3); pointer-events: none;
@@ -462,7 +461,8 @@ onUnmounted(() => {
   transition: border-color .2s, box-shadow .2s, background .2s;
 }
 .topbar-search input:focus { outline: none; border-color: var(--brand); background: var(--surface); box-shadow: 0 0 0 3px var(--brand-soft); }
-.top-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.top-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.topbar-search + .top-actions { margin-left: 0; }
 .icon-btn {
   position: relative;
   width: 38px;
@@ -489,11 +489,11 @@ onUnmounted(() => {
   cursor: pointer;
   min-width: 18px;
 }
-.content { padding: var(--s-6); max-width: 1440px; width: 100%; margin: 0 auto; }
+.content { padding: 26px 28px; max-width: 1440px; width: 100%; margin: 0 auto; }
 
 /* —— 响应式 —— */
 @media (max-width: 920px) {
-  .admin-shell { grid-template-columns: 64px 1fr; }
+  .admin-shell { grid-template-columns: 64px minmax(0, 1fr); }
   .sidebar { padding: 16px 10px; }
   .brand-name, .brand-sub, .nav-label, .nav-item span, .nav-count, .side-user-meta { display: none; }
   .nav-group, .nav-group-items { display: contents; }
@@ -508,6 +508,7 @@ onUnmounted(() => {
   .content { padding: var(--s-4); }
   .topbar { padding: 0 var(--s-4); }
   .topbar-search { display: none; }
+  .topbar-search + .top-actions { margin-left: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   .nav-group-chevron { transition: none; }
