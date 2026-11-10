@@ -63,6 +63,14 @@ async function main() {
     assert.equal(await draftLink.count(), 0)
     console.log('PASS student browser opens prefilled activity form, submits edits, and restores receipt')
     if (fixture.adminToken) await reviewInBrowser(browser, page, receipt.activityId)
+    const shortRequest = page.waitForResponse(r => r.url().endsWith('/api/ai/agent/ask'))
+    await page.locator('.ai-input input').fill('帮我发布一个读书会')
+    await page.getByRole('button', { name: '发送' }).click()
+    const shortReply = await result(await shortRequest)
+    assert.equal(shortReply.activityDrafts[0]?.title, '读书会')
+    await page.locator('.activity-draft-card').filter({ hasText: '读书会' })
+      .getByRole('link', { name: '编辑并提交活动' }).waitFor()
+    console.log('PASS exact short wording creates a draft in an existing browser conversation')
   } finally {
     await browser.close()
   }

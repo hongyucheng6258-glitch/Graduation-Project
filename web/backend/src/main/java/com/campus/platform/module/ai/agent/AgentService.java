@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +32,13 @@ public class AgentService {
     private static final int MAX_ROUNDS = 4;
     private static final int MAX_TOOL_CALLS = 6;
     private static final Duration BUDGET = Duration.ofSeconds(30);
+    private static final Pattern SHORT_PUBLISH = Pattern.compile(
+            "^(?:请\\s*)?(?:可以|能不能|能)?\\s*(?:(?:帮我|我要|我想)\\s*)?(?:发布|发起|举办|组织)\\s*"
+                    + "(?:一个|一场|一次|一项)?\\s*([^\\r\\n，,。！？!?；;]{1,72}?)[吗嘛吧]?[。！？!?]?$");
+    private static final Pattern ACTIVITY_LABEL = Pattern.compile("^(?:校园)?活动\\s*[:：]\\s*");
+    private static final Pattern SHORT_ACTIVITY_NAMES = Pattern.compile(
+            "读书会|读书分享会|分享会|学习交流会|交流会|研讨会|座谈会|说明会|见面会|宣讲会|运动会|晚会|辩论赛");
+    private static final Pattern GENERIC_ACTIVITY = Pattern.compile("(?:校园)?活动|讲座|比赛|竞赛|工作坊|沙龙");
     private static final String INSTRUCTIONS = """
             你是梧桐校园向导，用简体中文回答。
             查询当前活动、活动详情或学生自己的报名情况时，先调用可用的校园工具，再根据结果回答。
@@ -133,13 +141,24 @@ public class AgentService {
                 if ("user".equals(role)) state.userQuestions.add(previous.getContent());
             }
         }
+        state.userQuestions.add(question);
+        String shortTitle = shortActivityTitle(question);
+        if (shortTitle != null) {
+            String answer = "请告诉我活动名称。你也可以补充时间、地点和人数，我会先生成可编辑的草稿。";
+            if (!shortTitle.isEmpty()) {
+                var arguments = json.createObjectNode().put("title", shortTitle);
+                var outcome = executeTool(userId, ActivityPublishDrafts.PREPARE, arguments.toString(), state, deadline);
+                answer = state.activityDrafts.isEmpty() ? outcome.path("error").asText("活动草稿暂时无法生成，请重试。")
+                        : "已生成活动草稿。点击「编辑并提交活动」，补充时间、地点和人数等信息，核对后再提交。";
+            }
+            return finish(userId, sessionId, question, prompt, state, deadline, null, answer);
+        }
         state.lastIdleSearch = restoreIdleSearch(conversation.latestIdleSearch(sessionId));
         if (!state.lastIdleSearch.isEmpty()) {
             messages.add(message("assistant", "最近一次闲置搜索卡片有 " + state.lastIdleSearch.size()
                     + " 个结果。用户按编号追问时仅使用 resultNumber。"));
         }
         messages.add(message("user", question));
-        state.userQuestions.add(question);
         List<ObjectNode> definitions = tools.values().stream().map(tool -> tool.definition(json)).toList();
         int attempted = 0;
         boolean retriedResourceSearch = false;
@@ -158,28 +177,8 @@ public class AgentService {
                     retriedResourceSearch = true;
                     continue;
                 }
-                state.evidence.forEach(source -> knowledge.getObject().verifyVersion(userId, source.id(), source.version()));
-                checkDeadline(deadline);
-                String answer = assistant.path("content").asText();
-                var idleIds = List.copyOf(state.idleCardIds);
-                var idleItems = idle.guideCards(userId, idleIds);
-                var stored = new AgentMessageAttachments.Stored(List.copyOf(state.citations),
-                        state.actions.stream().map(ActivitySignupActions.Proposal::id).toList(), idleIds, state.searchedIdle,
-                        state.idleDrafts.stream().map(IdlePublishDrafts.Draft::id).toList(),
-                        state.idleAppointments.stream().map(IdleAppointmentActions.Card::id).toList(), List.copyOf(state.resources),
-                        state.activityDrafts.stream().map(ActivityPublishDrafts.Draft::id).toList());
-                var resourceCards = resources.cards(stored.resourceRefs());
-                if (resourceCards.size() != stored.resourceRefs().size()) {
-                    throw new BizException(ResultCode.AI_INVOKE_FAIL, "查询期间校园内容有更新，请重新查询");
-                }
-                if (requiredResourceKind != null && resourceCards.stream().noneMatch(card -> requiredResourceKind.equals(card.kind()))) {
-                    answer = "没有查到符合条件的校园记录，可以换个关键词再试。";
-                }
-                checkDeadline(deadline);
-                long id = conversation.save(userId, sessionId, question, answer, references(state), stored);
-                return new Reply(answer, List.copyOf(state.toolsUsed), id, List.copyOf(state.citations), prompt.id(),
-                        List.copyOf(state.actions), idleItems, state.searchedIdle, List.copyOf(state.idleDrafts),
-                        List.copyOf(state.idleAppointments), resourceCards, List.copyOf(state.activityDrafts));
+                return finish(userId, sessionId, question, prompt, state, deadline, requiredResourceKind,
+                        assistant.path("content").asText());
             }
             if (round == MAX_ROUNDS - 1 || attempted + calls.size() > MAX_TOOL_CALLS) {
                 throw new BizException(ResultCode.AI_INVOKE_FAIL, "校园查询超过工具调用上限，请缩小问题范围");
@@ -190,14 +189,52 @@ public class AgentService {
                 checkDeadline(deadline);
                 var function = call.path("function");
                 String name = function.path("name").asText();
-                String result = executeTool(userId, name, function.path("arguments").asText(), state, deadline);
-                messages.add(message("tool", result).put("tool_call_id", call.path("id").asText()));
+                var result = executeTool(userId, name, function.path("arguments").asText(), state, deadline);
+                messages.add(message("tool", result.toString()).put("tool_call_id", call.path("id").asText()));
             }
         }
         throw new BizException(ResultCode.AI_INVOKE_FAIL, "校园查询未能生成回答");
     }
 
-    private String executeTool(Long userId, String name, String arguments, RunState state, long deadline) {
+    private String shortActivityTitle(String question) {
+        var match = SHORT_PUBLISH.matcher(question.strip());
+        if (!match.matches()) return null;
+        String text = match.group(1).strip();
+        var label = ACTIVITY_LABEL.matcher(text);
+        boolean explicit = label.find();
+        String title = (explicit ? text.substring(label.end()) : text).strip();
+        boolean quoted = title.matches("[「『“\\\"《].+[」』”\\\"》]");
+        if (quoted) title = title.substring(1, title.length() - 1).strip();
+        if (GENERIC_ACTIVITY.matcher(title).matches() || (explicit && title.isEmpty())) return "";
+        return SHORT_ACTIVITY_NAMES.matcher(title).matches() ? title : null;
+    }
+
+    private Reply finish(Long userId, Long sessionId, String question, AgentPromptService.Snapshot prompt,
+                         RunState state, long deadline, String requiredResourceKind, String answer) {
+        state.evidence.forEach(source -> knowledge.getObject().verifyVersion(userId, source.id(), source.version()));
+        checkDeadline(deadline);
+        var idleIds = List.copyOf(state.idleCardIds);
+        var idleItems = idle.guideCards(userId, idleIds);
+        var stored = new AgentMessageAttachments.Stored(List.copyOf(state.citations),
+                state.actions.stream().map(ActivitySignupActions.Proposal::id).toList(), idleIds, state.searchedIdle,
+                state.idleDrafts.stream().map(IdlePublishDrafts.Draft::id).toList(),
+                state.idleAppointments.stream().map(IdleAppointmentActions.Card::id).toList(), List.copyOf(state.resources),
+                state.activityDrafts.stream().map(ActivityPublishDrafts.Draft::id).toList());
+        var resourceCards = resources.cards(stored.resourceRefs());
+        if (resourceCards.size() != stored.resourceRefs().size()) {
+            throw new BizException(ResultCode.AI_INVOKE_FAIL, "查询期间校园内容有更新，请重新查询");
+        }
+        if (requiredResourceKind != null && resourceCards.stream().noneMatch(card -> requiredResourceKind.equals(card.kind()))) {
+            answer = "没有查到符合条件的校园记录，可以换个关键词再试。";
+        }
+        checkDeadline(deadline);
+        long id = conversation.save(userId, sessionId, question, answer, references(state), stored);
+        return new Reply(answer, List.copyOf(state.toolsUsed), id, List.copyOf(state.citations), prompt.id(),
+                List.copyOf(state.actions), idleItems, state.searchedIdle, List.copyOf(state.idleDrafts),
+                List.copyOf(state.idleAppointments), resourceCards, List.copyOf(state.activityDrafts));
+    }
+
+    private JsonNode executeTool(Long userId, String name, String arguments, RunState state, long deadline) {
         AgentTool tool = tools.get(name);
         if (tool == null || arguments.length() > 4000) {
             return error("工具不可用或参数超出限制");
@@ -263,7 +300,7 @@ public class AgentService {
                 state.searchedResourceKinds.add(kind);
                 result.path("items").forEach(row -> state.resources.add(new CampusResourceTools.Ref(kind, row.path("id").asLong())));
             }
-            return result.toString();
+            return result;
         } catch (JsonProcessingException e) {
             return error("工具参数必须为有效的 JSON");
         } catch (BizException e) {
@@ -326,8 +363,8 @@ public class AgentService {
         }
     }
 
-    private String error(String text) {
-        return json.createObjectNode().put("error", text).toString();
+    private ObjectNode error(String text) {
+        return json.createObjectNode().put("error", text);
     }
 
     private ObjectNode message(String role, String content) {
