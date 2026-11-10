@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict')
+const { join } = require('node:path')
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright')
 
 const fixture = JSON.parse(process.env.CAMPUS_BROWSER_FIXTURE)
@@ -66,6 +67,26 @@ async function check(browser, width, admin) {
       const darkPaper = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--paper').trim().toLowerCase())
       assert.notEqual(darkPaper, shell.paper)
     }
+    if (admin) {
+      if (width === 1440) await page.getByRole('button', { name: '切换主题', exact: true }).click()
+      await page.goto(`${adminUrl}/admin/dashboard`)
+      await page.getByRole('heading', { name: '今天的校园，也交给你了。' }).waitFor()
+      await page.locator('.system-pill').filter({ hasText: '概览数据已更新' }).waitFor({ state: 'attached', timeout: 7000 })
+      assert.equal(await page.locator('.stat-card').count(), 4)
+      assert.equal(await page.locator('.dashboard canvas').count(), 3)
+      const dashboard = await page.evaluate(() => ({
+        greeting: getComputedStyle(document.querySelector('.admin-greeting')).backgroundColor,
+        gridGap: getComputedStyle(document.querySelector('.stat-grid')).columnGap,
+        overflow: document.documentElement.scrollWidth > innerWidth + 1,
+      }))
+      assert.equal(dashboard.greeting, 'rgba(0, 0, 0, 0)')
+      if (width === 1440) assert.equal(dashboard.gridGap, '18px')
+      assert.equal(dashboard.overflow, false, `dashboard overflows at ${width}px`)
+      const screenshotDir = process.env.CAMPUS_PROTOTYPE_SCREENSHOTS
+      if (screenshotDir && width === 1440) {
+        await page.screenshot({ path: join(screenshotDir, 'admin-dashboard.png'), fullPage: true })
+      }
+    }
     if (!admin && width <= 820) {
       assert.equal(shell.navWidth, 0)
       const menu = page.getByRole('button', { name: '切换导航' })
@@ -86,7 +107,7 @@ async function main() {
       await check(browser, width, false)
       await check(browser, width, true)
     }
-    console.log('PASS both assistants share their desktop and mobile layout')
+    console.log('PASS both assistants and the live admin dashboard at desktop and mobile widths')
   } finally {
     await browser.close()
   }

@@ -34,7 +34,7 @@
     <section class="admin-charts">
       <div class="chart-panel trend-panel">
         <div class="panel-head">
-          <h3>近30天趋势</h3>
+          <h3>近 30 天趋势</h3>
           <span>累计用户 / AI 调用量</span>
         </div>
         <div ref="trendRef" class="chart" />
@@ -251,28 +251,23 @@ function renderChart(el, option) {
 /* —— V2 问候头 —— */
 .admin-greeting {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 15px;
-  background: var(--brand-soft);
-  border: 1px solid var(--brand-line);
-  border-radius: 16px;
-  padding: 26px 30px;
+  gap: 16px;
   margin-bottom: 4px;
 }
 .greet-date { font-size: 12px; color: var(--brand-strong); margin: 0 0 7px; }
-.admin-greeting h1 { font-size: 25px; font-weight: 700; color: var(--ink); letter-spacing: -.4px; margin: 0; }
+.admin-greeting h1 { font-size: var(--fs-h1); font-weight: 700; color: var(--ink); letter-spacing: -.4px; margin: 0; }
 .greet-sub { display: block; font-size: 12px; color: var(--ink-3); margin-top: 8px; }
 .system-pill {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 1px solid var(--brand-line);
-  background: var(--surface);
-  border-radius: 50px;
-  padding: 6px 13px;
-  font-size: 11px;
-  color: var(--ink-2);
+  background: var(--success-soft);
+  border-radius: var(--r-pill);
+  padding: 8px 14px;
+  font-size: var(--fs-sm);
+  color: var(--success);
   flex-shrink: 0;
 }
 .system-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
@@ -280,7 +275,7 @@ function renderChart(el, option) {
 .system-pill.warn i { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, .18); }
 
 /* —— 统计卡 —— */
-.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
 .stat-card {
   display: flex;
   align-items: center;
@@ -288,7 +283,7 @@ function renderChart(el, option) {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 19px 21px;
+  padding: 22px;
   min-width: 0;
 }
 .stat-icon {
@@ -301,24 +296,24 @@ function renderChart(el, option) {
 }
 .stat-icon svg { width: 21px; height: 21px; }
 .stat-card b { display: block; font-size: 27px; font-weight: 700; color: var(--ink); letter-spacing: -.6px; line-height: 1.1; }
-.stat-card small { display: block; font-size: 11px; color: var(--ink-3); margin-top: 4px; white-space: nowrap; }
+.stat-card small { display: block; font-size: 11px; color: var(--ink-3); margin-top: 4px; }
 
 /* —— 图表 —— */
-.admin-charts { display: grid; grid-template-columns: 1.7fr 1fr; gap: 15px; }
-.admin-panels { display: grid; grid-template-columns: 1fr 1.2fr; gap: 15px; }
+.admin-charts { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 18px; }
+.admin-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .chart-panel {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 19px 21px;
+  padding: 22px;
   min-width: 0;
 }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 13px; }
 .panel-head h3 { font-size: 15px; font-weight: 650; color: var(--ink); margin: 0; }
 .panel-head span { font-size: 11px; color: var(--ink-3); }
-.chart { height: 300px; width: 100%; }
-.chart.donut { height: 285px; }
-.chart.bar-chart { height: 248px; }
+.chart { height: 240px; width: 100%; }
+.chart.donut { height: 240px; }
+.chart.bar-chart { height: 220px; }
 
 /* —— 待办审核 —— */
 .audit-table { display: flex; flex-direction: column; }
@@ -364,15 +359,16 @@ function renderChart(el, option) {
 .audit-empty { text-align: center; color: var(--ink-3); font-size: 12px; padding: 30px 0; }
 
 @media (max-width: 1100px) {
-  .stat-grid { grid-template-columns: repeat(2, 1fr); }
-  .admin-charts, .admin-panels { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-charts, .admin-panels { grid-template-columns: minmax(0, 1fr); }
   .chart.bar-chart { height: 260px; }
 }
 @media (max-width: 760px) {
-  .admin-greeting { padding: 21px; align-items: flex-start; }
+  .admin-greeting { align-items: flex-start; }
   .admin-greeting h1 { font-size: 21px; }
   .system-pill { display: none; }
-  .stat-card { padding: 15px 16px; gap: 12px; }
+  .stat-grid { gap: 10px; }
+  .stat-card { padding: 12px; gap: 8px; }
   .stat-icon { width: 38px; height: 38px; }
   .stat-card b { font-size: 22px; }
   .chart-panel { padding: 16px; }
