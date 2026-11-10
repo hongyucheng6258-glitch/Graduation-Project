@@ -1,62 +1,61 @@
 <template>
   <div class="content-manage">
-    <el-card>
-      <template #header>
-        <div class="head">
-          <h3>内容管理</h3>
-          <span class="sub">管理已发布内容：下架违规内容或恢复上架</span>
-        </div>
-      </template>
-      <el-tabs v-model="type" @tab-change="load">
-        <el-tab-pane label="活动" name="activity" />
-        <el-tab-pane label="闲置" name="idle" />
-        <el-tab-pane label="失物招领" name="lostfound" />
-        <el-tab-pane label="学习搭子" name="partner" />
-        <el-tab-pane label="互助问答" name="qa" />
-      </el-tabs>
-      <el-table :data="list" v-loading="loading">
-        <el-table-column label="标题" min-width="200" show-overflow-tooltip>
-          <template #default="{ row }">{{ titleOf(row) }}</template>
-        </el-table-column>
-        <el-table-column label="审核" width="90">
-          <template #default="{ row }">
-            <el-tag v-if="type === 'qa'" size="small" type="info">免审</el-tag>
-            <el-tag v-else size="small" :type="['warning','success','danger'][row.auditStatus]">
-              {{ ['待审核','已通过','已驳回'][row.auditStatus] }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">{{ statusText(row) }}</template>
-        </el-table-column>
-        <el-table-column label="发布时间" width="170">
-        <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
+    <WtPageHeader title="内容管理" subtitle="管理已发布内容的下架与恢复。" />
+
+    <div class="admin-list-toolbar">
+      <el-select v-model="type" aria-label="内容类型" style="width: 160px" @change="resetType">
+        <el-option v-for="(label, value) in contentTypes" :key="value" :label="label" :value="value" />
+      </el-select>
+    </div>
+    <el-table class="admin-list-table" :data="list" :scrollbar-tabindex="0" v-loading="loading" empty-text="暂无此类内容">
+      <el-table-column label="类型" width="110">
+        <template #default>
+          <el-tag size="small" round type="info">{{ contentTypes[type] }}</el-tag>
+        </template>
       </el-table-column>
-        <el-table-column label="操作" width="260" fixed="right">
-          <template #default="{ row }">
-            <template v-if="type === 'qa' || row.auditStatus === 1">
-              <el-button v-if="!isOff(row)" size="small" type="danger" plain @click="doOff(row)">下架</el-button>
-              <el-button v-else size="small" type="success" plain @click="doOn(row)">恢复上架</el-button>
-              <el-button v-if="type === 'activity' && !isOff(row)" size="small" type="primary" plain @click="openReport(row)">签到报表</el-button>
-            </template>
-            <span v-else style="color: var(--ink-3); font-size: 12px">—</span>
+      <el-table-column label="标题" min-width="200" show-overflow-tooltip>
+        <template #default="{ row }">{{ titleOf(row) || '—' }}</template>
+      </el-table-column>
+      <el-table-column prop="userId" label="作者 ID" width="100" />
+      <el-table-column label="审核" width="90">
+        <template #default="{ row }">
+          <el-tag v-if="type === 'qa'" size="small" round type="info">免审</el-tag>
+          <el-tag v-else size="small" round :type="['warning','success','danger'][row.auditStatus]">
+            {{ ['待审核','已通过','已驳回'][row.auditStatus] }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="状态" width="100">
+        <template #default="{ row }">
+          <el-tag size="small" round :type="canManage(row) && !isOff(row) ? 'success' : 'info'">
+            {{ statusText(row) || '—' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="发布时间" width="170">
+        <template #default="{ row }">{{ formatTime(row.createTime) || '—' }}</template>
+      </el-table-column>
+      <el-table-column label="操作" width="145">
+        <template #default="{ row }">
+          <template v-if="canManage(row)">
+            <el-button v-if="!isOff(row)" link type="danger" @click="doOff(row)">下架</el-button>
+            <el-button v-else link type="primary" @click="doOn(row)">恢复上架</el-button>
+            <el-button v-if="type === 'activity' && !isOff(row)" link type="primary" @click="openReport(row)">签到报表</el-button>
           </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination v-model:current-page="pageNum" :total="total" :page-size="10"
-                     layout="prev, pager, next" style="margin-top: 16px" @current-change="load" />
-    </el-card>
+          <span v-else style="color: var(--ink-3); font-size: 12px">—</span>
+        </template>
+      </el-table-column>
+    </el-table>
+    <el-pagination class="admin-list-pagination" v-model:current-page="pageNum" :total="total" :page-size="10"
+                   :pager-count="5" layout="total, prev, pager, next" />
 
     <!-- 签到报表弹窗 -->
-    <el-dialog v-model="reportVisible" title="签到报表" width="720px" destroy-on-close>
-      <template #header>
-        <span>签到报表</span>
-        <span style="float:right">
+    <el-dialog v-model="reportVisible" title="签到报表" width="min(720px, calc(100vw - 32px))" destroy-on-close>
+      <template v-if="report">
+        <div class="report-actions">
           <el-button size="small" :loading="exporting" @click="doExport('members')">导出报名名单</el-button>
           <el-button size="small" type="primary" :loading="exporting" @click="doExport('signins')">导出签到名单</el-button>
-        </span>
-      </template>
-      <template v-if="report">
+        </div>
         <div class="report-summary">
           <div class="sum-item"><b>{{ report.joinedCount }}</b><span>已通过报名</span></div>
           <div class="sum-item"><b>{{ report.signinCount }}</b><span>已签到</span></div>
@@ -77,8 +76,8 @@
             </template>
           </el-table-column>
           <el-table-column label="签到时间" width="170">
-        <template #default="{ row }">{{ formatTime(row.signTime) }}</template>
-      </el-table-column>
+            <template #default="{ row }">{{ formatTime(row.signTime) }}</template>
+          </el-table-column>
         </el-table>
       </template>
     </el-dialog>
@@ -86,17 +85,27 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
+import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import { ElMessage } from 'element-plus'
 import { auditAll } from '../../api/audit'
 import { contentOff, contentOn, signinReport, exportMembers, exportSignins } from '../../api/content'
 import { formatTime } from '../../utils/date'
+
+const contentTypes = {
+  activity: '活动',
+  idle: '闲置',
+  lostfound: '失物招领',
+  partner: '学习搭子',
+  qa: '互助问答',
+}
 
 const type = ref('activity')
 const list = ref([])
 const total = ref(0)
 const pageNum = ref(1)
 const loading = ref(false)
+let requestVersion = 0
 
 const reportVisible = ref(false)
 const report = ref(null)
@@ -125,6 +134,7 @@ const isOff = (row) => {
   if (type.value === 'partner' || type.value === 'qa') return row.status === 9
   return row.status === 2
 }
+const canManage = (row) => type.value === 'qa' || row.auditStatus === 1
 const titleOf = (row) => {
   if (type.value === 'partner') return `${row.subject || ''}${row.goal ? ' · ' + row.goal : ''}`
   return row.title || row.content || ''
@@ -137,14 +147,22 @@ const statusText = (row) => {
   return ['进行中', '已完成', '已下架'][row.status] ?? ''
 }
 
+function resetType() {
+  list.value = []
+  total.value = 0
+  pageNum.value = 1
+}
+
 async function load() {
+  const version = ++requestVersion
   loading.value = true
   try {
     const res = await auditAll({ type: type.value, pageNum: pageNum.value, pageSize: 10 })
+    if (version !== requestVersion) return
     list.value = res.list
     total.value = res.total
   } finally {
-    loading.value = false
+    if (version === requestVersion) loading.value = false
   }
 }
 
@@ -170,22 +188,17 @@ async function openReport(row) {
   }
 }
 
-onMounted(load)
+watch([type, pageNum], load, { immediate: true })
 </script>
 
 <style scoped>
-.head {
+.report-actions {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
 }
-.head h3 {
-  margin: 0;
-}
-.sub {
-  font-size: 12px;
-  color: var(--ink-3);
-}
+.report-actions .el-button + .el-button { margin-left: 0; }
 .report-summary {
   display: flex;
   gap: 16px;
@@ -193,6 +206,7 @@ onMounted(load)
 }
 .sum-item {
   flex: 1;
+  min-width: 0;
   text-align: center;
   padding: 14px;
   border-radius: 8px;
@@ -206,5 +220,9 @@ onMounted(load)
 .sum-item span {
   font-size: 12px;
   color: var(--ink-3);
+}
+@media (max-width: 540px) {
+  .report-summary { gap: 8px; }
+  .sum-item { padding: 8px; }
 }
 </style>

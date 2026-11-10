@@ -30,13 +30,12 @@ function parseImageValue(value) {
 /**
  * 将站内相对路径图片（如 /images/a.jpg）解析为当前应用 base 下的完整路径。
  * 管理端 base 为 /admin/，数据库返回的 /images/... 若不补前缀将 404。
- * base 为 / 时（如单测环境）恒等返回，不影响其他场景。
+ * 上传图片走站点根路径的 /api/assets/，静态图片使用当前应用的 base。
  */
-export function resolveAssetUrl(url) {
+export function resolveAssetUrl(url, base = import.meta.env?.BASE_URL || '/') {
   if (typeof url !== 'string') return url
   const value = url.trim()
-  if (!value.startsWith('/') || value.startsWith('//')) return value
-  let base = (import.meta.env && import.meta.env.BASE_URL) || '/'
+  if (!value.startsWith('/') || value.startsWith('//') || value.startsWith('/api/assets/')) return value
   if (!base.endsWith('/')) base += '/'
   if (value.startsWith(base)) return value
   return base + value.replace(/^\//, '')
@@ -46,7 +45,7 @@ export function normalizeImages(item) {
   if (!item || typeof item !== 'object') return []
   const imageList = parseImageValue(item.imageList)
   const list = imageList.length ? imageList : parseImageValue(item.images)
-  return list.map(resolveAssetUrl)
+  return list.map(url => resolveAssetUrl(url))
 }
 
 export function firstValidImage(item) {

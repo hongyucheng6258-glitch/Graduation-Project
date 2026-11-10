@@ -1,51 +1,41 @@
 <template>
-  <WtPageHeader title="AI 配置" subtitle="配置模型与调用参数" eyebrow="管理后台" />
+  <WtPageHeader title="AI 配置" subtitle="服务地址、密钥、模型参数与提示词模板。" />
 
   <div>
-    <!-- 模型参数配置 -->
-    <el-card v-loading="loading">
-      <template #header>AI 参数配置</template>
-      <el-form label-width="160px" style="max-width: 640px">
-        <el-form-item label="模型服务地址">
-          <el-input v-model="configs.base_url" placeholder="https://api.deepseek.com" />
-        </el-form-item>
-        <el-form-item label="API Key">
-          <el-input v-model="configs.api_key" type="password" show-password
-                    placeholder="留空则使用服务端 application.yml 配置" />
-        </el-form-item>
-        <el-form-item label="模型名称">
-          <el-input v-model="configs.model_name" placeholder="deepseek-chat" />
-        </el-form-item>
-        <el-form-item label="temperature">
-          <el-input-number v-model="temperatureNum" :min="0" :max="2" :step="0.1" />
-        </el-form-item>
-        <el-form-item label="最大输出 token">
-          <el-input-number v-model="maxTokensNum" :min="256" :max="8192" :step="256" />
-        </el-form-item>
-        <el-form-item label="超时时间(ms)">
-          <el-input-number v-model="timeoutNum" :min="5000" :max="300000" :step="5000" />
-        </el-form-item>
-        <el-form-item label="失败重试次数">
-          <el-input-number v-model="retryNum" :min="0" :max="5" />
-        </el-form-item>
-        <el-form-item label="每用户每日限流">
-          <el-input-number v-model="rateLimitNum" :min="1" :max="1000" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="saving" @click="save">保存配置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+    <el-form v-loading="loading" class="model-form" label-position="top">
+      <el-form-item label="服务地址">
+        <el-input v-model="configs.base_url" placeholder="https://api.deepseek.com" />
+      </el-form-item>
+      <el-form-item label="API 密钥">
+        <el-input v-model="configs.api_key" type="password" show-password
+                  placeholder="留空则使用服务端 application.yml 配置" />
+      </el-form-item>
+      <el-form-item label="模型名称">
+        <el-input v-model="configs.model_name" placeholder="deepseek-chat" />
+      </el-form-item>
+      <el-form-item label="温度 Temperature">
+        <el-input-number v-model="temperatureNum" :min="0" :max="2" :step="0.1" />
+      </el-form-item>
+      <el-form-item label="最大输出 Token">
+        <el-input-number v-model="maxTokensNum" :min="256" :max="8192" :step="256" />
+      </el-form-item>
+      <el-form-item label="超时时间（ms）">
+        <el-input-number v-model="timeoutNum" :min="5000" :max="300000" :step="5000" />
+      </el-form-item>
+      <el-form-item label="失败重试次数">
+        <el-input-number v-model="retryNum" :min="0" :max="5" />
+      </el-form-item>
+      <el-form-item label="每用户每日限流">
+        <el-input-number v-model="rateLimitNum" :min="1" :max="1000" />
+      </el-form-item>
+    </el-form>
 
-    <!-- 提示词模板管理 -->
-    <el-card style="margin-top: 16px">
-      <template #header>
-        <div class="head">
-          <span>提示词模板</span>
-          <el-button type="primary" size="small" @click="openEdit()">＋ 新建模板</el-button>
-        </div>
-      </template>
-      <el-table :data="prompts">
+    <el-card class="prompt-panel" shadow="never">
+      <div class="head">
+        <h2>提示词模板</h2>
+        <el-button size="small" @click="openEdit()">＋ 新建模板</el-button>
+      </div>
+      <el-table class="admin-list-table" :data="prompts">
         <el-table-column prop="scene" label="场景" width="110">
           <template #default="{ row }"><el-tag size="small">{{ row.scene }}</el-tag></template>
         </el-table-column>
@@ -60,15 +50,18 @@
         </el-table-column>
         <el-table-column label="操作" width="90">
           <template #default="{ row }">
-            <el-button size="small" @click="openEdit(row)">编辑</el-button>
+            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
 
-    <!-- 模板编辑弹窗 -->
-    <el-dialog v-model="editVisible" :title="editForm.id ? '编辑模板' : '新建模板'" width="560px">
-      <el-form label-width="80px">
+    <div class="config-actions">
+      <el-button type="primary" :disabled="loading || !configReady" :loading="saving" @click="save">保存配置</el-button>
+    </div>
+
+    <el-dialog v-model="editVisible" :title="editForm.id ? '编辑模板' : '新建模板'" width="min(560px, calc(100vw - 32px))">
+      <el-form label-position="top">
         <el-form-item label="场景">
           <el-select v-model="editForm.scene">
             <el-option label="答疑 chat" value="chat" />
@@ -105,6 +98,7 @@ import { ElMessage } from 'element-plus'
 import { getAiConfig, updateAiConfig, listPrompts, createPrompt, updatePrompt } from '../../api/aiConfig'
 
 const loading = ref(false)
+const configReady = ref(false)
 const agentEnabled = ref(false)
 const ragEnabled = ref(false)
 onMounted(async () => {
@@ -136,6 +130,7 @@ onMounted(async () => {
   try {
     const list = await getAiConfig()
     list.forEach((c) => { configs[c.configKey] = c.configValue })
+    configReady.value = true
     prompts.value = await listPrompts()
   } finally {
     loading.value = false
@@ -143,6 +138,7 @@ onMounted(async () => {
 })
 
 async function save() {
+  if (loading.value || !configReady.value || saving.value) return
   saving.value = true
   try {
     await updateAiConfig({ ...configs })
@@ -174,9 +170,52 @@ async function savePrompt() {
 </script>
 
 <style scoped>
+.model-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  max-width: 820px;
+}
+.model-form :deep(.el-form-item) {
+  min-width: 0;
+  margin: 0;
+}
+.model-form :deep(.el-form-item__label) {
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.model-form :deep(.el-input-number) {
+  width: 100%;
+}
+.model-form :deep(.el-input-number .el-input__inner) {
+  text-align: start;
+}
+.prompt-panel {
+  margin-top: var(--s-5);
+  border-radius: var(--r-md);
+}
+.prompt-panel .admin-list-table {
+  border: 0;
+}
 .head {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+.head h2 {
+  font-size: var(--fs-body);
+  font-weight: 650;
+}
+.config-actions {
+  margin: 22px 0;
+}
+@media (max-width: 640px) {
+  .model-form {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-4);
+  }
 }
 </style>

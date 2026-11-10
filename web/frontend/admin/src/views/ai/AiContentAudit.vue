@@ -4,7 +4,7 @@
     <div class="page-head">
       <div>
         <h1>AI 内容审核</h1>
-        <p class="desc">AI 智能预审结果复核 · 拦截内容人工裁决，保障社区内容安全</p>
+        <p class="desc">查看 AI 风险、人工复核并决定恢复展示或维持拦截。</p>
       </div>
       <div class="page-head-actions">
         <button class="btn btn-ghost btn-sm" :disabled="loading" @click="loadAll">
@@ -56,7 +56,7 @@
 
     <!-- Tab -->
     <div class="tabs" style="margin-bottom: var(--s-4)">
-      <button v-for="t in tabs" :key="t.key" class="tab" :class="{ active: tab === t.key }" @click="tab = t.key">
+      <button v-for="t in tabs" :key="t.key" type="button" class="tab" :aria-pressed="tab === t.key" :class="{ active: tab === t.key }" @click="tab = t.key">
         {{ t.label }}
         <span v-if="t.key === 'pending'" class="tab-count">{{ pendingCount }}</span>
         <span v-else-if="t.key === 'log'" class="tab-count">{{ blockedCount }}</span>
@@ -65,31 +65,22 @@
 
     <!-- 待复核 -->
     <div v-show="tab === 'pending'" v-loading="loading">
-      <el-table :data="pendingList" :row-key="(r) => r.type + '-' + r.id">
-        <el-table-column label="类型" width="100">
-          <template #default="{ row }">
+      <div class="risk-list">
+        <article v-for="row in pendingList" :key="row.type + '-' + row.id" class="risk-card">
+          <div class="risk-labels">
             <span class="tag" :class="typeTag(row.type)">{{ typeText(row.type) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="内容" min-width="220">
-          <template #default="{ row }">{{ row.title || row.content }}</template>
-        </el-table-column>
-        <el-table-column label="风险" width="90">
-          <template #default="{ row }">
             <span class="tag" :class="riskClass(row.aiRiskLevel)">{{ riskText(row.aiRiskLevel) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="aiAuditReason" label="AI 判断原因" min-width="200" show-overflow-tooltip />
-        <el-table-column label="提交时间" width="160">
-          <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" type="success" :disabled="acting" @click="restore(row)">恢复展示</el-button>
-            <el-button size="small" type="danger" :disabled="acting" @click="openBlock(row)">维持拦截</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+          </div>
+          <div class="risk-copy">
+            <h2>{{ row.title || row.content || row.subject }}</h2>
+            <p>{{ formatTime(row.createTime) }}<template v-if="row.aiAuditReason"> · {{ row.aiAuditReason }}</template></p>
+          </div>
+          <div class="risk-actions">
+            <el-button size="small" :disabled="acting" @click="restore(row)">恢复展示</el-button>
+            <el-button size="small" type="danger" plain :disabled="acting" @click="openBlock(row)">维持拦截</el-button>
+          </div>
+        </article>
+      </div>
       <el-pagination v-if="riskPages > 1" v-model:current-page="riskPage" :page-count="riskPages"
         :disabled="loading || acting" layout="prev, pager, next"
         aria-label="待复核列表分页（各模块每页最多 100 条）" @current-change="loadAll" />
@@ -101,7 +92,7 @@
 
     <!-- 拦截日志 -->
     <div v-show="tab === 'log'" v-loading="loading">
-      <el-table :data="blockedList" :row-key="(r) => r.type + '-' + r.id">
+      <el-table class="admin-list-table" :data="blockedList" :row-key="(r) => r.type + '-' + r.id">
         <el-table-column label="类型" width="100">
           <template #default="{ row }">
             <span class="tag" :class="typeTag(row.type)">{{ typeText(row.type) }}</span>
@@ -290,6 +281,7 @@ onMounted(loadAll)
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--s-4);
+  flex-wrap: wrap;
   margin-bottom: var(--s-5);
 }
 .page-head h1 {
@@ -302,7 +294,7 @@ onMounted(loadAll)
 .page-head .desc { color: var(--ink-3); font-size: var(--fs-sm); }
 .page-head-actions { display: flex; gap: var(--s-2); flex: none; }
 
-.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-4); margin-bottom: var(--s-4); }
+.kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-4); margin-bottom: var(--s-4); }
 .kpi {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -332,7 +324,7 @@ onMounted(loadAll)
 .kpi-value { font-family: var(--font-display); font-size: 1.55rem; font-weight: 600; line-height: 1.2; letter-spacing: -.01em; }
 .kpi-value small { font-size: var(--fs-sm); color: var(--ink-3); font-weight: 500; }
 
-.tabs { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 3px; gap: 2px; }
+.tabs { display: inline-flex; flex-wrap: wrap; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 3px; gap: 2px; }
 .tab {
   padding: 6px 14px;
   border-radius: var(--r-pill);
@@ -371,6 +363,23 @@ onMounted(loadAll)
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-4); }
 .card-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-h3); }
 .card-sub { font-size: var(--fs-xs); color: var(--ink-3); margin-top: 2px; }
+
+.risk-list { display: flex; flex-direction: column; gap: 16px; }
+.risk-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 18px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.risk-labels, .risk-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.risk-copy { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.risk-copy h2 { font-size: var(--fs-body); font-weight: 600; }
+.risk-copy p { margin-top: 4px; color: var(--ink-3); font-size: var(--fs-xs); }
+.risk-actions :deep(.el-button + .el-button) { margin-left: 0; }
 
 .tag {
   display: inline-flex;
@@ -415,7 +424,7 @@ onMounted(loadAll)
 
 .rule-list { display: flex; flex-direction: column; gap: var(--s-3); }
 .rule-row { display: flex; align-items: center; gap: var(--s-3); }
-.rule-name { width: 280px; font-size: var(--fs-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: none; }
+.rule-name { width: min(280px, 52%); font-size: var(--fs-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: none; }
 .rule-bar { flex: 1; height: 8px; border-radius: var(--r-pill); background: var(--surface-3); overflow: hidden; }
 .rule-bar span { display: block; height: 100%; border-radius: var(--r-pill); background: linear-gradient(90deg, var(--gold), var(--accent)); }
 .rule-num { width: 56px; text-align: right; font-size: var(--fs-xs); font-family: var(--font-mono); color: var(--ink-2); flex: none; }
@@ -426,6 +435,10 @@ onMounted(loadAll)
 .dialog-tip { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.6; margin-bottom: var(--s-3); }
 
 @media (max-width: 780px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .kpi { padding: 10px; gap: 6px; }
+  .kpi-icon { width: 30px; height: 30px; }
+  .kpi-value { font-size: var(--fs-h3); }
+  .risk-card { padding: 14px; }
 }
 </style>

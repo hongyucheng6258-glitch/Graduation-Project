@@ -1,43 +1,50 @@
 <template>
-  <WtPageHeader title="用户管理" subtitle="查看与管理平台用户" eyebrow="管理后台" />
+  <WtPageHeader title="用户管理" subtitle="查询、启用或禁用账号，重置密码。" />
 
-  <el-card>
-    <div class="toolbar">
-      <el-input v-model="keyword" placeholder="学号/昵称" clearable style="width: 220px" @keyup.enter="search" @clear="search" />
-      <el-select v-model="status" placeholder="全部状态" clearable style="width: 130px" @change="search">
-        <el-option label="正常" :value="0" />
-        <el-option label="已禁用" :value="1" />
-      </el-select>
-      <el-button type="primary" @click="search">搜索</el-button>
-    </div>
-    <el-table :data="list" v-loading="loading">
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="studentNo" label="学号" width="120">
-        <template #default="{ row }">{{ row.studentNo || '—' }}</template>
-      </el-table-column>
-      <el-table-column prop="nickname" label="昵称" width="130" />
-      <el-table-column prop="phone" label="手机号" width="120" />
-      <el-table-column label="最近登录" width="170">
-        <template #default="{ row }">{{ formatTime(row.lastLoginTime) || '从未登录' }}</template>
-      </el-table-column>
-      <el-table-column label="状态" width="90">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 0 ? 'success' : 'danger'">
-            {{ row.status === 0 ? '正常' : '已禁用' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="200">
-        <template #default="{ row }">
-          <el-button v-if="row.status === 0" size="small" type="danger" @click="toggle(row, 1)">禁用</el-button>
-          <el-button v-else size="small" type="success" @click="toggle(row, 0)">解封</el-button>
-          <el-button size="small" @click="resetPwd(row)">重置密码</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-    <el-pagination v-model:current-page="pageNum" :total="total" :page-size="10"
-                   layout="total, prev, pager, next" style="margin-top: 16px" @current-change="load" />
-  </el-card>
+  <form class="admin-list-toolbar" @submit.prevent="search">
+    <el-input v-model="keyword" aria-label="学号或昵称" placeholder="学号 / 昵称搜索" clearable style="width: 220px" @clear="search" />
+    <el-select v-model="status" aria-label="账号状态" placeholder="全部状态" clearable style="width: 130px" @change="search">
+      <el-option label="正常" :value="0" />
+      <el-option label="已禁用" :value="1" />
+    </el-select>
+    <el-button type="primary" native-type="submit">搜索</el-button>
+  </form>
+  <el-table class="admin-list-table" :data="list" :scrollbar-tabindex="0" v-loading="loading" empty-text="暂无符合条件的用户">
+    <el-table-column prop="id" label="ID" width="70" />
+    <el-table-column prop="studentNo" label="学号" width="120">
+      <template #default="{ row }">{{ row.studentNo || '—' }}</template>
+    </el-table-column>
+    <el-table-column prop="nickname" label="昵称" min-width="150">
+      <template #default="{ row }">
+        <div class="user-name">
+          <el-avatar :size="32" :src="resolveAssetUrl(row.avatar)" aria-hidden="true">
+            {{ row.nickname?.charAt(0) || '用' }}
+          </el-avatar>
+          <span>{{ row.nickname || '—' }}</span>
+        </div>
+      </template>
+    </el-table-column>
+    <el-table-column prop="phone" label="手机号" width="120" />
+    <el-table-column label="最近登录" width="170">
+      <template #default="{ row }">{{ formatTime(row.lastLoginTime) || '从未登录' }}</template>
+    </el-table-column>
+    <el-table-column label="状态" width="90">
+      <template #default="{ row }">
+        <el-tag size="small" round :type="row.status === 0 ? 'success' : 'danger'">
+          {{ row.status === 0 ? '正常' : '已禁用' }}
+        </el-tag>
+      </template>
+    </el-table-column>
+    <el-table-column label="操作" width="150">
+      <template #default="{ row }">
+        <el-button link type="primary" @click="resetPwd(row)">重置密码</el-button>
+        <el-button v-if="row.status === 0" link type="danger" @click="toggle(row, 1)">禁用</el-button>
+        <el-button v-else link type="primary" @click="toggle(row, 0)">启用</el-button>
+      </template>
+    </el-table-column>
+  </el-table>
+  <el-pagination class="admin-list-pagination" v-model:current-page="pageNum" :total="total" :page-size="10"
+                 :pager-count="5" layout="total, prev, pager, next" @current-change="load" />
 </template>
 
 <script setup>
@@ -46,6 +53,7 @@ import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listUsers, updateUserStatus, resetPassword } from '../../api/user'
 import { formatTime } from '../../utils/date'
+import { resolveAssetUrl } from '../../utils/image'
 
 const keyword = ref('')
 const status = ref(undefined)
@@ -90,9 +98,15 @@ onMounted(load)
 </script>
 
 <style scoped>
-.toolbar {
+.user-name {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+  align-items: center;
+  gap: 10px;
+}
+.user-name .el-avatar {
+  flex: none;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 600;
 }
 </style>

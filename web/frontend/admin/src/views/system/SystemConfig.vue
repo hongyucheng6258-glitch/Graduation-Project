@@ -1,33 +1,32 @@
 <template>
-  <WtPageHeader title="系统配置" subtitle="在线修改系统参数，保存后立即生效，无需重启" eyebrow="管理后台" />
+  <WtPageHeader title="系统配置" subtitle="管理站点信息、功能开关与审核规则，保存后立即生效（仅超级管理员）。" />
 
   <div v-loading="loading">
     <!-- 操作栏 -->
-    <div class="toolbar">
-      <el-radio-group v-model="activeCategory" @change="onCategoryChange">
+    <div class="admin-list-toolbar">
+      <el-radio-group v-model="activeCategory" class="category-filter" aria-label="配置分组">
         <el-radio-button label="">全部分组</el-radio-button>
         <el-radio-button v-for="c in categories" :key="c.key" :label="c.key">
           {{ c.label }}
         </el-radio-button>
       </el-radio-group>
-      <div class="spacer" />
       <el-button @click="loadData">刷新</el-button>
-      <el-button type="primary" :loading="saving" @click="saveAll">保存全部（即时生效）</el-button>
     </div>
 
     <!-- 配置表单：按分组渲染 -->
-    <el-card v-for="group in groupedConfigs" :key="group.category" class="config-card">
+    <el-card v-for="group in groupedConfigs" :key="group.category" class="config-card" shadow="never">
       <template #header>
         <div class="card-header">
-          <span class="group-title">{{ group.label }}</span>
+          <h2 class="group-title">{{ group.label }}</h2>
           <el-tag size="small" type="info">{{ group.items.length }} 项</el-tag>
         </div>
       </template>
-      <el-form label-width="200px" label-position="right">
+      <el-form class="config-form" label-position="top">
         <el-form-item
           v-for="item in group.items"
           :key="item.configKey"
           :label="item.description || item.configKey"
+          :class="{ 'wide-field': ['bool', 'list', 'json'].includes(item.valueType) }"
         >
           <!-- bool 类型：开关 -->
           <el-switch
@@ -41,7 +40,6 @@
             v-else-if="item.valueType === 'int' || item.valueType === 'long'"
             v-model="formData[item.configKey]"
             :controls-position="'right'"
-            style="width: 220px"
           />
           <!-- double 类型：小数输入 -->
           <el-input-number
@@ -50,7 +48,6 @@
             :precision="2"
             :step="0.1"
             :controls-position="'right'"
-            style="width: 220px"
           />
           <!-- list 类型：文本域（逗号分隔） -->
           <el-input
@@ -73,7 +70,6 @@
             v-else
             v-model="formData[item.configKey]"
             :placeholder="`配置键：${item.configKey}`"
-            style="max-width: 480px"
           />
           <div class="config-key-hint">键：{{ item.configKey }}</div>
         </el-form-item>
@@ -82,6 +78,9 @@
 
     <!-- 无数据提示 -->
     <el-empty v-if="!loading && filteredConfigs.length === 0" description="暂无配置项" />
+    <div class="config-actions">
+      <el-button type="primary" :loading="saving" @click="saveAll">保存全部配置</el-button>
+    </div>
   </div>
 </template>
 
@@ -99,8 +98,8 @@ const activeCategory = ref('')
 
 // 分组定义（与后端 category 对应）
 const categories = [
-  { key: 'basic', label: '基础功能' },
   { key: 'site', label: '站点信息' },
+  { key: 'basic', label: '功能开关' },
   { key: 'audit', label: '内容审核' },
   { key: 'chat', label: '私信聊天' },
   { key: 'upload', label: '上传设置' },
@@ -140,10 +139,6 @@ const groupedConfigs = computed(() => {
   })
 })
 
-function onCategoryChange() {
-  // 切换分组时不需要重新加载，computed 自动过滤
-}
-
 async function loadData() {
   loading.value = true
   try {
@@ -178,17 +173,18 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+.category-filter {
+  min-width: 0;
+  gap: var(--s-2);
 }
-.spacer {
-  flex: 1;
+.category-filter :deep(.el-radio-button__inner) {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  box-shadow: none;
 }
 .config-card {
-  margin-bottom: 16px;
+  margin-bottom: var(--s-4);
+  border-radius: var(--r-md);
 }
 .card-header {
   display: flex;
@@ -196,14 +192,45 @@ onMounted(loadData)
   gap: 8px;
 }
 .group-title {
-  font-weight: 600;
-  font-size: 15px;
+  font-weight: 650;
+  font-size: var(--fs-body);
+}
+.config-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4) 20px;
+  max-width: 820px;
+}
+.config-form :deep(.el-form-item) {
+  min-width: 0;
+  margin: 0;
+}
+.config-form :deep(.el-form-item__label) {
   color: var(--ink);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.config-form :deep(.el-input-number) {
+  width: 100%;
+}
+.wide-field {
+  grid-column: 1 / -1;
 }
 .config-key-hint {
-  margin-top: 4px;
-  font-size: 12px;
+  width: 100%;
+  margin-top: var(--s-1);
+  font-size: var(--fs-xs);
   color: var(--ink-3);
-  font-family: monospace;
+  font-family: var(--font-mono);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.config-actions {
+  margin-top: 22px;
+}
+@media (max-width: 640px) {
+  .config-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

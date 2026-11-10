@@ -315,31 +315,7 @@ def verify_combined(base, cfg, db):
                 cur.execute("DELETE FROM pdf_document WHERE id=%s", (pdf,))
             if activity:
                 cur.execute("DELETE FROM activity WHERE id=%s", (activity,))
-            if lost:
-                cur.execute("DELETE FROM lost_found_claim WHERE lost_found_id=%s", (lost,))
-                cur.execute("DELETE FROM message WHERE biz_type='lostfound' AND biz_id=%s", (lost,))
-                cur.execute("DELETE FROM lost_found WHERE id=%s", (lost,))
-            if partner:
-                for table in ("chat_message", "chat_conversation_member"):
-                    cur.execute(f"DELETE m FROM {table} m JOIN chat_conversation c ON c.id=m.conversation_id "
-                                "WHERE c.user1_id=%s OR c.user2_id=%s", (student, student))
-                cur.execute("DELETE FROM chat_conversation WHERE user1_id=%s OR user2_id=%s", (student, student))
-                cur.execute("DELETE FROM study_partner WHERE id=%s", (partner,))
-            if post:
-                cur.execute("DELETE FROM post_like WHERE post_id=%s", (post,))
-                cur.execute("DELETE FROM post_comment WHERE post_id=%s", (post,))
-                cur.execute("DELETE FROM favorite WHERE target_type='post' AND target_id=%s", (post,))
-                cur.execute("DELETE FROM message WHERE biz_type='post' AND (user_id=%s OR user_id=%s)", (student, visitor))
-                cur.execute("DELETE FROM post WHERE user_id=%s OR user_id=%s", (student, visitor))
-            if question:
-                cur.execute("DELETE FROM campus_answer WHERE question_id=%s", (question,))
-                cur.execute("DELETE FROM campus_question WHERE id=%s", (question,))
-            if notice:
-                cur.execute("DELETE FROM notice WHERE id=%s", (notice,))
-            if wrong:
-                cur.execute("DELETE FROM wrong_question_review WHERE wrong_question_id=%s", (wrong,))
-                cur.execute("DELETE FROM wrong_question WHERE id=%s", (wrong,))
-            for uid in (student, visitor, spare):
+            for uid in (student, visitor):
                 if uid:
                     cleanup_student(cur, uid)
             if admin:
@@ -422,6 +398,8 @@ def verify_browser(base, cfg, db, script):
     question_title = "如何预约图书馆研讨室 " + suffix
     notice_title = "图书馆开放时间调整 " + suffix
     wrong_title = "如何计算条件概率 " + suffix
+    report_reason = "管理端举报验收 " + suffix
+    model_name = "campus-qa-" + suffix
     with db.cursor() as cur:
         try:
             for code, nickname in (("BS", "Browser Student"), ("BV", "Browser Visitor")):
@@ -441,6 +419,15 @@ def verify_browser(base, cfg, db, script):
                 cur.execute("INSERT INTO idle_item(user_id,title,audit_status,status) VALUES(%s,%s,1,0)",
                             (visitor, idle_title))
                 idle = cur.lastrowid
+            if script == "verify_admin_prototype.cjs":
+                cur.execute("INSERT INTO idle_item(user_id,title,description,audit_status,status,ai_risk_level,ai_audit_reason,audit_source) "
+                            "VALUES(%s,%s,'需要人工核对的闲置说明',0,0,2,'验收用高风险预审记录','ai_manual')",
+                            (visitor, idle_title))
+                idle = cur.lastrowid
+                cur.execute("INSERT INTO report(reporter_id,target_type,target_id,reason_type,reason,status) "
+                            "VALUES(%s,'idle',%s,'other',%s,0)", (student, idle, report_reason))
+                cur.execute("INSERT INTO ai_call_log(user_id,scene,model,prompt_tokens,completion_tokens,cost_ms,status) "
+                            "VALUES(%s,'chat',%s,32,16,200,0)", (student, model_name))
             if script == "verify_prototype_community.cjs":
                 cur.execute("INSERT INTO user(student_no,nickname) VALUES(%s,'备用同学')", ("BC" + suffix,))
                 spare = cur.lastrowid
@@ -472,6 +459,8 @@ def verify_browser(base, cfg, db, script):
             }
             if idle:
                 fixture.update(idleId=idle, idleTitle=idle_title)
+            if script == "verify_admin_prototype.cjs":
+                fixture.update(reportReason=report_reason, modelName=model_name)
             if lost:
                 fixture.update(lostId=lost, lostTitle=lost_title, partnerSubject=subject, postId=post, postText=post_text,
                                questionId=question, questionTitle=question_title, noticeId=notice, noticeTitle=notice_title, spareId=spare, wrongTitle=wrong_title)
@@ -493,6 +482,7 @@ def verify_browser(base, cfg, db, script):
                 cur.execute("DELETE FROM agent_action WHERE activity_id=%s", (activity,))
                 cur.execute("DELETE FROM activity WHERE id=%s", (activity,))
             if idle:
+                cur.execute("DELETE FROM message WHERE biz_type='idle' AND biz_id=%s", (idle,))
                 cur.execute("DELETE FROM idle_item WHERE id=%s", (idle,))
             if lost:
                 cur.execute("DELETE FROM lost_found_claim WHERE lost_found_id=%s", (lost,))
@@ -519,6 +509,12 @@ def verify_browser(base, cfg, db, script):
             if wrong:
                 cur.execute("DELETE FROM wrong_question_review WHERE wrong_question_id=%s", (wrong,))
                 cur.execute("DELETE FROM wrong_question WHERE id=%s", (wrong,))
+            if script == "verify_admin_prototype.cjs":
+                cur.execute("DELETE FROM notice WHERE admin_id=%s", (admin,))
+                cur.execute("DELETE FROM report WHERE reporter_id=%s AND reason=%s", (student, report_reason))
+                cur.execute("DELETE FROM ai_call_log WHERE user_id=%s AND model=%s", (student, model_name))
+                cur.execute("DELETE FROM message WHERE user_id=%s AND biz_type='report'", (student,))
+                cur.execute("DELETE FROM admin WHERE username=%s", ("qa-" + identifier,))
             for uid in (student, visitor, spare):
                 if uid:
                     cleanup_student(cur, uid)
@@ -532,11 +528,13 @@ def main():
     parser.add_argument("--base", default="http://127.0.0.1:18088")
     browser_scripts = {"browser": "verify_browser.cjs", "layout": "verify_assistant_layout.cjs",
                        "prototype": "verify_prototype_student.cjs", "game": "verify_prototype_game.cjs",
-                       "community": "verify_prototype_community.cjs"}
+                       "community": "verify_prototype_community.cjs", "admin-ui": "verify_admin_prototype.cjs"}
     parser.add_argument("--stage", choices=("tools", "rag", "combined", "actions", *browser_scripts), default="tools")
     args = parser.parse_args()
     base = args.base.rstrip("/")
     assert urlsplit(base).hostname in ("127.0.0.1", "localhost", "::1"), "Loopback backend only"
+    if args.stage == "admin-ui":
+        assert os.environ.get("CAMPUS_ADMIN_PROTOTYPE_ISOLATED") == "1", "Admin UI test writes settings; use a disposable environment"
     cfg = local_config()
     db = pymysql.connect(host="127.0.0.1", port=int(cfg.get("MYSQL_PORT", 3306)),
                          user=cfg.get("MYSQL_USER", "root"), password=cfg["MYSQL_PASSWORD"],

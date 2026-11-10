@@ -19,23 +19,27 @@
       </div>
     </div>
 
+    <nav class="review-type-nav" aria-label="审核分类">
+      <RouterLink v-for="(category, key) in CFG" :key="key" class="review-type"
+        :class="{ selected: props.type === key }"
+        :to="{ path: `/audit/${key}`, query: viewMode === 'pending' ? { view: 'pending' } : {} }">
+        {{ category.label }}
+      </RouterLink>
+    </nav>
+
+    <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" show-icon class="audit-error" />
+
     <!-- 审核卡片列表 -->
     <div v-loading="loading" class="review-list" :class="{ 'review-list--focused': focusedId }">
-      <div v-for="row in list" :key="row.id" class="review-card" :class="{ 'no-cover': props.type === 'partner' }">
-        <!-- 封面（搭子无图片，不展示封面区） -->
-        <div v-if="props.type !== 'partner'" class="review-cover">
-          <el-image v-if="firstValidImage(row) && !imageErrors[row.id]" :src="firstValidImage(row)" fit="cover"
-                    :preview-src-list="normalizeImages(row)" @error="imageErrors[row.id] = true" />
-          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" v-html="cfg.icon"></svg>
-        </div>
-
-        <!-- 主体 -->
+      <article v-for="row in list" :key="row.id" class="review-card"
+        :class="{ 'has-cover': firstValidImage(row) && !imageErrors[row.id] }">
         <div class="review-body">
-          <div class="review-title">
-            <span class="ellipsis">{{ displayTitle(row) }}</span>
+          <div class="review-tags">
+            <span class="tag tag-brand">{{ cfg.label }}</span>
             <span class="tag" :class="statusClass(row.auditStatus)">{{ statusText(row.auditStatus) }}</span>
             <span class="tag" :class="riskClass(row.aiRiskLevel)">{{ riskText(row.aiRiskLevel) }}</span>
           </div>
+          <h2>{{ displayTitle(row) }}</h2>
           <div class="review-meta">
             <span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -69,9 +73,14 @@
           </div>
         </div>
 
+        <div v-if="firstValidImage(row) && !imageErrors[row.id]" class="review-cover">
+          <el-image :src="firstValidImage(row)" fit="cover"
+                    :preview-src-list="normalizeImages(row)" @error="imageErrors[row.id] = true" />
+        </div>
+
         <!-- 操作 -->
         <div class="review-actions">
-          <button v-if="row.auditStatus !== 1" class="btn btn-success btn-sm" :disabled="acting" @click="pass(row)">
+          <button v-if="row.auditStatus !== 1" class="btn btn-primary btn-sm" :disabled="acting" @click="pass(row)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
             通过
           </button>
@@ -80,9 +89,9 @@
             驳回
           </button>
         </div>
-      </div>
+      </article>
 
-      <div v-if="!loading && list.length === 0" class="empty">
+      <div v-if="!loading && !loadError && list.length === 0" class="empty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/></svg>
         <b>暂无内容</b>
         <p>当前视图下没有待处理的数据</p>
@@ -121,11 +130,11 @@ const focusedId = computed(() => ['idle', 'activity'].includes(props.type) && ty
 let requestVersion = 0
 
 const CFG = {
-  activity: { title: '活动审核', desc: '校园活动发布审核 · 内容安全与合规校验', icon: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' },
-  idle: { title: '闲置审核', desc: '闲置物品发布审核 · 交易信息与违规校验', icon: '<path d="M3 7h18l-2 13H5z"/><path d="M8 11v6M12 11v6M16 11v6"/>' },
-  lostfound: { title: '失物招领审核', desc: '失物招领信息审核 · 真实性校验', icon: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>' },
-  post: { title: '动态审核', desc: '校园动态发布审核 · 社区内容治理', icon: '<path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/>' },
-  partner: { title: '搭子审核', desc: '学习搭子发布审核 · 信息真实性与合规校验', icon: '<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="M17 11l2 2 4-4"/>' }
+  activity: { label: '活动', title: '活动审核', desc: '校园活动发布审核 · 内容安全与合规校验' },
+  idle: { label: '闲置', title: '闲置审核', desc: '闲置物品发布审核 · 交易信息与违规校验' },
+  lostfound: { label: '失物', title: '失物招领审核', desc: '失物招领信息审核 · 真实性校验' },
+  post: { label: '动态', title: '动态审核', desc: '校园动态发布审核 · 社区内容治理' },
+  partner: { label: '搭子', title: '搭子审核', desc: '学习搭子发布审核 · 信息真实性与合规校验' }
 }
 const cfg = computed(() => CFG[props.type] || CFG.idle)
 const sourceText = { manual: '人工', ai: 'AI 自动', ai_manual: 'AI+人工' }
@@ -136,6 +145,7 @@ const pageNum = ref(1)
 const pageSize = 8
 const total = ref(0)
 const loading = ref(false)
+const loadError = ref('')
 const acting = ref(false)
 const rejectVisible = ref(false)
 const rejectReason = ref('')
@@ -174,14 +184,14 @@ function displayDesc(row) {
 }
 
 function handleViewChange() {
-  pageNum.value = 1
-  load()
+  resetAndLoad()
 }
 
 async function load() {
   const version = ++requestVersion
   const recordId = focusedId.value
   loading.value = true
+  loadError.value = ''
   if (recordId) list.value = []
   try {
     const requestFn = viewMode.value === 'all' ? auditAll : auditList
@@ -190,6 +200,11 @@ async function load() {
     if (version !== requestVersion) return
     list.value = res.list
     total.value = res.total
+  } catch (error) {
+    if (version !== requestVersion) return
+    list.value = []
+    total.value = 0
+    loadError.value = error.message || '无法读取审核记录，请刷新重试'
   } finally {
     if (version === requestVersion) loading.value = false
   }
@@ -230,6 +245,8 @@ async function reject() {
 }
 
 function resetAndLoad() {
+  list.value = []
+  total.value = 0
   pageNum.value = 1
   imageErrors.value = {}
   load()
@@ -249,6 +266,7 @@ watch([() => props.type, () => route.query.view, focusedId], ([, view], [, previ
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--s-4);
+  flex-wrap: wrap;
   margin-bottom: var(--s-5);
 }
 .page-head h1 {
@@ -259,37 +277,37 @@ watch([() => props.type, () => route.query.view, focusedId], ([, view], [, previ
   letter-spacing: -.01em;
 }
 .page-head .desc { color: var(--ink-3); font-size: var(--fs-sm); }
-.page-head-actions { display: flex; gap: var(--s-2); flex: none; align-items: center; }
+.page-head-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
 
-.review-list { display: flex; flex-direction: column; gap: var(--s-3); }
+.review-type-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.review-type {
+  padding: 5px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.review-type:hover { border-color: var(--brand-line); }
+.review-type.selected { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.audit-error { margin-bottom: 16px; }
+.review-list { display: flex; flex-direction: column; gap: 16px; }
 .review-card {
   display: grid;
-  grid-template-columns: 148px 1fr auto;
-  gap: var(--s-5);
-  padding: var(--s-4);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  padding: 22px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  transition: box-shadow .25s, border-color .25s;
-}
-.review-card:hover { box-shadow: var(--shadow-md); border-color: var(--brand-line); }
-/* 无封面类型（搭子）：去掉 148px 封面空列，主体顶格、按钮贴近内容 */
-.review-card.no-cover { grid-template-columns: 1fr auto; gap: var(--s-4); }
-.review-cover {
-  width: 148px;
-  height: 104px;
   border-radius: var(--r-md);
-  background: var(--surface-3);
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  color: var(--ink-3);
 }
-.review-cover img { width: 100%; height: 100%; object-fit: cover; }
-.review-cover svg { width: 26px; height: 26px; }
-.review-body { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.review-title { font-weight: 600; font-size: var(--fs-sm); color: var(--ink); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.ellipsis { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.review-card.has-cover { grid-template-columns: minmax(0, 1fr) 148px; }
+.review-cover { width: 100%; height: 104px; border-radius: var(--r-sm); overflow: hidden; background: var(--surface-2); }
+.review-cover :deep(.el-image) { width: 100%; height: 100%; }
+.review-body { min-width: 0; display: flex; flex-direction: column; gap: 8px; overflow-wrap: anywhere; }
+.review-body h2 { font-size: var(--fs-body); font-weight: 650; }
+.review-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .review-meta { display: flex; gap: var(--s-3); flex-wrap: wrap; font-size: var(--fs-cap); color: var(--ink-3); }
 .review-meta span { display: inline-flex; align-items: center; gap: 4px; }
 .review-meta svg { width: 12px; height: 12px; }
@@ -303,8 +321,7 @@ watch([() => props.type, () => route.query.view, focusedId], ([, view], [, previ
   overflow: hidden;
 }
 .review-list--focused .review-desc { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
-.review-actions { display: flex; flex-direction: column; gap: var(--s-2); justify-content: center; }
-.review-actions .btn { min-width: 92px; }
+.review-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--s-2); }
 
 .ai-pre {
   display: flex;
@@ -312,8 +329,7 @@ watch([() => props.type, () => route.query.view, focusedId], ([, view], [, previ
   align-items: flex-start;
   padding: var(--s-2) var(--s-3);
   border-radius: var(--r-sm);
-  background: var(--info-soft);
-  border: 1px solid var(--info-line);
+  background: var(--surface-2);
 }
 .ai-pre-icon {
   width: 26px;
@@ -361,8 +377,8 @@ watch([() => props.type, () => route.query.view, focusedId], ([, view], [, previ
   border: none;
 }
 .btn:active { transform: translateY(1px); }
-.btn-success { background: var(--success); color: #fff; }
-.btn-success:hover { filter: brightness(1.08); box-shadow: var(--shadow-sm); }
+.btn-primary { background: var(--brand); color: var(--brand-ink); }
+.btn-primary:hover { filter: brightness(1.08); box-shadow: var(--shadow-sm); }
 .btn-ghost-danger { background: var(--surface); color: var(--error); border: 1px solid var(--line-strong); }
 .btn-ghost-danger:hover { border-color: var(--error); background: var(--error-soft); }
 .btn-sm { padding: 5px 10px; font-size: var(--fs-xs); border-radius: var(--r-xs); }
@@ -377,9 +393,8 @@ watch([() => props.type, () => route.query.view, focusedId], ([, view], [, previ
 .empty p { font-size: var(--fs-xs); }
 
 @media (max-width: 780px) {
-  .review-card { grid-template-columns: 1fr; }
-  .review-cover { width: 100%; height: 140px; }
-  .review-actions { flex-direction: row; flex-wrap: wrap; }
-  .review-actions .btn { flex: 1; }
+  .review-card { padding: 16px; }
+  .review-card.has-cover { grid-template-columns: minmax(0, 1fr); }
+  .review-cover { height: 140px; }
 }
 </style>

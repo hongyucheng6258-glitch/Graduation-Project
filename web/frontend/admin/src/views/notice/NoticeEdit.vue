@@ -1,11 +1,11 @@
 <template>
-  <WtPageHeader title="编辑公告" subtitle="撰写或更新一条公告" eyebrow="管理后台" />
+  <WtPageHeader :title="id || draftId ? '编辑公告' : '新建公告'" subtitle="撰写内容、预览排版并发布到学生端。" />
 
-  <el-card v-loading="loading">
+  <el-card v-loading="loading" class="notice-editor">
     <template #header>{{ id ? '编辑公告' : '新建公告' }}（Markdown）</template>
     <el-alert v-if="draftId" :title="draftMessage" :closable="false" type="info" show-icon />
     <a v-if="savedNoticeId" :href="router.resolve({ name: 'NoticeEdit', params: { id: savedNoticeId } }).href">打开已保存公告</a>
-    <el-form v-if="!draftId || draftReady" label-width="80px">
+    <el-form v-if="!draftId || draftReady" label-position="top">
       <el-form-item label="标题" required>
         <el-input v-model="form.title" maxlength="64" show-word-limit style="max-width: 560px" />
       </el-form-item>
@@ -20,7 +20,7 @@
           <div class="md-preview" v-html="preview" />
         </div>
       </el-form-item>
-      <el-form-item>
+      <el-form-item class="editor-actions">
         <el-button type="primary" :loading="saving" @click="save(false)">保存草稿</el-button>
         <el-button v-if="!draftId" type="success" :loading="saving" @click="save(true)">保存并发布</el-button>
         <el-button @click="$router.back()">返回</el-button>
@@ -120,9 +120,10 @@ async function save(andPublish) {
 </script>
 
 <style scoped>
+.notice-editor { border-color: var(--line); border-radius: var(--r-md); }
 .editor-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
 }
@@ -131,17 +132,25 @@ async function save(andPublish) {
   border-radius: 6px;
   padding: 12px;
   min-height: 380px;
-  overflow-y: auto;
+  overflow: auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
   line-height: 1.8;
-  background: #fafbfc;
+  background: var(--surface-2);
 }
 .md-preview :deep(h1), .md-preview :deep(h2), .md-preview :deep(h3) {
   margin: 12px 0 8px;
 }
 .md-preview :deep(pre) {
-  background: #f6f8fa;
+  background: var(--surface);
   padding: 8px;
   border-radius: 4px;
   overflow-x: auto;
+}
+.editor-actions :deep(.el-form-item__content) { gap: 8px; }
+.editor-actions :deep(.el-button + .el-button) { margin-left: 0; }
+@media (max-width: 820px) {
+  .editor-row { grid-template-columns: minmax(0, 1fr); }
+  .md-preview { min-height: 160px; }
 }
 </style>

@@ -1,41 +1,36 @@
 <template>
-  <WtPageHeader title="公告管理" subtitle="发布与维护校园公告" eyebrow="管理后台" />
+  <WtPageHeader title="系统公告" subtitle="公告的新建、编辑、发布、下线与删除。" />
 
-  <el-card>
-    <template #header>
-      <div class="head">
-        <span>公告管理</span>
-        <el-button type="primary" @click="$router.push('/notice/edit')">＋ 新建公告</el-button>
-      </div>
-    </template>
-    <el-table :data="list" v-loading="loading">
-      <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="title" label="标题" min-width="220" show-overflow-tooltip />
-      <el-table-column label="状态" width="100">
-        <template #default="{ row }">
-          <el-tag :type="['info','success','warning'][row.status]">
-            {{ ['草稿','已发布','已下线'][row.status] }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="发布时间" width="170">
-        <template #default="{ row }">{{ formatTime(row.publishTime) }}</template>
-      </el-table-column>
-      <el-table-column label="创建时间" width="170">
-        <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="260" fixed="right">
-        <template #default="{ row }">
-          <el-button size="small" @click="$router.push(`/notice/edit/${row.id}`)">编辑</el-button>
-          <el-button v-if="row.status !== 1" size="small" type="success" @click="publish(row)">发布</el-button>
-          <el-button v-if="row.status === 1" size="small" type="warning" @click="offline(row)">下线</el-button>
-          <el-button size="small" type="danger" @click="remove(row)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-    <el-pagination v-model:current-page="pageNum" :total="total" :page-size="10"
-                   layout="total, prev, pager, next" style="margin-top: 16px" @current-change="load" />
-  </el-card>
+  <div class="admin-list-toolbar">
+    <el-button type="primary" @click="$router.push('/notice/edit')">＋ 新建公告</el-button>
+  </div>
+  <el-table class="admin-list-table" :data="list" :scrollbar-tabindex="0" v-loading="loading" empty-text="暂无公告">
+    <el-table-column prop="id" label="ID" width="60" />
+    <el-table-column prop="title" label="标题" min-width="220" show-overflow-tooltip />
+    <el-table-column label="状态" width="100">
+      <template #default="{ row }">
+        <el-tag size="small" round :type="['warning', 'success', 'info'][row.status]">
+          {{ ['草稿','已发布','已下线'][row.status] }}
+        </el-tag>
+      </template>
+    </el-table-column>
+    <el-table-column label="发布时间" width="170">
+      <template #default="{ row }">{{ formatTime(row.publishTime) || '—' }}</template>
+    </el-table-column>
+    <el-table-column label="创建时间" width="170">
+      <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
+    </el-table-column>
+    <el-table-column label="操作" width="160">
+      <template #default="{ row }">
+        <el-button link type="primary" @click="$router.push(`/notice/edit/${row.id}`)">编辑</el-button>
+        <el-button v-if="row.status !== 1" link type="primary" @click="publish(row)">发布</el-button>
+        <el-button v-else link type="warning" @click="offline(row)">下线</el-button>
+        <el-button link type="danger" @click="remove(row)">删除</el-button>
+      </template>
+    </el-table-column>
+  </el-table>
+  <el-pagination class="admin-list-pagination" v-model:current-page="pageNum" :total="total" :page-size="10"
+                 :pager-count="5" layout="total, prev, pager, next" @current-change="load" />
 </template>
 
 <script setup>
@@ -82,11 +77,3 @@ async function remove(row) {
 
 onMounted(load)
 </script>
-
-<style scoped>
-.head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-</style>
