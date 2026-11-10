@@ -215,16 +215,36 @@ async function checkChat(browser) {
   console.log('PASS 私信双栏、两条会话切换、双方实时收发和手机布局')
 }
 
+async function checkWrongBook(browser) {
+  const page = await signIn(browser, fixture.studentId, fixture.studentToken, 390)
+  await page.goto(base + '/ai/wrong')
+  await page.getByRole('heading', { name: '错题本', exact: true, level: 1 }).waitFor()
+  const stats = page.locator('.wrong-stats > .stat-mini')
+  assert.equal(await stats.count(), 4)
+  await stats.filter({ hasText: '累计错题' }).getByText('1', { exact: true }).waitFor()
+  const card = page.locator('.wq-card').filter({ hasText: fixture.wrongTitle })
+  await card.getByRole('button', { name: fixture.wrongTitle, exact: true }).click()
+  await page.getByRole('button', { name: /已完全掌握/ }).click()
+  await page.getByRole('button', { name: '提交复习反馈', exact: true }).click()
+  await page.getByText(/复习完成，状态已更新/).waitFor()
+  await page.getByRole('button', { name: '完成', exact: true }).click()
+  await stats.filter({ hasText: '累计错题' }).getByText('1', { exact: true }).waitFor()
+  await checkWidth(page)
+  await capture(page, '错题本-手机')
+  console.log('PASS 错题本真实统计、键盘可操作的卡片、复习写入及手机布局')
+}
+
 async function main() {
   const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE })
   try {
-    await checkLostFound(browser)
-    await checkPartner(browser)
-    await checkSocial(browser)
-    await checkQuestions(browser)
-    await checkNotice(browser)
-    await checkProfile(browser)
-    await checkChat(browser)
+    const checks = [checkLostFound, checkPartner, checkSocial, checkQuestions, checkNotice, checkProfile, checkChat, checkWrongBook]
+    for (const check of checks) {
+      try {
+        await check(browser)
+      } finally {
+        await Promise.all(browser.contexts().map(context => context.close()))
+      }
+    }
   } finally {
     await browser.close()
   }

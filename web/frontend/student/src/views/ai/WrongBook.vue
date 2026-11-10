@@ -1,23 +1,24 @@
 <template>
   <div class="wrongbook">
-    <!-- 渐变 Banner（对齐原型 wrong-banner，含统计 + 勋章） -->
-    <div class="wrong-banner">
-      <div class="banner-left">
-        <h1>我的错题本</h1>
-        <p>快速收录 · 智能复习 · AI 辅助，逐个击破</p>
-        <div class="banner-stats">
-          <div><b>{{ stats.total ?? 0 }}</b><span>错题总数</span></div>
-          <div><b>{{ stats.pending ?? 0 }}</b><span>待复习</span></div>
-          <div><b>{{ stats.mastered ?? 0 }}</b><span>已掌握</span></div>
-          <div><b>{{ stats.weekReviewCount ?? 0 }}</b><span>本周复习</span></div>
-        </div>
-      </div>
+    <header class="wrong-heading">
+      <h1>错题本</h1>
+      <p>把做错的题收录下来，按进度复习。</p>
+    </header>
+    <section class="wrong-stats" aria-label="错题统计">
+      <div class="stat-mini"><b>{{ stats.total ?? 0 }}</b><small>累计错题</small></div>
+      <div class="stat-mini"><b>{{ stats.pending ?? 0 }}</b><small>待复习</small></div>
+      <div class="stat-mini"><b>{{ weak.knowledgePoints.length }}</b><small>高频知识点（前 10）</small></div>
+      <div class="stat-mini"><b>{{ stats.total ? Math.round((stats.mastered ?? 0) / stats.total * 100) : 0 }}%</b><small>已掌握占比</small></div>
+    </section>
+
+    <details class="learning-achievements">
+      <summary>学习成就</summary>
       <div class="medal-row">
-        <div class="medal" :class="{ on: (stats.total ?? 0) > 0 }">🏅 收录达人<small>累计错题 &gt; 0</small></div>
-        <div class="medal" :class="{ on: (stats.weekReviewCount ?? 0) > 0 }">🎯 复习坚持<small>本周有复习</small></div>
-        <div class="medal" :class="{ on: (stats.mastered ?? 0) > 0 }">🤖 AI 掌握<small>已掌握 &gt; 0</small></div>
+        <span class="medal" :class="{ on: (stats.total ?? 0) > 0 }">收录达人 · {{ stats.total ?? 0 }} 题</span>
+        <span class="medal" :class="{ on: (stats.weekReviewCount ?? 0) > 0 }">坚持复习 · 本周 {{ stats.weekReviewCount ?? 0 }} 次</span>
+        <span class="medal" :class="{ on: (stats.mastered ?? 0) > 0 }">已掌握 {{ stats.mastered ?? 0 }} 题</span>
       </div>
-    </div>
+    </details>
 
     <!-- 中间操作区 -->
     <div class="actions">
@@ -88,18 +89,21 @@
       <el-card v-for="wq in list" :key="wq.id" class="wq-card" shadow="hover">
         <div class="wq-head">
           <el-checkbox
+            :aria-label="`选择错题：${wq.question}`"
             :model-value="selectedIds.includes(wq.id)"
             @change="toggleSelect(wq.id)"
           />
           <el-tag size="small">{{ wq.subject || '待整理' }}</el-tag>
           <el-tag v-if="wq.tag" size="small" type="info" style="margin-left: 6px">{{ wq.tag }}</el-tag>
-          <el-tag size="small" :type="statusOf(wq.status).type" style="margin-left: 6px">
+          <el-tag size="small" class="wq-status" :type="statusOf(wq.status).type">
             {{ statusOf(wq.status).label }}
           </el-tag>
           <span class="wq-source">{{ wq.source === 'ai' ? 'AI收录' : '手动收录' }}</span>
         </div>
 
-        <div class="wq-q" :title="wq.question" @click="openReview(wq.id)">{{ wq.question }}</div>
+        <h2 class="wq-title">
+          <button type="button" class="wq-q" @click="openReview(wq.id)">{{ wq.question }}</button>
+        </h2>
 
         <div class="wq-meta">
           <span v-if="wq.questionType" class="meta-item">{{ wq.questionType }}</span>
@@ -132,7 +136,7 @@
     />
 
     <!-- 今日复习弹窗 -->
-    <el-dialog v-model="todayVisible" title="📖 今日待复习" width="640px" append-to-body>
+    <el-dialog v-model="todayVisible" title="📖 今日待复习" width="min(640px, calc(100vw - 24px))" append-to-body>
       <div v-if="!todayList.length" class="today-empty">
         <p>🎉 今日没有待复习的错题，很棒！</p>
         <el-button @click="todayVisible = false">收下夸奖</el-button>
@@ -151,7 +155,7 @@
     </el-dialog>
 
     <!-- 编辑弹窗 -->
-    <el-dialog v-model="editVisible" :title="editForm.id ? '编辑错题' : '收录错题'" width="620px" append-to-body>
+    <el-dialog v-model="editVisible" :title="editForm.id ? '编辑错题' : '收录错题'" width="min(620px, calc(100vw - 24px))" append-to-body>
       <el-form :model="editForm" label-width="76px">
         <el-form-item label="题目" required><el-input v-model="editForm.question" type="textarea" :rows="3" /></el-form-item>
         <el-form-item label="学科"><el-input v-model="editForm.subject" placeholder="留空=待整理" /></el-form-item>
@@ -400,124 +404,22 @@ async function remove(wq) {
   min-width: 0;
 }
 
-/* 渐变 Banner（对齐原型） */
-.wrong-banner {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-6);
-  flex-wrap: wrap;
-  padding: var(--s-7);
-  border-radius: var(--r-xl);
-  background: linear-gradient(120deg, oklch(36% 0.11 250) 0%, var(--info) 55%, var(--brand) 130%);
-  color: #fff;
-  margin-bottom: var(--s-5);
+.wrong-heading h1 { margin: 0 0 6px; font-size: var(--fs-h1); }
+.wrong-heading p { margin: 0; color: var(--ink-3); font-size: var(--fs-sm); }
+.wrong-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 18px 0 20px;
 }
-.wrong-banner::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: url('/images/wrong-bg.jpg') center/cover;
-  opacity: 0.35;
-  mix-blend-mode: overlay;
-}
-.banner-left {
-  position: relative;
-  z-index: 1;
-}
-.banner-left h1 {
-  font-family: var(--font-display);
-  font-size: var(--fs-h1);
-  font-weight: 600;
-  margin: 0 0 6px;
-}
-.banner-left p {
-  color: rgba(255, 255, 255, 0.82);
-  font-size: var(--fs-sm);
-  margin-bottom: var(--s-5);
-}
-.banner-stats {
-  display: flex;
-  gap: var(--s-6);
-  flex-wrap: wrap;
-}
-.banner-stats div b {
-  font-family: var(--font-display);
-  font-size: 1.7rem;
-  font-weight: 600;
-  display: block;
-  line-height: 1.1;
-}
-.banner-stats div span {
-  font-size: var(--fs-cap);
-  color: rgba(255, 255, 255, 0.7);
-  letter-spacing: 0.03em;
-}
-
-/* 勋章行 */
-.medal-row {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  gap: var(--s-3);
-  flex-wrap: wrap;
-}
-.medal {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  min-width: 108px;
-  padding: var(--s-4) var(--s-3);
-  border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  backdrop-filter: blur(6px);
-  font-weight: 700;
-  font-size: var(--fs-sm);
-  filter: grayscale(1);
-  opacity: 0.65;
-  transition: all .2s var(--ease-out);
-}
-.medal small {
-  font-weight: 500;
-  font-size: var(--fs-cap);
-  color: rgba(255, 255, 255, 0.75);
-}
-.medal.on {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
-  filter: none;
-  opacity: 1;
-  transform: translateY(-2px);
-}<style scoped>
-.wrongbook {
-  padding: 0 4px;
-}
-.stats {
-  margin-bottom: 16px;
-}
-.stat-card {
-  border-radius: 10px;
-  padding: 14px 18px;
-  color: #fff;
-}
-.stat-num {
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-.stat-label {
-  font-size: 12px;
-  opacity: 0.9;
-  margin-top: 2px;
-}
-.c-total { background: linear-gradient(135deg, #409eff, #79bbff); }
-.c-pending { background: linear-gradient(135deg, #f56c6c, #f89898); }
-.c-mastered { background: linear-gradient(135deg, #67c23a, #95d475); }
-.c-week { background: linear-gradient(135deg, #e6a23c, #ebb563); }
+.stat-mini { padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.stat-mini b { display: block; color: var(--brand-strong); font-size: var(--fs-h1); font-variant-numeric: tabular-nums; }
+.stat-mini small { color: var(--ink-3); font-size: var(--fs-sm); }
+.learning-achievements { margin-bottom: 16px; color: var(--ink-2); font-size: var(--fs-sm); }
+.learning-achievements summary { cursor: pointer; }
+.medal-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.medal { padding: 4px 10px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--ink-3); font-size: var(--fs-xs); }
+.medal.on { background: var(--brand-soft); color: var(--brand-strong); }
 .actions {
   display: flex;
   gap: 10px;
@@ -525,8 +427,8 @@ async function remove(wq) {
   margin-bottom: 12px;
 }
 .weak-panel {
-  background: #fdf6ec;
-  border: 1px solid #faecd8;
+  background: var(--warning-soft);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 14px;
   margin-bottom: 14px;
@@ -555,7 +457,7 @@ async function remove(wq) {
   cursor: default;
 }
 .reason-item {
-  background: #f4f4f5;
+  background: var(--surface-2);
   border-radius: 4px;
   padding: 1px 8px;
   color: #606266;
@@ -587,21 +489,26 @@ async function remove(wq) {
 }
 .cards {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   margin-bottom: 16px;
 }
-.wq-head {
-  display: flex;
-  align-items: center;
-}
+.wq-card { border-color: var(--line); border-radius: var(--r-md); background: var(--surface); }
+.wq-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.wq-status { margin-left: auto; }
 .wq-source {
-  margin-left: auto;
   font-size: 12px;
   color: var(--ink-3, #909399);
 }
+.wq-title { margin: 10px 0 6px; }
 .wq-q {
-  margin: 10px 0 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-weight: 600;
+  overflow-wrap: anywhere;
   font-size: 14px;
   color: var(--ink, #303133);
   line-height: 1.6;
@@ -612,7 +519,7 @@ async function remove(wq) {
   cursor: pointer;
 }
 .wq-q:hover {
-  color: #409eff;
+  color: var(--brand-strong);
 }
 .wq-meta {
   display: flex;
@@ -624,7 +531,7 @@ async function remove(wq) {
   margin-bottom: 8px;
 }
 .meta-item {
-  background: #f4f4f5;
+  background: var(--surface-2);
   border-radius: 4px;
   padding: 1px 6px;
 }
@@ -687,9 +594,10 @@ async function remove(wq) {
   gap: 6px;
   align-items: center;
 }
-@media (max-width: 900px) {
-  .cards {
-    grid-template-columns: 1fr;
-  }
+.actions :deep(.el-button + .el-button), .wq-ops :deep(.el-button + .el-button) { margin-left: 0; }
+@media (max-width: 640px) {
+  .wrong-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .stat-mini { padding: 12px; }
+  .stat-mini b { font-size: var(--fs-h2); }
 }
 </style>

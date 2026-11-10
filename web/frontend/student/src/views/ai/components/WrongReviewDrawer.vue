@@ -2,7 +2,7 @@
   <el-drawer
     v-model="visible"
     :title="title"
-    size="560px"
+    size="min(560px, 100vw)"
     append-to-body
     :destroy-on-close="false"
   >

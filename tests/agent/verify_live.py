@@ -336,6 +336,9 @@ def verify_combined(base, cfg, db):
                 cur.execute("DELETE FROM campus_question WHERE id=%s", (question,))
             if notice:
                 cur.execute("DELETE FROM notice WHERE id=%s", (notice,))
+            if wrong:
+                cur.execute("DELETE FROM wrong_question_review WHERE wrong_question_id=%s", (wrong,))
+                cur.execute("DELETE FROM wrong_question WHERE id=%s", (wrong,))
             for uid in (student, visitor, spare):
                 if uid:
                     cleanup_student(cur, uid)
@@ -409,7 +412,7 @@ def verify_actions(base, cfg, db):
 
 def verify_browser(base, cfg, db, script):
     suffix = uuid.uuid4().hex[:10]
-    student = visitor = spare = admin = activity = idle = lost = partner = post = question = notice = None
+    student = visitor = spare = admin = activity = idle = lost = partner = post = question = notice = wrong = None
     title = "BrowserActivity" + suffix
     identifier = "Makerspace-" + suffix
     idle_title = "BrowserIdle" + suffix
@@ -418,6 +421,7 @@ def verify_browser(base, cfg, db, script):
     post_text = "图书馆午后 #校园 " + suffix
     question_title = "如何预约图书馆研讨室 " + suffix
     notice_title = "图书馆开放时间调整 " + suffix
+    wrong_title = "如何计算条件概率 " + suffix
     with db.cursor() as cur:
         try:
             for code, nickname in (("BS", "Browser Student"), ("BV", "Browser Visitor")):
@@ -455,6 +459,9 @@ def verify_browser(base, cfg, db, script):
                 cur.execute("INSERT INTO notice(admin_id,title,content,status,publish_time) VALUES(%s,%s,'周末开放时间为 9:00 至 17:00',1,NOW())",
                             (admin, notice_title))
                 notice = cur.lastrowid
+                cur.execute("INSERT INTO wrong_question(user_id,subject,question,correct_answer,knowledge_points) "
+                            "VALUES(%s,'数学',%s,'使用条件概率公式','条件概率')", (student, wrong_title))
+                wrong = cur.lastrowid
             db.commit()
             fixture = {
                 "studentToken": token(cfg["JWT_SECRET"], student),
@@ -467,10 +474,13 @@ def verify_browser(base, cfg, db, script):
                 fixture.update(idleId=idle, idleTitle=idle_title)
             if lost:
                 fixture.update(lostId=lost, lostTitle=lost_title, partnerSubject=subject, postId=post, postText=post_text,
-                               questionId=question, questionTitle=question_title, noticeId=notice, noticeTitle=notice_title, spareId=spare)
+                               questionId=question, questionTitle=question_title, noticeId=notice, noticeTitle=notice_title, spareId=spare, wrongTitle=wrong_title)
             subprocess.run(["node", str(ROOT / "tests/agent" / script)],
                            env={**os.environ, "CAMPUS_BROWSER_FIXTURE": json.dumps(fixture)},
                            timeout=165, check=True)
+            if wrong:
+                cur.execute("SELECT review_count FROM wrong_question WHERE id=%s", (wrong,))
+                assert cur.fetchone() == (1,), "Expected one persisted review"
         finally:
             if student:
                 cur.execute("SELECT id FROM kb_document WHERE owner_id=%s AND state NOT IN ('DELETED','PURGED')", (student,))
@@ -506,6 +516,9 @@ def verify_browser(base, cfg, db, script):
                 cur.execute("DELETE FROM campus_question WHERE id=%s", (question,))
             if notice:
                 cur.execute("DELETE FROM notice WHERE id=%s", (notice,))
+            if wrong:
+                cur.execute("DELETE FROM wrong_question_review WHERE wrong_question_id=%s", (wrong,))
+                cur.execute("DELETE FROM wrong_question WHERE id=%s", (wrong,))
             for uid in (student, visitor, spare):
                 if uid:
                     cleanup_student(cur, uid)
