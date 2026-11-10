@@ -1,22 +1,22 @@
 <template>
   <div v-if="loadError" class="load-error" role="alert"><span>{{ loadError }}</span><button type="button" class="text-btn" @click="load">重新加载</button></div>
-  <WtPageHeader title="校园公告" subtitle="学校与平台的重要通知" eyebrow="资讯" />
+  <WtPageHeader title="校园公告" subtitle="通知、公告与活动公示。" />
 
   <div class="notice-list">
     <div v-loading="loading" class="list-page">
-      <div
+      <RouterLink
         v-for="n in list"
         :key="n.id"
         class="notice-card card card-hover"
-        @click="$router.push(`/notice/detail/${n.id}`)"
+        :to="`/notice/detail/${n.id}`"
       >
-        <span class="tag tag-brand">公告</span>
+        <span class="tag">公告</span>
         <div class="notice-main">
-          <div class="n-title">{{ n.title }}</div>
-          <div class="n-meta">校园平台 · {{ formatTime(n.publishTime) }}</div>
+          <h2 class="n-title">{{ n.title }}</h2>
+          <div v-if="n.publishTime" class="n-meta">发布于 {{ formatTime(n.publishTime) }}</div>
         </div>
-        <span class="n-arrow">→</span>
-      </div>
+        <span class="n-view">查看</span>
+      </RouterLink>
       <EmptyBox v-if="!loadError && !loading && !list.length" description="暂无公告" />
       <el-pagination
         v-model:current-page="pageNum"
@@ -43,7 +43,7 @@ const pageNum = ref(1)
 const total = ref(0)
 const loading = ref(false)
 const loadError = ref('')
-const restoredListState = useListState('notice', { pageNum })
+useListState('notice', { pageNum })
 
 async function load() {
   loading.value = true
@@ -65,6 +65,7 @@ onMounted(load)
 <style scoped>
 .notice-list {
   min-width: 0;
+  max-width: 820px;
 }
 .list-page {
   display: flex;
@@ -75,8 +76,11 @@ onMounted(load)
   display: flex;
   gap: var(--s-4);
   align-items: center;
-  cursor: pointer;
+  padding: 22px;
+  color: inherit;
+  text-decoration: none;
 }
+.notice-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 .notice-card .tag {
   flex: none;
 }
@@ -86,20 +90,18 @@ onMounted(load)
 }
 .n-title {
   font-weight: 600;
-  font-size: var(--fs-sm);
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: var(--fs-body);
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
   color: var(--ink);
 }
 .n-meta {
   font-size: var(--fs-cap);
   color: var(--ink-3);
 }
-.n-arrow {
-  font-size: var(--fs-cap);
-  color: var(--ink-3);
+.n-view {
+  font-size: var(--fs-sm);
+  color: var(--brand-strong);
   flex: none;
 }
 .tag {
@@ -111,5 +113,8 @@ onMounted(load)
   font-weight: 600;
   letter-spacing: 0.02em;
 }
-.tag-brand { background: var(--brand-soft); color: var(--brand-strong); }
+.tag { background: var(--surface-2); color: var(--ink-2); }
+@media (max-width: 640px) {
+  .notice-card { padding: 14px; gap: 10px; }
+}
 </style>

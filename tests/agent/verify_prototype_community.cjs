@@ -1,8 +1,14 @@
 const assert = require('node:assert/strict')
+const { join } = require('node:path')
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright')
 
 const fixture = JSON.parse(process.env.CAMPUS_BROWSER_FIXTURE)
 const base = process.env.CAMPUS_STUDENT_URL || 'http://127.0.0.1:5173'
+
+async function capture(page, name) {
+  const dir = process.env.CAMPUS_PROTOTYPE_SCREENSHOTS
+  if (dir) await page.screenshot({ path: join(dir, name + '.png') })
+}
 
 async function signIn(browser, id, token, width) {
   const page = await browser.newPage({ viewport: { width, height: 900 } })
@@ -31,6 +37,7 @@ async function checkLostFound(browser) {
   await card.waitFor()
   await checkWidth(claimant)
   assert.equal(Math.round((await card.locator('.cover').boundingBox()).height), 140)
+  await capture(claimant, '失物招领-手机')
   await card.press('Enter')
   const url = base + '/lostfound/detail/' + fixture.lostId
   await claimant.waitForURL(url)
@@ -67,6 +74,7 @@ async function checkPartner(browser) {
   await card.getByText('周末上午', { exact: false }).waitFor()
   assert.equal(await page.locator('.partner-list .grid').evaluate(el =>
     getComputedStyle(el).gridTemplateColumns.split(' ').length), 2)
+  await capture(page, '学习搭子-桌面')
   await card.getByRole('link', { name: '查看主页' }).click()
   await page.waitForURL(base + '/user/' + fixture.visitorId)
   await page.goto(base + '/partner')
@@ -87,6 +95,7 @@ async function checkSocial(browser) {
   const card = page.locator('.post-card').filter({ hasText: fixture.postText })
   await card.waitFor()
   assert.ok((await card.boundingBox()).width <= 720)
+  await capture(page, '校园动态-桌面')
   await card.getByRole('button', { name: '点赞', exact: true }).press('Enter')
   await card.getByRole('button', { name: '取消点赞', exact: true }).waitFor()
   await card.getByRole('button', { name: '收藏', exact: true }).click()
@@ -115,12 +124,50 @@ async function checkSocial(browser) {
   console.log('PASS 动态发布提交、点赞收藏、发表评论、分享直达及手机宽度')
 }
 
+async function checkQuestions(browser) {
+  const student = await signIn(browser, fixture.studentId, fixture.studentToken, 390)
+  const author = await signIn(browser, fixture.visitorId, fixture.visitorToken, 1440)
+  await student.goto(base + '/qa')
+  await student.getByRole('heading', { name: '互助问答', exact: true, level: 1 }).waitFor()
+  const item = student.getByRole('link', { name: new RegExp(fixture.questionTitle) })
+  await item.waitFor()
+  await checkWidth(student)
+  await item.click()
+  const url = base + '/qa/detail/' + fixture.questionId
+  await student.waitForURL(url)
+  const answer = '可以在图书馆服务台预约'
+  await student.getByPlaceholder('写下你的回答，帮同学解决问题…').fill(answer)
+  await student.getByRole('button', { name: '提交回答' }).click()
+  await student.getByText(answer, { exact: true }).waitFor()
+  await author.goto(url)
+  await author.getByRole('button', { name: '采纳为最佳回答' }).click()
+  await author.getByText('✅ 已采纳', { exact: true }).waitFor()
+  await student.goto(base + '/qa')
+  await item.getByText('已采纳', { exact: true }).waitFor()
+  console.log('PASS 互助问答列表、真实回答、采纳并刷新状态')
+}
+
+async function checkNotice(browser) {
+  const page = await signIn(browser, fixture.studentId, fixture.studentToken, 820)
+  await page.goto(base + '/notice')
+  const row = page.getByRole('link', { name: new RegExp(fixture.noticeTitle) })
+  await row.waitFor()
+  await checkWidth(page)
+  await row.press('Enter')
+  await page.waitForURL(base + '/notice/detail/' + fixture.noticeId)
+  await page.getByRole('heading', { name: fixture.noticeTitle, exact: true, level: 1 }).waitFor()
+  await page.getByText('周末开放时间为 9:00 至 17:00', { exact: true }).waitFor()
+  console.log('PASS 校园公告真实列表、键盘查看及公告正文')
+}
+
 async function main() {
   const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE })
   try {
     await checkLostFound(browser)
     await checkPartner(browser)
     await checkSocial(browser)
+    await checkQuestions(browser)
+    await checkNotice(browser)
   } finally {
     await browser.close()
   }

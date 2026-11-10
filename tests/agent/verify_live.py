@@ -332,6 +332,11 @@ def verify_combined(base, cfg, db):
                 cur.execute("DELETE FROM favorite WHERE target_type='post' AND target_id=%s", (post,))
                 cur.execute("DELETE FROM message WHERE biz_type='post' AND (user_id=%s OR user_id=%s)", (student, visitor))
                 cur.execute("DELETE FROM post WHERE user_id=%s OR user_id=%s", (student, visitor))
+            if question:
+                cur.execute("DELETE FROM campus_answer WHERE question_id=%s", (question,))
+                cur.execute("DELETE FROM campus_question WHERE id=%s", (question,))
+            if notice:
+                cur.execute("DELETE FROM notice WHERE id=%s", (notice,))
             for uid in (student, visitor):
                 if uid:
                     cleanup_student(cur, uid)
@@ -405,13 +410,15 @@ def verify_actions(base, cfg, db):
 
 def verify_browser(base, cfg, db, script):
     suffix = uuid.uuid4().hex[:10]
-    student = visitor = admin = activity = idle = lost = partner = post = None
+    student = visitor = admin = activity = idle = lost = partner = post = question = notice = None
     title = "BrowserActivity" + suffix
     identifier = "Makerspace-" + suffix
     idle_title = "BrowserIdle" + suffix
     lost_title = "BrowserLost" + suffix
     subject = "高等数学 " + suffix
     post_text = "图书馆午后 #校园 " + suffix
+    question_title = "如何预约图书馆研讨室 " + suffix
+    notice_title = "图书馆开放时间调整 " + suffix
     with db.cursor() as cur:
         try:
             for code, nickname in (("BS", "Browser Student"), ("BV", "Browser Visitor")):
@@ -441,6 +448,12 @@ def verify_browser(base, cfg, db, script):
                 cur.execute("INSERT INTO post(user_id,content,images,audit_status) VALUES(%s,%s,%s,1)",
                             (visitor, post_text, json.dumps(["/images/home-campus.webp"])))
                 post = cur.lastrowid
+                cur.execute("INSERT INTO campus_question(user_id,title,content,category) VALUES(%s,%s,'期末小组讨论需要预约','生活')",
+                            (visitor, question_title))
+                question = cur.lastrowid
+                cur.execute("INSERT INTO notice(admin_id,title,content,status,publish_time) VALUES(%s,%s,'周末开放时间为 9:00 至 17:00',1,NOW())",
+                            (admin, notice_title))
+                notice = cur.lastrowid
             db.commit()
             fixture = {
                 "studentToken": token(cfg["JWT_SECRET"], student),
@@ -452,7 +465,8 @@ def verify_browser(base, cfg, db, script):
             if idle:
                 fixture.update(idleId=idle, idleTitle=idle_title)
             if lost:
-                fixture.update(lostId=lost, lostTitle=lost_title, partnerSubject=subject, postId=post, postText=post_text)
+                fixture.update(lostId=lost, lostTitle=lost_title, partnerSubject=subject, postId=post, postText=post_text,
+                               questionId=question, questionTitle=question_title, noticeId=notice, noticeTitle=notice_title)
             subprocess.run(["node", str(ROOT / "tests/agent" / script)],
                            env={**os.environ, "CAMPUS_BROWSER_FIXTURE": json.dumps(fixture)},
                            timeout=165, check=True)
@@ -486,6 +500,11 @@ def verify_browser(base, cfg, db, script):
                 cur.execute("DELETE FROM favorite WHERE target_type='post' AND target_id=%s", (post,))
                 cur.execute("DELETE FROM message WHERE biz_type='post' AND (user_id=%s OR user_id=%s)", (student, visitor))
                 cur.execute("DELETE FROM post WHERE user_id=%s OR user_id=%s", (student, visitor))
+            if question:
+                cur.execute("DELETE FROM campus_answer WHERE question_id=%s", (question,))
+                cur.execute("DELETE FROM campus_question WHERE id=%s", (question,))
+            if notice:
+                cur.execute("DELETE FROM notice WHERE id=%s", (notice,))
             for uid in (student, visitor):
                 if uid:
                     cleanup_student(cur, uid)

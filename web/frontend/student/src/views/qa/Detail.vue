@@ -1,10 +1,11 @@
 <template>
   <div v-if="question" class="detail">
+    <RouterLink to="/qa" class="text-btn detail-back">返回互助问答</RouterLink>
     <el-card>
       <template #header>
         <div class="q-head">
           <span class="cat">{{ question.category }}</span>
-          <b>{{ question.title }}</b>
+          <h1>{{ question.title }}</h1>
           <span v-if="question.status === 1" class="solved">已解决</span>
           <span v-else class="pending">待答</span>
         </div>
@@ -151,18 +152,20 @@ async function accept(answerId) {
 
 <style scoped>
 .detail { max-width: 820px; margin: 0 auto; }
-.q-head { display: flex; align-items: center; gap: 10px; }
-.q-head b { font-size: 16px; flex: 1; }
+.detail-back { display: inline-block; margin-bottom: 16px; }
+.detail :deep(.el-card) { border-color: var(--line); border-radius: var(--r-md); }
+.q-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.q-head h1 { flex: 1 1 10ch; margin: 0; font-size: var(--fs-h2); overflow-wrap: anywhere; }
 .cat { padding: 2px 10px; border-radius: var(--r-pill); background: var(--brand-soft); color: var(--brand-strong); font-size: var(--fs-cap); font-weight: 600; flex-shrink: 0; }
 .solved { padding: 2px 10px; border-radius: var(--r-pill); background: var(--success-soft, #f0faf5); color: var(--success-strong, #008a5c); font-size: var(--fs-cap); font-weight: 600; }
 .pending { padding: 2px 10px; border-radius: var(--r-pill); background: var(--warning-soft, #fff7e6); color: var(--gold-strong, #a06a00); font-size: var(--fs-cap); font-weight: 600; }
-.q-content { margin: 4px 0 10px; white-space: pre-wrap; line-height: 1.7; }
-.q-meta { display: flex; gap: 14px; font-size: var(--fs-cap); color: var(--ink-3); }
+.q-content { margin: 4px 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.q-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: var(--fs-cap); color: var(--ink-3); }
 .tip { color: var(--ink-3); font-size: var(--fs-cap); margin: 0 0 10px; }
 .ai-box {
   margin-top: 12px; padding: 14px 16px; border-radius: var(--r-md);
   background: var(--brand-soft); border: 1px solid var(--brand-line);
-  white-space: pre-wrap; line-height: 1.7; font-size: var(--fs-cap);
+  white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; font-size: var(--fs-cap);
 }
 .answer {
   padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 10px;
@@ -172,7 +175,7 @@ async function accept(answerId) {
 .who { font-weight: 600; color: var(--brand-strong); }
 .accept-tag { color: var(--success-strong, #008a5c); font-weight: 600; }
 .time { color: var(--ink-3); }
-.answer__content { margin: 0; white-space: pre-wrap; line-height: 1.7; }
+.answer__content { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
 .answer__ops { margin-top: 8px; }
 </style>
 
