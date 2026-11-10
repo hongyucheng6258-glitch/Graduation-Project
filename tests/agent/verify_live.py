@@ -416,7 +416,7 @@ def verify_browser(base, cfg, db, script):
                 "studentToken": token(cfg["JWT_SECRET"], student),
                 "visitorToken": token(cfg["JWT_SECRET"], visitor),
                 "adminToken": token(cfg["JWT_SECRET"], admin, "admin"),
-                "activityId": activity, "activityTitle": title, "identifier": identifier,
+                "studentId": student, "visitorId": visitor, "activityId": activity, "activityTitle": title, "identifier": identifier,
                 "pdf": base64.b64encode(pdf_bytes(identifier)).decode(),
             }
             if idle:
@@ -449,7 +449,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default="http://127.0.0.1:18088")
     browser_scripts = {"browser": "verify_browser.cjs", "layout": "verify_assistant_layout.cjs",
-                       "prototype": "verify_prototype_student.cjs"}
+                       "prototype": "verify_prototype_student.cjs", "game": "verify_prototype_game.cjs"}
     parser.add_argument("--stage", choices=("tools", "rag", "combined", "actions", *browser_scripts), default="tools")
     args = parser.parse_args()
     base = args.base.rstrip("/")
