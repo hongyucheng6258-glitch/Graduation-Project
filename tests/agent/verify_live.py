@@ -386,11 +386,12 @@ def verify_actions(base, cfg, db):
             db.commit()
 
 
-def verify_browser(base, cfg, db, layout_only=False):
+def verify_browser(base, cfg, db, script):
     suffix = uuid.uuid4().hex[:10]
-    student = visitor = admin = activity = None
+    student = visitor = admin = activity = idle = None
     title = "BrowserActivity" + suffix
     identifier = "Makerspace-" + suffix
+    idle_title = "BrowserIdle" + suffix
     with db.cursor() as cur:
         try:
             for code, nickname in (("BS", "Browser Student"), ("BV", "Browser Visitor")):
@@ -406,6 +407,10 @@ def verify_browser(base, cfg, db, layout_only=False):
                 VALUES(%s,%s,'Test Room',DATE_ADD(NOW(),INTERVAL 1 DAY),DATE_ADD(NOW(),INTERVAL 25 HOUR),1,3)
                 """, (visitor, title))
             activity = cur.lastrowid
+            if script == "verify_prototype_student.cjs":
+                cur.execute("INSERT INTO idle_item(user_id,title,audit_status,status) VALUES(%s,%s,1,0)",
+                            (visitor, idle_title))
+                idle = cur.lastrowid
             db.commit()
             fixture = {
                 "studentToken": token(cfg["JWT_SECRET"], student),
@@ -414,7 +419,8 @@ def verify_browser(base, cfg, db, layout_only=False):
                 "activityId": activity, "activityTitle": title, "identifier": identifier,
                 "pdf": base64.b64encode(pdf_bytes(identifier)).decode(),
             }
-            script = "verify_assistant_layout.cjs" if layout_only else "verify_browser.cjs"
+            if idle:
+                fixture.update(idleId=idle, idleTitle=idle_title)
             subprocess.run(["node", str(ROOT / "tests/agent" / script)],
                            env={**os.environ, "CAMPUS_BROWSER_FIXTURE": json.dumps(fixture)},
                            timeout=165, check=True)
@@ -429,6 +435,8 @@ def verify_browser(base, cfg, db, layout_only=False):
                 cur.execute("DELETE FROM message WHERE biz_type='activity' AND biz_id=%s", (activity,))
                 cur.execute("DELETE FROM agent_action WHERE activity_id=%s", (activity,))
                 cur.execute("DELETE FROM activity WHERE id=%s", (activity,))
+            if idle:
+                cur.execute("DELETE FROM idle_item WHERE id=%s", (idle,))
             for uid in (student, visitor):
                 if uid:
                     cleanup_student(cur, uid)
@@ -440,7 +448,9 @@ def verify_browser(base, cfg, db, layout_only=False):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default="http://127.0.0.1:18088")
-    parser.add_argument("--stage", choices=("tools", "rag", "combined", "actions", "browser", "layout"), default="tools")
+    browser_scripts = {"browser": "verify_browser.cjs", "layout": "verify_assistant_layout.cjs",
+                       "prototype": "verify_prototype_student.cjs"}
+    parser.add_argument("--stage", choices=("tools", "rag", "combined", "actions", *browser_scripts), default="tools")
     args = parser.parse_args()
     base = args.base.rstrip("/")
     assert urlsplit(base).hostname in ("127.0.0.1", "localhost", "::1"), "Loopback backend only"
@@ -449,8 +459,8 @@ def main():
                          user=cfg.get("MYSQL_USER", "root"), password=cfg["MYSQL_PASSWORD"],
                          database=cfg.get("MYSQL_DB", "ai_campus_platform"), charset="utf8mb4")
     with db:
-        if args.stage in ("browser", "layout"):
-            verify_browser(base, cfg, db, layout_only=args.stage == "layout")
+        if args.stage in browser_scripts:
+            verify_browser(base, cfg, db, browser_scripts[args.stage])
         else:
             {"tools": verify_read_only, "rag": verify_rag, "combined": verify_combined,
              "actions": verify_actions}[args.stage](base, cfg, db)

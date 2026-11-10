@@ -55,7 +55,7 @@
         <aside>
           <div class="event-ticket">
             <div class="ticket-top">
-              <span>我的活动通行证</span>
+              <h2>报名参与</h2>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
             </div>
             <div class="ticket-date">
@@ -409,17 +409,19 @@ onMounted(load)
 
 .event-detail-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 36px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 28px;
   align-items: start;
 }
+.event-detail-layout article { min-width: 0; overflow-wrap: anywhere; }
 .event-detail-hero {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 20px;
   overflow: hidden;
 }
-.detail-cover-img { width: 100%; aspect-ratio: 16 / 9; display: block; }
+.detail-cover-img,
+.event-detail-hero :deep(.event-art) { width: 100%; height: clamp(220px, 38vw, 340px); display: block; }
 .event-detail-heading { padding: 28px 33px 24px; }
 .head-tags { display: flex; gap: 8px; align-items: center; }
 .tag {
@@ -509,9 +511,10 @@ onMounted(load)
   box-shadow: 0 10px 32px oklch(25% 0.04 265 / .03);
 }
 .ticket-top { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--ink-3); }
+.ticket-top h2 { margin: 0; font-size: 18px; color: var(--ink); }
 .ticket-top > svg { width: 20px; height: 20px; color: var(--brand); }
 .ticket-date { display: flex; gap: 18px; align-items: center; margin-top: 15px; color: var(--brand); }
-.ticket-date > strong { font: 650 69px/1.3 var(--font-display); letter-spacing: -3px; color: var(--brand); }
+.ticket-date > strong { font: 650 46px/1.3 var(--font-display); letter-spacing: -3px; color: var(--brand); }
 .ticket-date > span { font-size: 16px; font-weight: 550; color: var(--ink); }
 .ticket-date small { display: block; font-size: 12px; color: var(--ink-3); font-weight: 400; margin-top: 7px; }
 .ticket-perforation {
@@ -567,10 +570,10 @@ onMounted(load)
   .ticket-perforation { margin-left: -21px; margin-right: -21px; }
   .event-detail-heading { padding: 23px; }
   .event-detail-heading > h1 { font-size: 25px; }
-  .ticket-date > strong { font-size: 56px; }
+  .ticket-date > strong { font-size: 40px; }
 }
 @media (max-width: 760px) {
-  .event-detail-layout { grid-template-columns: 1fr; gap: 25px; }
+  .event-detail-layout { grid-template-columns: minmax(0, 1fr); gap: 25px; }
   .event-detail-heading { padding: 22px; }
   .event-detail-heading > h1 { font-size: 25px; line-height: 1.55; }
   .event-detail-heading > p { font-size: 12px; }
@@ -581,7 +584,7 @@ onMounted(load)
   .ticket-perforation { margin-left: -24px; margin-right: -24px; }
   .ticket-hint { font-size: 13px; }
   .ticket-note { font-size: 11px; }
-  .ticket-date > strong { font-size: 60px; }
+  .ticket-date > strong { font-size: 40px; }
   .detail-breadcrumb { font-size: 11px; margin: 2px 0 20px; }
 }
 </style>

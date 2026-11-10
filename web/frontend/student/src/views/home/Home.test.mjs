@@ -3,22 +3,25 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const source = await readFile(new URL('./Home.vue', import.meta.url), 'utf8')
+const heroSource = await readFile(new URL('../../components/wt/WtHero.vue', import.meta.url), 'utf8')
 
-test('V2 首页使用摄影 Hero（校园蓝视觉）', () => {
+test('首页 Hero 在按钮下方预告真实活动，照片单独展示', () => {
   assert.match(source, /<WtHero/)
-  assert.match(source, /photo="\/images\/campus-v2\.webp"/)
-  assert.match(source, /photo-note="秋日校园 · 2026"/)
+  assert.match(source, /photo="\/images\/home-campus\.webp"/)
   assert.match(source, /primary="\{ label:\s*'发现校园活动'/)
+  assert.match(source, /if \(!a\) return null/)
+  assert.match(heroSource, /class="hero-actions"[\s\S]+?class="hero-event"[\s\S]+?class="hero-photo"/)
 })
 
-test('首页快捷服务条提供四个校园服务入口', () => {
+test('首页快捷服务按原型顺序提供六个有效服务入口', () => {
   assert.match(source, /class="quick-strip"/)
   assert.match(source, /v-for="e in entries"/)
-  // 四宫格：学习搭子 / 活动 / 闲置 / 失物
-  assert.match(source, /title:\s*'你的学习搭子'/)
-  assert.match(source, /title:\s*'去见见新朋友'/)
-  assert.match(source, /title:\s*'给好物下一站'/)
-  assert.match(source, /title:\s*'找回那份牵挂'/)
+  const entries = source.match(/const entries = \[([\s\S]*?)\n\]/)[1]
+  assert.deepEqual([...entries.matchAll(/title:\s*'([^']+)'[^\n]+?to:\s*'([^']+)'/g)].map((match) => match.slice(1)), [
+    ['校园活动', '/activity'], ['闲置互换', '/idle'], ['失物招领', '/lostfound'],
+    ['学习搭子', '/partner'], ['互助问答', '/qa'], ['AI 学习', '/ai/chat']
+  ])
+  assert.match(source, /to="\/campus-3d"/)
 })
 
 test('首页双栏布局：活动/闲置/动态 + 学习区/公告/日程', () => {

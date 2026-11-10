@@ -1,6 +1,8 @@
 <template>
   <div v-if="loadError" class="load-error" role="alert"><span>{{ loadError }}</span><button type="button" class="text-btn" @click="load">重新加载</button></div>
-  <WtPageHeader title="闲置物品" subtitle="校园里的二手好物，流转给需要的人" eyebrow="校园服务" />
+  <WtPageHeader title="闲置互换" subtitle="把闲置分享给同学，交换你需要的好物。">
+    <el-button type="primary" @click="goPublish">＋ 发布闲置</el-button>
+  </WtPageHeader>
 
   <div class="idle-list">
     <!-- 搜索栏 + 分类筛选 -->
@@ -9,12 +11,11 @@
         <template #append><el-button @click="search">搜索</el-button></template>
       </el-input>
       <div class="chips">
-        <span class="chip" :class="{ active: !category }" @click="selectCategory('')">全部</span>
-        <span v-for="c in categories" :key="c" class="chip" :class="{ active: category === c }" @click="selectCategory(c)">{{ c }}</span>
+        <button type="button" class="chip" :class="{ active: !category }" :aria-pressed="!category" @click="selectCategory('')">全部</button>
+        <button v-for="c in categories" :key="c" type="button" class="chip" :class="{ active: category === c }" :aria-pressed="category === c" @click="selectCategory(c)">{{ c }}</button>
       </div>
       <div class="spacer" />
       <el-button @click="$router.push('/idle/appointments')">我的预约</el-button>
-      <el-button type="primary" @click="goPublish">＋ 发布闲置</el-button>
     </div>
 
     <!-- 卡片网格 -->
@@ -36,7 +37,7 @@
         <template #footer>
           <div class="card-footer">
             <el-tag v-if="item.category" size="small">{{ item.category }}</el-tag>
-            <span class="expect">期望换：{{ item.expectItem || '面议' }}</span>
+            <span class="expect">期望换：{{ item.expectItem || '待商量' }}</span>
           </div>
         </template>
       </ItemCard>
@@ -150,7 +151,7 @@ watch(
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   min-width: 0;
   margin-bottom: 16px;
@@ -201,5 +202,12 @@ watch(
 .expect {
   font-size: 12px;
   color: var(--warning);
+}
+.grid :deep(.cover) { height: 150px; }
+@media (max-width: 1000px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
 }
 </style>

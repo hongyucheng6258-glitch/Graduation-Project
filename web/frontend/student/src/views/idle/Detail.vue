@@ -1,63 +1,63 @@
 <template>
-  <WtPageHeader title="闲置详情" subtitle="查看物品详情与交换条件" eyebrow="校园服务" />
-
   <div class="detail" v-loading="loading">
-    <el-card v-if="item">
-      <div class="layout">
-        <!-- 图左 -->
+    <RouterLink to="/idle" class="text-btn detail-back">返回闲置互换</RouterLink>
+    <div v-if="item" class="layout">
+      <article class="detail-main">
         <div class="gallery">
-          <el-carousel v-if="detailImages.length" height="360px" :arrow="detailImages.length > 1 ? 'hover' : 'never'">
-          <span v-if="isSchematic" class="schematic-flag">示意图</span>
+          <el-carousel v-if="detailImages.length" height="clamp(220px, 38vw, 340px)" :arrow="detailImages.length > 1 ? 'hover' : 'never'">
+            <span v-if="isSchematic" class="schematic-flag">示意图</span>
             <el-carousel-item v-for="img in detailImages" :key="img">
               <el-image :src="img" fit="contain" style="width:100%;height:100%" :preview-src-list="detailImages" lazy @error="onImgError($event, img)" />
             </el-carousel-item>
           </el-carousel>
           <el-empty v-else description="暂无图片" :image-size="80" />
         </div>
-        <!-- 右侧信息 -->
         <div class="info">
-          <h2>{{ item.title }}</h2>
+          <h1>{{ item.title }}</h1>
           <div class="meta">
             <el-tag v-if="item.category">{{ item.category }}</el-tag>
             <el-tag :type="statusType">{{ statusText }}</el-tag>
             <span class="views">👁 {{ item.viewCount }} 次浏览</span>
           </div>
-          <div class="expect">期望换物：<b>{{ item.expectItem || '面议' }}</b></div>
+          <div class="expect">期望换物：<b>{{ item.expectItem || '待商量' }}</b></div>
           <div class="desc">{{ item.description }}</div>
-          <div class="publisher" style="cursor:pointer" @click="goUser(item.userId)">
-            <el-avatar :size="36" :src="item.publisherAvatar">{{ item.publisherNickname?.charAt(0) }}</el-avatar>
-            <div>
-              <div style="color:var(--brand-strong);font-weight:600">{{ item.publisherNickname }}</div>
-              <div class="score" v-if="item.sellerAvgScore">历史评分 ⭐ {{ item.sellerAvgScore.toFixed(1) }}</div>
-            </div>
-          </div>
-          <div class="actions">
-            <template v-if="!item.isOwner">
-              <el-button v-if="item.reviewAppointmentId && !item.reviewed" type="warning" size="large" @click="openReview">
-                评价
-              </el-button>
-              <el-button v-else-if="item.reviewAppointmentId && item.reviewed" disabled>已评价</el-button>
-              <el-button v-else-if="item.myAppointmentId" disabled>已预约，等待卖家处理</el-button>
-              <el-button v-else type="primary" size="large" :disabled="item.status !== 0" @click="appointVisible = true">
-                {{ item.status === 0 ? '发起预约互换' : '该物品暂不可预约' }}
-              </el-button>
-              <el-button size="large" @click="contactPublisher">私信卖家</el-button>
-            </template>
-            <template v-else>
-              <el-button type="danger" plain @click="offline">下架</el-button>
-              <el-button v-if="item.reviewAppointmentId && !item.reviewed" type="warning" size="large" @click="openReview">
-                评价
-              </el-button>
-              <el-button v-else-if="item.reviewAppointmentId && item.reviewed" disabled>已评价</el-button>
-            </template>
-            <el-button text type="warning" @click="reportVisible = true">举报</el-button>
-            <el-button text :type="favorited ? 'warning' : 'default'" @click="toggleFavorite">
-              {{ favorited ? '★ 已收藏' : '☆ 收藏' }}
-            </el-button>
-          </div>
         </div>
-      </div>
-    </el-card>
+      </article>
+      <aside class="trade-panel">
+        <h2>联系发布者</h2>
+        <button type="button" class="publisher" @click="goUser(item.userId)">
+          <el-avatar :size="36" :src="item.publisherAvatar">{{ item.publisherNickname?.charAt(0) }}</el-avatar>
+          <div>
+            <div style="color:var(--brand-strong);font-weight:600">{{ item.publisherNickname }}</div>
+            <div class="score" v-if="item.sellerAvgScore">历史评分 ⭐ {{ item.sellerAvgScore.toFixed(1) }}</div>
+          </div>
+        </button>
+        <div class="actions">
+          <template v-if="!item.isOwner">
+            <el-button v-if="item.reviewAppointmentId && !item.reviewed" type="warning" size="large" @click="openReview">
+              评价
+            </el-button>
+            <el-button v-else-if="item.reviewAppointmentId && item.reviewed" disabled>已评价</el-button>
+            <el-button v-else-if="item.myAppointmentId" disabled>已预约，等待卖家处理</el-button>
+            <el-button v-else type="primary" size="large" :disabled="item.status !== 0" @click="appointVisible = true">
+              {{ item.status === 0 ? '发起预约互换' : '该物品暂不可预约' }}
+            </el-button>
+            <el-button size="large" @click="contactPublisher">私信卖家</el-button>
+          </template>
+          <template v-else>
+            <el-button type="danger" plain @click="offline">下架</el-button>
+            <el-button v-if="item.reviewAppointmentId && !item.reviewed" type="warning" size="large" @click="openReview">
+              评价
+            </el-button>
+            <el-button v-else-if="item.reviewAppointmentId && item.reviewed" disabled>已评价</el-button>
+          </template>
+          <el-button text type="warning" @click="reportVisible = true">举报</el-button>
+          <el-button text :type="favorited ? 'warning' : 'default'" @click="toggleFavorite">
+            {{ favorited ? '★ 已收藏' : '☆ 收藏' }}
+          </el-button>
+        </div>
+      </aside>
+    </div>
 
     <!-- 预约弹窗 -->
     <el-dialog v-model="appointVisible" title="发起预约" width="440px">
@@ -118,7 +118,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { idleDetail, appoint, offlineIdle, reviewAppoint } from '../../api/idle'
@@ -269,15 +268,29 @@ onMounted(load)
 <style scoped>
 .layout {
   display: grid;
-  grid-template-columns: 480px 1fr;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 28px;
+  align-items: start;
 }
+.detail-back { display: inline-block; margin: 0 0 16px; }
+.detail-main,
+.trade-panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.detail-main { overflow: hidden; }
+.info, .trade-panel { padding: 22px; }
+.trade-panel h2 { margin: 0 0 16px; font-size: 18px; }
 .gallery {
   background: var(--surface-2);
   border-radius: 8px;
 }
-.info h2 {
-  margin-bottom: 12px;
+.info h1 {
+  margin: 0 0 12px;
+  font-size: var(--fs-h1);
 }
 .meta {
   display: flex;
@@ -301,6 +314,10 @@ onMounted(load)
 }
 .publisher {
   display: flex;
+  width: 100%;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
   gap: 10px;
   align-items: center;
   padding: 12px;
@@ -315,7 +332,13 @@ onMounted(load)
 .actions {
   display: flex;
   gap: 10px;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
+}
+.actions :deep(.el-button + .el-button) { margin-left: 0; }
+.detail :deep(.el-dialog) { max-width: calc(100% - 32px); }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
 }
 .rate-row {
   display: flex;
