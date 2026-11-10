@@ -16,13 +16,27 @@ async function main() {
     const page = await context.newPage()
     page.setDefaultTimeout(10000)
     await page.goto(`${base}/`)
+    await page.getByRole('heading', { name: /课表之外/ }).waitFor()
+    assert.equal(await page.locator('.utility-bar').count(), 0, '学生端仍显示主导航下方的工具条')
+    assert.equal(await page.locator('.campus-header + main.content').count(), 1)
+    const header = await page.locator('.campus-header').boundingBox()
+    const hero = await page.locator('.campus-hero').boundingBox()
+    assert.equal(Math.round(hero.y - header.y - header.height), 24)
     const services = page.locator('[aria-label="校园服务快捷入口"]')
     assert.equal(await services.getByRole('button').count() + await services.getByRole('link').count(), 6)
     assert.equal(Math.round((await page.locator('.hero-photo').boundingBox()).height), 320)
     await page.getByRole('link', { name: /进入3D校园/ }).waitFor()
+    assert.equal(await page.locator('.bulletin').getByRole('link', { name: '全部' }).getAttribute('href'), '/notice')
 
     const screenshotDir = process.env.CAMPUS_PROTOTYPE_SCREENSHOTS
     if (screenshotDir) await page.screenshot({ path: join(screenshotDir, 'student-home.png'), fullPage: true })
+
+    await page.getByRole('button', { name: '个人中心', exact: true }).click()
+    await page.getByRole('menuitem', { name: '个人中心', exact: true }).waitFor()
+    await page.getByRole('menuitem', { name: '错题本', exact: true }).click()
+    await page.waitForURL(`${base}/ai/wrong`)
+    await page.locator('footer.footer').getByRole('link', { name: '你画我猜', exact: true }).click()
+    await page.waitForURL(`${base}/draw-guess`)
 
     await page.goto(`${base}/activity`)
     await page.getByRole('heading', { name: '校园活动', level: 1, exact: true }).waitFor({ timeout: 7000 })
@@ -53,6 +67,7 @@ async function main() {
       for (const route of ['/', '/activity', `/activity/detail/${fixture.activityId}`, '/idle', `/idle/detail/${fixture.idleId}`]) {
         await page.goto(base + route)
         await page.locator('main.content h1').waitFor()
+        assert.equal(await page.locator('.utility-bar').count(), 0)
         const { width: available, scrollWidth, elements } = await page.evaluate(() => ({
           width: innerWidth,
           scrollWidth: document.documentElement.scrollWidth,

@@ -132,22 +132,6 @@
         </div>
       </header>
 
-      <!-- V2 工具条：面包屑 + 快捷链接 -->
-      <div class="utility-bar">
-        <div class="utility-path">
-          <a class="text-btn" @click="go('/')">我的校园</a>
-          <span>/</span>
-          <b>{{ pageTitle }}</b>
-        </div>
-        <div class="utility-links">
-          <a class="text-btn" @click="go('/notice')">校园公告</a>
-          <RouterLink class="text-btn" to="/campus-3d">3D 校园</RouterLink>
-          <RouterLink class="text-btn" to="/draw-guess">你画我猜</RouterLink>
-          <a class="text-btn" @click="go('/ai/wrong')">我的错题</a>
-          <a class="text-btn" @click="go('/profile')">我的主页</a>
-        </div>
-      </div>
-
       <main class="content">
         <router-view />
       </main>
@@ -159,6 +143,7 @@
         </div>
         <div class="footer-links">
           <span>AI Campus · 毕业设计项目</span>
+          <RouterLink class="text-btn" to="/draw-guess">你画我猜</RouterLink>
           <a class="text-btn" @click="go('/maintenance')">页面导航</a>
           <a class="text-btn" @click="go('/maintenance')">帮助与反馈</a>
         </div>
@@ -270,36 +255,6 @@ const navGroups = [
     ]
   }
 ]
-
-const PAGE_TITLES = {
-  '/': '综合门户',
-  '/campus-3d': '3D校园',
-  '/search': '搜索结果',
-  '/activity': '校园活动',
-  '/activity/publish': '发布活动',
-  '/idle': '闲置互换',
-  '/idle/publish': '发布闲置',
-  '/lostfound': '失物招领',
-  '/lostfound/publish': '发布失物信息',
-  '/partner': '学习搭子',
-  '/partner/publish': '发布搭子帖',
-  '/qa': '互助问答',
-  '/qa/publish': '发布提问',
-  '/social': '动态广场',
-  '/draw-guess': '你画我猜',
-  '/notice': '校园公告',
-  '/message': '消息中心',
-  '/chat': '私信',
-  '/ai/chat': 'AI 答疑',
-  '/ai/code': '代码纠错',
-  '/ai/wrong': '错题本',
-  '/profile': '个人中心'
-}
-const pageTitle = computed(() => {
-  const p = route.path
-  const matched = Object.keys(PAGE_TITLES).find((k) => p === k || p.startsWith(k + '/'))
-  return (matched && PAGE_TITLES[matched]) || route.meta?.title || '梧桐校园'
-})
 
 function isActive(to) {
   if (to === '/') return route.path === '/'
@@ -568,27 +523,11 @@ onUnmounted(() => {
 .bell-wrap { line-height: 0; cursor: pointer; }
 .bell-wrap :deep(.el-badge__content) { transform: translate(18%, -18%); }
 
-/* ===================== 工具条 ===================== */
-.utility-bar {
-  height: 68px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 15px;
-  color: var(--ink-3);
-  font-size: 12px;
-}
-.utility-path { display: flex; align-items: center; gap: 13px; }
-.utility-path b { font-weight: 500; color: var(--ink); }
-.utility-links { display: flex; gap: 25px; }
-.utility-path .text-btn, .utility-links .text-btn { color: var(--ink-3); font-size: 12px; }
-.utility-links .text-btn:hover { color: var(--brand); }
-
 /* ===================== 内容与页脚 ===================== */
 .content {
   max-width: 1320px;
   margin: 0 auto;
-  padding: 0 24px 25px;
+  padding: 24px 24px 25px;
   min-height: calc(100vh - 260px);
 }
 .footer {
@@ -707,12 +646,7 @@ onUnmounted(() => {
   .header-publish svg { width: 15px; }
   .header-avatar { padding-left: 0; border-left: 0; }
   .top-actions .icon-btn { min-width: 30px; min-height: 32px; }
-  .content { padding: 0 20px 24px; }
-  .utility-bar { height: 54px; }
-  .utility-links { gap: 15px; }
-  .utility-links a:first-child, .utility-links a:last-child { display: none; }
-  .utility-bar .text-btn { font-size: 11px; }
-  .utility-path { font-size: 11px; gap: 10px; }
+  .content { padding: 16px 20px 24px; }
   .footer { flex-direction: column; gap: 21px; }
   .footer-links { font-size: 11px; gap: 14px; width: 100%; }
   .footer-links > span { font-size: 10px; }
