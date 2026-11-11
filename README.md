@@ -1,153 +1,59 @@
-# 三维交互式智慧校园服务平台
+# 梧桐校园 · 三维交互式智慧校园服务平台
 
-基于 **Spring Boot + Vue 3** 的校园综合服务项目，将校园活动、闲置互换、失物招领、学习互助、实时社交和 AI 学习组织到同一平台，并提供可漫游、可办理业务的三维校园空间。
+梧桐校园由 **Vue 3 学生端、Vue 3 管理端和 Spring Boot 后端**组成。学生可以在普通网页或 Three.js 校园里使用活动报名、闲置互换、失物认领、学习互助和实时交流。学生端校园向导连接实时业务和知识库，管理端智能助手连接待办查询、审核确认与公告草稿。
 
-项目包含 **Web 学生端、Web 管理后台和 Spring Boot 后端**。界面中使用“梧桐校园”作为站点展示名称，可作为《基于 Spring Boot 的三维交互式智慧校园服务平台的设计与实现》的毕业设计项目基础。
+[功能](#功能) · [智能助手与 RAG](#智能助手与-rag) · [技术架构](#技术架构) · [Docker 快速启动](#docker-快速启动) · [开发与测试](#开发与测试) · [部署说明](./部署说明.md)
 
-[项目特点](#项目特点) · [功能说明](#功能说明) · [技术架构](#技术架构) · [快速启动](#快速启动) · [项目结构](#项目结构) · [开发与测试](#开发与测试) · [部署说明](./部署说明.md)
+## 功能
 
-## 项目特点
+| 模块 | 已实现的流程 |
+| --- | --- |
+| 校园活动 | 发布与审核、浏览和报名、发布者审批、签到、报名与签到 CSV 导出 |
+| 闲置互换 | 发布、分类搜索、收藏、预约、接受或拒绝、交接确认与评价 |
+| 失物招领 | 寻物与拾到登记、搜索与候选匹配、申请认领、发布者核实、确认领回 |
+| 学习互助 | 学习搭子发布与匹配、互助提问与采纳、代码纠错、OCR 错题录入和复习 |
+| 校园社区 | 动态发布与按需加载图片、评论、点赞、收藏、分享、私信和举报 |
+| 你画我猜 | 公开房、私密房、房间码加入、WebSocket 同步画板、轮流作画、猜词、计分与作品展区 |
+| 消息与公告 | 站内公告、审核和预约结果通知、未读筛选与已读状态 |
+| 管理后台 | 数据看板、用户管理、内容审核、内容上下架、举报、公告、AI 日志与系统配置。顶部搜索按学号、昵称、内容关键词或工单编号定位记录，返回搜索时恢复结果页码和焦点 |
 
-### 三维空间与校园服务结合
+**三维校园**入口为 `/campus-3d`。场景包含梧桐中庭及 12 个服务房间，支持环视、移动、导览定位、全屏和画质切换。房间内使用与普通网页相同的业务组件和账号状态。WebGL 无法启动时，仍可通过导览打开业务页面。
 
-学生可以从首页进入 `/campus-3d`，在“梧桐中庭”及各分区漫游，走进服务房间后直接使用活动、交易、问答、聊天和 AI 学习等功能。三维入口与普通网页共用学生端组件、账号状态和后端数据，在房间中打开详情、发布内容或进入私信时，浏览器地址仍保持在三维校园页面。
+## 智能助手与 RAG
 
-空间层负责场景与移动，业务层复用已有页面，便于继续增加服务入口。
+| 能力 | 实现 |
+| --- | --- |
+| 学生端校园向导 | 通过 Function Calling 调用活动、报名、闲置等业务工具，返回真实数据、原帖入口或操作确认卡。发布活动、提交报名和预约等写入操作由用户确认 |
+| 管理端智能助手 | 查询实时待办、查看活动和闲置审核证据、按记录生成审核确认卡。支持公告草稿及管理资料问答 |
+| 文档检索 | PDFBox 提取文本并按页切片。Embedding 服务使用 `bge-small-zh-v1.5` 的 ONNX 模型生成向量，Qdrant 检索相关切片，模型依据片段回答并附文档与页码 |
+| 资料权限 | 公共资料、学生个人 PDF 和管理资料分别按文档范围与身份校验。工作台支持 PDF 预览、发布、撤回和重建索引 |
+| 提示词与运行记录 | 工作台维护校园向导和资料问答的提示词版本，可切换生效版本并查看运行记录 |
+| 学习辅助 | 智能对话支持 SSE 流式答复和历史会话。错题本支持 OCR 录入、整理、讲解、同类题和复习计划 |
 
-### AI 融入学习、生活和内容治理
-
-AI 能力覆盖智能对话、PDF 问答、代码纠错、错题整理与复习，也用于活动推荐、闲置估价、失物匹配、学习搭子匹配、发布文案辅助和内容风险预审。校园向导可检索当前业务数据，再将相关信息提供给模型组织回答。
-
-### 业务流程与实时互动
-
-活动包含报名、审批、取消报名和签到；闲置包含预约、处理、完成和评价；失物招领包含认领申请、核实和确认。私信和“你画我猜”分别使用 WebSocket 实现实时通信，AI 对话支持 SSE 流式输出。
-
-### 学生使用与后台治理配套
-
-后台提供运营统计、用户管理、内容审核、举报处理、公告管理和 AI 配置。内容预审结合本地风险词规则与外部模型，低风险内容可自动通过，中高风险内容保留人工复核入口。
-
-## 功能说明
-
-### 学生端
-
-| 模块 | 已有功能 |
-|---|---|
-| 账号与资料 | 学号注册、学生登录、验证码界面与校验开关、资料及头像修改、密码修改；注册页含人机交互校验 |
-| 校园首页 | 公告、活动、闲置、失物信息聚合，常用服务入口，活动／闲置／失物／动态搜索 |
-| 校园活动 | 列表与筛选、详情、发布与编辑、AI 文案辅助、报名及取消报名、报名审批、签到二维码与签到、我的发布与报名、AI 活动推荐 |
-| 闲置互换 | 发布与编辑、分类浏览、详情、收藏、预约、发布者接受或拒绝预约、交易完成、评价、下架及重新上架、AI 参考估价 |
-| 失物招领 | 寻物／招领发布、浏览与检索、编辑、AI 候选匹配、认领申请、发布者核实、申请人确认领取、完成标记 |
-| 学习搭子 | 按学科与关键词浏览、发布学习需求、查看我的发布、AI 匹配与推荐理由、标记已找到 |
-| 互助问答 | 提问、问题浏览与详情、回答、提问者采纳答案、AI 参考回答、我的提问与回答 |
-| 动态广场 | 发布动态、AI 文案辅助、查看详情、点赞及取消点赞、评论 |
-| 公告与通知 | 公告列表与详情、站内消息分类、未读数量、单条及全部已读 |
-| 实时私信 | 会话列表、历史消息、文字及图片消息、未读提示、业务上下文卡片、隐藏会话、拉黑及取消拉黑、聊天消息举报 |
-| 个人中心 | 我的闲置、报名、错题和收藏入口，个人资料管理；他人主页聚合其闲置、活动、失物、动态和评价 |
-| 内容反馈 | 内容／用户举报、后台处理；业务操作与审核结果通过消息通知用户 |
-| 多人游戏 | 你画我猜大厅、公开／私密房间、房间码与密码加入、实时画板和猜词聊天、回合计时与计分、游戏记录及作品画廊 |
-| 界面与导航 | 明暗主题切换及状态保存、桌面与窄屏布局、手机导航菜单 |
-
-### AI 学习与业务辅助
-
-| 场景 | 功能与实现方式 |
-|---|---|
-| 智能对话 | 新建、重命名和删除会话，保存历史消息，SSE 流式答复 |
-| PDF 学习问答 | 上传文本型 PDF，使用 PDFBox 提取文字，绑定学习会话并针对文档提问 |
-| 校园向导 | 根据问题关键词查询活动、个人报名、闲置、失物、动态和公告等业务数据，提供带业务上下文的回答 |
-| 代码纠错 | 提交代码与问题描述，获取错误分析、修改建议和修复结果 |
-| 错题录入 | 手动收录或通过题目图片进行 OCR 文字识别，支持后续人工编辑 |
-| 错题整理与讲解 | AI 归纳学科、章节、题型、难度、知识点及错因，生成题目讲解 |
-| 练习与复习 | AI 生成同类题、保存练习题到错题本、根据全部或选中错题生成复习提纲、生成复习计划；根据复习反馈更新掌握状态和下次复习时间 |
-| 薄弱点分析 | 按已收录错题统计知识点、错因分布和高频错题，生成统计型报告 |
-| 发布辅助 | 为活动、闲置、失物及动态生成标题、正文与标签，提供润色、扩写和精简 |
-| 失物匹配 | 从已有拾到记录中筛选候选，返回可能匹配的记录与理由 |
-| 闲置估价 | 根据描述给出参考价格区间、定价建议及发布卖点 |
-| 搭子与活动推荐 | 结合学习目标、时间安排或历史报名偏好推荐候选，并给出理由 |
-| 互助参考回答 | 为校园问题生成可供学生参考的答案 |
-| 内容风险预审 | 返回风险等级与原因，与本地规则及人工审核流程衔接 |
-
-**能力边界：**AI 使用外部 DeepSeek 接口，需要有效服务密钥；项目未训练大模型。OCR 在浏览器中通过 Tesseract.js 执行，相关识别资源存放于 `public/ocr/`。PDF 上传解析面向可提取文本的文档，扫描件不会自动转为可问答文本。校园向导中的图书馆、食堂等部分静态信息仍为示例占位，正式使用时应替换为实际校园信息。AI 参考答案、估价和推荐结果需要结合具体情况判断。
-
-### 三维校园
-
-| 空间 | 服务房间 |
-|---|---|
-| 梧桐中庭 | 综合门户与各分区导览 |
-| 校园服务区 | 校园活动、闲置互换、学习搭子、失物招领 |
-| 社交信息区 | 互助问答、动态广场、你画我猜、校园公告、消息中心 |
-| AI 学习区 | AI 答疑、代码纠错、错题本 |
-
-三维校园共设置 **12 个服务房间**，支持拖动环视、WASD 移动、点击门和服务台交互、导览定位、返回中庭、全屏及画质切换。房间内提供返回上一级、返回房间和服务加载重试，列表筛选与分页状态可在房间内返回时恢复。
-
-场景使用 Three.js 构建，是校园服务的空间化入口。
-
-### 管理后台
-
-| 模块 | 已有功能 |
-|---|---|
-| 数据总览 | 核心业务指标、趋势、模块分布及待办统计 |
-| 用户管理 | 用户查询、启用／禁用、密码重置 |
-| 内容审核 | 活动、闲置、失物、动态、搭子五类发布内容审核，查看 AI 风险等级、原因与审核来源 |
-| AI 内容审核 | 按审核结果与风险筛选内容，人工复核、恢复展示或维持拦截 |
-| 内容管理 | 活动、闲置、失物、动态、搭子、问答六类内容管理，下架与恢复 |
-| 举报处理 | 查看举报详情并处理内容、用户或聊天相关举报 |
-| 公告管理 | 公告新建、编辑、发布、下线与删除 |
-| 活动报表 | 查看报名／签到统计，导出报名名单和签到名单，文件格式为 CSV |
-| AI 配置 | 服务地址、密钥、模型及参数配置，提示词模板新建与编辑 |
-| AI 调用日志 | 查询调用记录、场景、Token 用量、耗时及结果 |
-| 系统配置 | 站点信息、维护模式、注册开关、AI 审核开关、高／中风险词等配置 |
-| 管理员管理 | 子管理员列表、新建与编辑，区分超级管理员和审核员角色 |
-
-学生与管理员分别登录，后端校验 JWT 角色；部分系统配置和管理员管理操作仅允许超级管理员访问。
-
-### 主要业务流程
-
-- **活动：**发布 → 内容审核 → 浏览与报名 → 发布者审批 → 签到 → 报名／签到统计与导出。
-- **闲置：**发布 → 内容审核 → 预约 → 发布者接受或拒绝 → 完成 → 评价。
-- **失物：**发布寻物或招领 → 内容审核 → 检索／匹配 → 申请认领 → 发布者核实 → 确认领取。
-- **错题：**手动／OCR 录入 → 编辑与 AI 整理 → 讲解与同类题 → 复习反馈 → 更新掌握状态和复习时间。
-- **内容治理：**本地规则／AI 预审 → 低风险自动通过或进入人工复核 → 展示／驳回；已发布内容还可通过举报、下架和恢复流程处理。
+可以在校园向导中输入「帮我发布活动：《校园读书会》」，打开草稿补齐地点和起止时间，再提交审核。管理端可查询待审记录并核对后确认，学生端可在「我的报名 → 我的发布」和消息中心查看结果。PDF 问答适用于可提取文字的 PDF，图片型扫描件需先做 OCR。
 
 ## 技术架构
 
 ```mermaid
-flowchart TD
-    Student[学生浏览器] --> StudentWeb[Vue 学生端与 Three.js 校园]
-    Admin[管理员浏览器] --> AdminWeb[Vue 管理后台]
-    StudentWeb -->|HTTP / SSE / WebSocket| API[Spring Boot 后端]
-    AdminWeb -->|HTTP| API
-    API --> Controller[Controller 参数与接口层]
-    Controller --> Service[Service 业务与状态处理]
-    Service --> Mapper[MyBatis-Plus 数据访问]
-    Mapper --> MySQL[(MySQL)]
-    Service --> Redis[(Redis)]
-    Service --> Gateway[统一 AI 网关]
-    Gateway --> Model[DeepSeek API]
+flowchart LR
+    Student[学生端 Vue 3 与 Three.js] -->|HTTP / SSE / WebSocket| Nginx[Nginx]
+    Admin[管理端 Vue 3] -->|HTTP| Nginx
+    Nginx --> API[Spring Boot]
+    API --> DB[(MySQL)]
+    API --> Redis[(Redis)]
+    API --> Agent[校园向导与管理助手]
+    Agent --> Model[DeepSeek 兼容模型接口]
+    Agent --> Embedding[BGE ONNX Embedding]
+    Agent --> Qdrant[(Qdrant)]
 ```
 
-| 层次 | 技术 |
-|---|---|
-| 后端基础 | Java 17、Spring Boot 3.2.5、Spring MVC、Validation |
-| 数据与缓存 | MyBatis-Plus 3.5.7、MySQL 8、Redis；Compose 使用 Redis 7 |
-| 实时通信 | Spring WebSocket；AI 答复使用 SSE |
-| 身份与校验 | JWT、BCrypt 密码散列、业务资源归属校验、可信 Origin 配置 |
-| AI 与文档 | DeepSeek OpenAI 兼容接口、OkHttp、PDFBox 3.0.2 |
-| Web 前端 | Vue 3、Vite 6、Vue Router、Pinia、Element Plus、Axios |
-| 展示与编辑 | ECharts、Markdown It、Highlight.js、WangEditor、Monaco Editor |
-| 三维与 OCR | Three.js、Tesseract.js 7 |
-| 部署 | Docker Compose、Nginx、多阶段镜像构建 |
+- **后端**使用 Java 17、Spring Boot、MyBatis-Plus、JWT、BCrypt 和 Spring WebSocket。MySQL 保存业务记录、上传资源、文档切片和提示词版本，Redis 用于验证码、缓存与限流。
+- **前端**使用 Vue 3、Vite、Pinia、Vue Router、Element Plus 和 ECharts。Three.js 渲染校园场景，Tesseract.js 支持浏览器内的错题 OCR。
+- **部署**使用 Docker Compose、Nginx 和多阶段构建。完整环境包含 MySQL、Redis、Spring Boot、两个 Web 端、Embedding 和 Qdrant，Agent 表结构由一次性迁移任务初始化。
 
-后端按业务模块划分 Controller、Service、Mapper、DTO 和 VO。AI 场景统一通过网关调用，网关负责提示词、上下文、调用日志及部分调用额度控制。图片和上传资源以 Data URI／Base64 方式存入数据库，MinIO 接口主要用于兼容既有资源访问。
+## Docker 快速启动
 
-## 快速启动
-
-### 使用 Docker Compose
-
-包含校园向导、向量知识库与 PDF 问答的完整启动方式见 [部署说明](部署说明.md)。以下为基础演示环境的启动说明。
-
-需要安装 Git 和支持 Compose 的 Docker 环境。首次构建需要联网下载镜像与项目依赖。
-
-下面以 Windows PowerShell 为例：
+需要 Git 和支持 `!override` 的 Docker Compose。首次构建会下载基础镜像、依赖和 Embedding 模型。以下以 Windows PowerShell 为例。
 
 ```powershell
 git clone https://github.com/hongyucheng6258-glitch/Graduation-Project.git
@@ -159,151 +65,82 @@ if (-not (Test-Path -LiteralPath .env)) {
 notepad .env
 ```
 
-在 `.env` 中填写以下配置：
-
-| 配置项 | 说明 |
-|---|---|
-| `MYSQL_ROOT_PASSWORD` | 必填，数据库密码 |
-| `REDIS_PASSWORD` | 必填，Redis 服务与后端客户端共用密码 |
-| `JWT_SECRET` | 必填，至少 32 个字符的随机签名密钥 |
-| `SIGNIN_SECRET` | 必填，至少 16 个字符的随机签到密钥 |
-| `AI_API_KEY` | 使用 AI 能力时填写有效密钥，也可在管理后台配置 |
-| `STUDENT_PORT` / `ADMIN_PORT` | 模板使用 15173 / 15174 |
-| `TRUSTED_ORIGINS` | 已包含模板前端地址；修改端口或域名时同步调整 |
-
-然后启动：
+| 配置项 | 填写内容 |
+| --- | --- |
+| `MYSQL_ROOT_PASSWORD`、`REDIS_PASSWORD` | 各自的本机密码，均为必填项 |
+| `JWT_SECRET`、`SIGNIN_SECRET` | 分别填写至少 32、16 字符的随机值 |
+| `AI_API_KEY` | 体验模型问答和生成时填写有效密钥，也可在管理端配置 |
+| `AI_BASE_URL`、`AI_MODEL` | 模板使用 DeepSeek 和 `deepseek-chat`，可按服务配置调整 |
+| `STUDENT_PORT`、`ADMIN_PORT`、`BACKEND_PORT` | 建议设置为 `15173`、`15174`、`18080`。模板的后端端口是 `8080`，如沿用模板则使用 `8080` 检查后端 |
+| `TRUSTED_ORIGINS` | 模板已含本机默认前端地址。修改端口或域名时同步更新 |
 
 ```powershell
-docker compose up -d --build
-docker compose ps
+$stack = @('-f', 'docker-compose.yml', '-f', 'docker-compose.agent.yml')
+docker compose @stack up -d --build --wait
+docker compose @stack ps -a
 ```
 
-Compose 会启动 MySQL、Redis、后端、学生端和管理端。已有镜像和数据卷时，可使用 `docker compose up -d` 恢复运行。
-
-### 访问地址
-
-以下地址对应仓库 `.env.example` 中的端口：
+按上表建议端口启动后访问以下地址。`agent-migrate` 是一次性迁移任务，成功时显示 `Exited (0)`。
 
 | 服务 | 地址 |
-|---|---|
-| 学生端 | [http://localhost:15173/](http://localhost:15173/) |
-| 三维校园 | [http://localhost:15173/campus-3d](http://localhost:15173/campus-3d) |
-| 管理后台 | [http://localhost:15174/admin/](http://localhost:15174/admin/) |
-| 后端存活检查 | [http://localhost:8080/healthz](http://localhost:8080/healthz) |
-| 数据库与 Redis 就绪检查 | [http://localhost:8080/readyz](http://localhost:8080/readyz) |
+| --- | --- |
+| 学生端 | [http://127.0.0.1:15173/](http://127.0.0.1:15173/) |
+| 三维校园 | [http://127.0.0.1:15173/campus-3d](http://127.0.0.1:15173/campus-3d) |
+| 管理端 | [http://127.0.0.1:15174/admin/](http://127.0.0.1:15174/admin/) |
+| 后端就绪检查 | [http://127.0.0.1:18080/readyz](http://127.0.0.1:18080/readyz) |
 
-未配置 `STUDENT_PORT`、`ADMIN_PORT` 时，Compose 默认映射到 5173、5174。Windows 若将这两个端口划入系统保留范围，可使用模板中的 15173、15174。
+### 初始化演示数据
 
-### 演示账号
-
-首次使用 Compose 创建 MySQL 数据卷并成功执行演示 SQL 后，可使用：
-
-| 角色 | 账号 | 密码 |
-|---|---|---|
-| 学生 | `2021001` | `admin123` |
-| 超级管理员 | `admin` | `admin123` |
-| 审核员 | `auditor` | `admin123` |
-
-这些账号来自开发演示数据，不代表真实校园用户。已有数据卷不会在每次启动时重新导入演示数据。
-
-### 日常管理
+完整 Compose 首次启动会初始化库表和本地初始管理员 `admin`，演示初始密码为 `admin123`，首次登录后应修改。学生可从前台注册，也可运行演示数据脚本生成学生账号 `CAMPUSDEMO01` 和业务样例。脚本生成的密码保存在指定的本机文件。演示 PDF 可在管理端「AI 配置 → 校园向导工作台」上传到公共知识库。 [演示数据导入说明](./docker/demo/README.md) · [演示 PDF](./docker/demo/knowledge/)
 
 ```powershell
-# 查看后端日志
-docker compose logs -f backend
-
-# 停止服务，保留数据卷
-docker compose down
-
-# 按源码重新构建并启动
-docker compose up -d --build
+docker compose @stack logs -f backend
+docker compose @stack down
 ```
 
-完整的本地开发、SQL 迁移、Nginx 配置和故障排查见 [部署说明](./部署说明.md)。
-
-## 项目结构
-
-```text
-Graduation-Project/
-├── web/
-│   ├── backend/
-│   │   ├── pom.xml
-│   │   └── src/
-│   │       ├── main/java/com/campus/platform/
-│   │       │   ├── common/          # 统一响应、异常、常量和用户上下文
-│   │       │   ├── config/          # 数据访问、系统及其他配置
-│   │       │   ├── interceptor/     # 身份、权限与维护模式
-│   │       │   ├── module/          # 按业务划分的后端模块
-│   │       │   └── utils/
-│   │       ├── main/resources/db/   # 表结构、迁移及演示 SQL
-│   │       └── test/                # 后端测试源码
-│   └── frontend/
-│       ├── student/
-│       │   ├── src/api/             # 后端接口封装
-│       │   ├── src/views/           # 学生业务页面
-│       │   ├── src/features/        # 三维校园及多人游戏
-│       │   ├── src/components/      # 通用、聊天和 AI 交互组件
-│       │   └── public/              # 图片及本地 OCR 资源
-│       └── admin/
-│           ├── src/views/           # 运营、审核及系统管理页面
-│           └── public/
-├── docker/                         # Dockerfile、Nginx、SQL 与数据脚本
-├── tests/browser/                  # 浏览器交互与真实流程测试源码
-├── 测试素材/                        # 图片上传测试所需素材
-├── docker-compose.yml
-├── docker-compose.e2e.yml           # 隔离测试环境覆盖配置
-├── .env.example                    # 环境变量模板
-├── README.md
-└── 部署说明.md
-```
-
-后端业务模块包括 `auth`、`user`、`activity`、`idle`、`lostfound`、`partner`、`qa`、`post`、`chat`、`drawgame`、`message`、`notice`、`favorite`、`report`、`upload`、`site`、`ai` 和 `admin`。
-
-源码入口：[后端](./web/backend/) · [学生端](./web/frontend/student/) · [管理端](./web/frontend/admin/) · [三维空间](./web/frontend/student/src/features/campus3d/) · [AI 业务](./web/backend/src/main/java/com/campus/platform/module/ai/)
+`down` 会保留数据卷。`down -v` 会移除 MySQL、Redis 和 Qdrant 的数据卷。环境变量、账号初始化、数据迁移和排错步骤见 [部署说明](./部署说明.md)。数据库备份目录和本机密钥由 Git 忽略。
 
 ## 开发与测试
 
-本地开发需要 Java 17、Maven 和 Node.js/npm，以及已配置的 MySQL、Redis。前后端分别启动，后端所需环境变量与数据库初始化步骤见 [部署说明](./部署说明.md)。
-
-前端示例使用 `npm.cmd`，便于在 Windows PowerShell 中避开 `npm.ps1` 执行策略限制；其他终端可使用 `npm`。
+源码开发需要 Java 17、Maven、Node.js/npm、MySQL 和 Redis。本地 Vite 默认使用 `5173`、`5174`，代理到后端 `8080`。Java 服务的配置和 SQL 初始化见 [部署说明](./部署说明.md)。
 
 ```powershell
-# 在仓库根目录安装前端依赖
 npm.cmd --prefix web/frontend/student ci
 npm.cmd --prefix web/frontend/admin ci
 
-# 分别在两个终端启动学生端、管理端
+# 分别在两个终端运行
 npm.cmd --prefix web/frontend/student run dev
 npm.cmd --prefix web/frontend/admin run dev
 ```
 
-本地 Vite 默认使用 5173、5174，并将接口代理到后端 8080；它不自动读取 Compose 的端口映射。修改 Vite 启动端口时，同步调整后端 `TRUSTED_ORIGINS`。
-
-仓库提供后端 JUnit／Mockito 测试、前端 Node.js 测试和 Playwright 浏览器测试源码：
-
 ```powershell
-# 后端测试（按测试要求配置环境变量与依赖服务）
-mvn -f web/backend/pom.xml test
-
-# 前端测试与构建（先安装对应依赖）
-npm.cmd --prefix web/frontend/student test
-npm.cmd --prefix web/frontend/admin test
-npm.cmd --prefix web/frontend/student run build
-npm.cmd --prefix web/frontend/admin run build
+mvn -B -f web/backend/pom.xml test
+$frontendTests = rg --files -g '*.test.mjs' web/frontend
+$runnerTests = rg --files -g '*.test.cjs' tests/browser/e2e
+node --test @frontendTests @runnerTests
 ```
 
-真实浏览器 E2E 入口为 `tests/browser/e2e/run-all.cjs`。测试会创建账号并写入业务数据，应使用独立 Compose 项目、端口和数据卷。Playwright 安装路径、测试地址、素材配置与核心类别运行方式见 [部署说明的测试章节](./部署说明.md#七测试)。
+如未安装 Ripgrep，可用 `Get-ChildItem -Recurse -File` 收集相同测试文件。浏览器和业务验收在独立 Compose 环境运行，使用独立账号、端口和数据卷。
 
-## 配置与使用说明
+| 测试入口 | 用途 |
+| --- | --- |
+| [run-all.cjs](./tests/browser/e2e/run-all.cjs) | 登录、审核、活动、闲置、失物、社交、AI、3D 与并发等端到端回归 |
+| [search-and-assistant-ui.cjs](./tests/browser/e2e/search-and-assistant-ui.cjs) | 搜索分页返回、分类重试、助手故障入口、动态图片与 WebGL 降级 |
+| [agent-closure.cjs](./tests/browser/e2e/agent-closure.cjs) | 活动草稿、人工审核与通知，以及预约和重复确认 |
+| [rag-eval.cjs](./tests/browser/e2e/rag-eval.cjs) | 公共资料、个人 PDF、管理资料、撤回与无依据问答评测 |
 
-- **AI 服务：**默认接口地址为 `https://api.deepseek.com`，模型名为 `deepseek-chat`。管理后台保存的非空配置优先于环境变量。没有有效密钥时，AI 调用不可用；内容审核仍可按本地规则处理。
-- **内容审核：**AI 开关与风险词可在后台配置。外部 AI 审核失败时回退到本地规则，普通低风险内容可通过，其余内容进入人工复核。
-- **验证码：**前端有验证码交互，后端是否校验由 `platform.captcha.enabled` 决定；当前源码为 `false`，用于本地联调，可通过配置启用。
-- **上传与文档：**图片、文件和 PDF 使用数据库存储，注意数据库包大小及上传限制；MinIO 为兼容接口依赖，当前基础 Compose 不启动 MinIO。
-- **三维展示：**需要支持 WebGL 的浏览器，运行负担与设备有关；可切换画质，也可从学生端普通页面访问对应业务。
-- **数据初始化：**首次初始化使用的演示 SQL 包含数据重置逻辑。不要对需要保留业务数据的数据库手工执行该脚本；`docker compose down -v` 会删除当前项目的数据卷。
-- **本地配置：**实际 `.env`、服务密钥、数据库备份、依赖目录及构建产物不随源码提交。部署时从 `.env.example` 创建本机配置。
+最近一次发布前的端到端回归覆盖 20 类功能，144 项通过。AI 配额与未配置场景、双人实时画板、助手闭环及 8 项 RAG 检查另有验收记录。 [测试环境与验收结果](./文档/04-测试与实验/分阶段验收与答辩演示.md)
 
----
+## 项目结构
 
-功能清单依据仓库的学生端／管理端页面、后端接口及服务实现整理。运行配置与迁移细节请以 [部署说明](./部署说明.md)、`pom.xml`、`package-lock.json` 和实际环境为准。
+```text
+web/backend/            Spring Boot、数据库迁移与后端测试
+web/frontend/student/   学生端、Three.js 校园和实时画板
+web/frontend/admin/     管理后台和管理智能助手
+web/frontend/shared/    两端共用的助手界面
+docker/                 镜像配置、Nginx、Embedding 和演示数据
+tests/browser/          Playwright 浏览器测试与业务回归
+文档/                   需求、系统设计、数据字典、接口与验收材料
+```
+
+[工程文档目录](./文档/README.md) · [数据库设计与数据字典](./文档/02-系统设计/数据库设计与数据字典.md) · [接口说明](./文档/03-接口与实现/接口说明书.md)
