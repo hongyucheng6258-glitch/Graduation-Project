@@ -14,7 +14,7 @@
     </el-upload>
     <div class="preview-list">
       <div v-for="(url, i) in modelValue" :key="url" class="preview-item">
-        <el-image :src="url" fit="cover" class="preview-img" :preview-src-list="modelValue" />
+        <el-image :src="url" fit="contain" class="preview-img" :preview-src-list="modelValue" />
         <el-icon class="remove" @click="remove(i)"><Close /></el-icon>
       </div>
     </div>
@@ -76,6 +76,7 @@ function remove(index) {
   width: 90px;
   height: 90px;
   border-radius: 6px;
+  background: var(--surface-2);
 }
 .remove {
   position: absolute;

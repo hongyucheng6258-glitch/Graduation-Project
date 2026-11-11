@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-29 11:44:28 Asia/Shanghai",
+  "documentFiles": 34,
+  "markdownFiles": 15,
+  "diagramSourceFiles": 14,
+  "localLinksChecked": 197,
+  "markdownTablesChecked": 213,
+  "pandocHtmlConversions": 15,
+  "counts": {
+    "endpoints": 187,
+    "databaseTables": 40,
+    "dtoClasses": 49,
+    "plannedCases": 63
+  },
+  "sourceFilesChecksummed": 642,
+  "applicationFilesUnchanged": 624,
+  "secretKeysChecked": [
+    "MYSQL_ROOT_PASSWORD",
+    "REDIS_PASSWORD",
+    "AI_API_KEY",
+    "JWT_SECRET",
+    "SIGNIN_SECRET"
+  ],
+  "errors": [],
+  "warnings": [],
+  "diagramVerification": "源文件类型与边界检查及人工语法复核 未声明已完成图像渲染",
+  "outputScope": "工程支撑材料 不含毕业论文正文"
+}

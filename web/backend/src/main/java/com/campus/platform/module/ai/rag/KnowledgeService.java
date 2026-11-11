@@ -161,6 +161,15 @@ public class KnowledgeService {
         return file(status(id, userId));
     }
 
+    FileContent publicFile(long id) {
+        var doc = jdbc.query("""
+                SELECT id,pdf_id,state,error_message,active_version,scope,owner_id
+                FROM kb_document WHERE id=? AND scope='PUBLIC' AND state NOT IN ('DELETED','PURGED')
+                """, this::statusRow, id).stream().findFirst()
+                .orElseThrow(() -> new BizException(ResultCode.NOT_FOUND, "未找到公共资料"));
+        return file(doc);
+    }
+
     FileContent internalFile(long id, String version) {
         return file(verifyInternalVersion(id, version));
     }

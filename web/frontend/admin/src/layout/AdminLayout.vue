@@ -47,14 +47,27 @@
     <!-- ===================== 主区 ===================== -->
     <div class="main">
       <header class="topbar">
-        <div class="crumbs">
-          <span>首页</span><span class="sep">/</span><b>{{ $route.meta.title || '管理后台' }}</b>
-        </div>
-        <div class="topbar-search">
+        <nav class="crumbs" aria-label="面包屑">
+          <ol class="crumb-list" role="list">
+            <li v-for="(crumb, index) in breadcrumbs" :key="crumb.label">
+              <span v-if="index" class="sep" aria-hidden="true">›</span>
+              <RouterLink v-if="crumb.to" class="crumb-label" :to="crumb.to">{{ crumb.label }}</RouterLink>
+              <span v-else class="crumb-label" :aria-current="index === breadcrumbs.length - 1 ? 'page' : undefined">
+                {{ crumb.label }}
+              </span>
+            </li>
+          </ol>
+        </nav>
+        <form class="topbar-search" role="search" aria-label="顶部全局搜索" @submit.prevent="onGlobalSearch">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input ref="searchRef" v-model="keyword" type="search" placeholder="搜索用户 / 内容 / 工单 ID…（Ctrl + K）" @keydown.enter="onGlobalSearch" />
-        </div>
+          <input ref="searchRef" v-model="keyword" type="search" maxlength="80" aria-label="搜索用户、内容或工单 ID"
+            placeholder="用户、内容或工单 ID" title="Ctrl / ⌘ + K" />
+          <button type="submit">搜索</button>
+        </form>
         <div class="top-actions">
+          <RouterLink :to="{ name: 'AdminSearch' }" class="icon-btn mobile-search" aria-label="全局搜索" title="全局搜索">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          </RouterLink>
           <button class="icon-btn" title="切换主题" @click="toggleTheme">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
           </button>
@@ -77,11 +90,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '../store/admin'
 import { statsPendingCounts } from '../api/stats'
 import { matchesNavigationPath } from './adminSidebarNavigation.mjs'
+import { searchKeyword } from '../utils/searchQuery.mjs'
 
 const router = useRouter()
 const route = useRoute()
@@ -91,6 +105,9 @@ const searchRef = ref()
 const counts = ref({})
 const countError = ref(false)
 let countTimer = null
+watch(() => route.query.q, q => {
+  if (route.name === 'AdminSearch') keyword.value = searchKeyword(q)
+}, { immediate: true })
 
 const ICONS = {
   dashboard: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>',
@@ -158,6 +175,39 @@ const visibleGroups = computed(() =>
     .filter((g) => g.items.length > 0)
 )
 
+const breadcrumbs = computed(() => {
+  const title = route.meta.title || '管理后台'
+  if (route.name === 'Dashboard') return [{ label: title }]
+
+  const trail = [{ label: '首页', to: '/dashboard' }]
+  const searchQ = searchKeyword(route.query.searchQ)
+  if (searchQ && route.query.record) {
+    const target = route.query.searchTarget
+    trail.push({ label: '搜索结果', to: {
+      name: 'AdminSearch',
+      query: { q: searchQ, scope: route.query.searchScope, pages: route.query.searchPages },
+      hash: typeof target === 'string' && /^result-[a-z]+-[1-9]\d*$/.test(target) ? `#${target}` : ''
+    } })
+  }
+  const path = route.path.replace(/\/$/, '')
+  for (const group of visibleGroups.value) {
+    const item = group.items.find((entry) => matchesNavigationPath(entry.to, path))
+    if (!item) continue
+
+    if (group.label !== '概览' && group.label !== item.label) trail.push({ label: group.label })
+    if (path === item.to) return [...trail, { label: item.label }]
+
+    trail.push({ label: item.label, to: item.to })
+    break
+  }
+
+  if (route.name === 'NoticeEdit') {
+    const editing = route.params.id || (typeof route.query.draft === 'string' && route.query.draft)
+    return [...trail, { label: editing ? '编辑公告' : '新建公告' }]
+  }
+  return [...trail, { label: title }]
+})
+
 const adminAccount = computed(() => adminStore.adminInfo?.username || adminStore.adminInfo?.nickname || '')
 
 const roleText = computed(() => {
@@ -177,8 +227,8 @@ function isActive(to) {
 }
 
 function onGlobalSearch() {
-  const q = keyword.value.trim()
-  router.push(q ? { path: '/user', query: { q } } : '/user')
+  const q = searchKeyword(keyword.value)
+  router.push({ name: 'AdminSearch', query: q ? { q } : {} })
 }
 
 function toggleTheme() {
@@ -196,7 +246,9 @@ function logout() {
 function onKeydown(e) {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault()
-    searchRef.value?.focus()
+    if (searchRef.value?.offsetParent) searchRef.value.focus()
+    else if (route.name === 'AdminSearch') document.getElementById('admin-search-keyword')?.focus()
+    else router.push({ name: 'AdminSearch' })
   }
 }
 
@@ -341,28 +393,35 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 18px;
-  height: 64px;
-  padding: 0 28px;
+  min-height: 64px;
+  padding: 8px 28px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
 }
-.crumbs { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--ink-3); }
-.crumbs b { color: var(--ink); font-weight: 600; }
-.crumbs .sep { opacity: .5; }
-.topbar-search { flex: 1; max-width: 260px; min-width: 0; margin-left: auto; position: relative; }
+.crumbs { min-width: 0; font-size: var(--fs-sm); color: var(--ink-3); }
+.crumb-list { display: flex; flex-wrap: wrap; gap: 2px 8px; margin: 0; padding: 0; list-style: none; }
+.crumb-list li { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.crumb-label { padding-block: 3px; }
+.crumbs a { color: var(--brand-strong); text-decoration: none; }
+.crumbs a:hover, .crumbs a:focus-visible { text-decoration: underline; }
+.crumbs [aria-current="page"] { color: var(--ink); font-weight: 650; }
+.crumbs .sep { color: var(--ink-3); }
+.topbar-search { display: flex; flex: 1; max-width: 330px; min-width: 0; margin-left: auto; position: relative; }
 .topbar-search svg {
   position: absolute; left: 12px; top: 50%; width: 16px; height: 16px;
   transform: translateY(-50%); color: var(--ink-3); pointer-events: none;
 }
 .topbar-search input {
-  width: 100%; height: 38px; padding: 0 14px 0 36px;
-  border: 1px solid var(--line); border-radius: var(--r-sm);
+  flex: 1; min-width: 0; height: 38px; padding: 0 8px 0 36px;
+  border: 1px solid var(--line); border-radius: var(--r-sm) 0 0 var(--r-sm);
   background: var(--surface-2); color: var(--ink); font-size: var(--fs-sm);
   transition: border-color .2s, box-shadow .2s, background .2s;
 }
+.topbar-search button { flex: none; border: 0; border-radius: 0 var(--r-sm) var(--r-sm) 0; padding-inline: 10px; background: var(--brand); color: #fff; cursor: pointer; }
 .topbar-search input:focus { outline: none; border-color: var(--brand); background: var(--surface); box-shadow: 0 0 0 3px var(--brand-soft); }
-.top-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.top-actions { display: flex; flex: none; align-items: center; gap: 12px; margin-left: auto; }
 .topbar-search + .top-actions { margin-left: 0; }
+.top-actions .mobile-search { display: none; }
 .icon-btn {
   position: relative;
   width: 38px;
@@ -399,12 +458,19 @@ onUnmounted(() => {
   .nav-group { margin: 5px 0; }
   .nav-item { justify-content: center; padding: 10px 0; }
   .brand, .sidebar-foot { justify-content: center; padding: 12px 0; }
-  .crumbs { display: none; }
 }
 @media (max-width: 780px) {
   .content { padding: var(--s-4); }
-  .topbar { padding: 0 var(--s-4); }
+  .topbar { padding-inline: var(--s-4); }
   .topbar-search { display: none; }
   .topbar-search + .top-actions { margin-left: auto; }
+  .top-actions .mobile-search { display: grid; }
+}
+@media (max-width: 480px) {
+  .topbar { gap: 10px; padding-inline: 12px; }
+  .crumb-list, .crumb-list li { column-gap: 5px; }
+  .crumb-list li { white-space: normal; }
+  .top-actions { gap: 6px; }
+  .top-actions .icon-btn { width: 30px; height: 32px; }
 }
 </style>

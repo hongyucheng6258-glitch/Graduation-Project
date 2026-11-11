@@ -10,7 +10,7 @@ export function postDetail(id) {
 }
 
 export function listPost(params) {
-  return request.get('/post/list', { params })
+  return request.get('/post/list', { params: { ...params, compactImages: true } })
 }
 
 export function likePost(id) {

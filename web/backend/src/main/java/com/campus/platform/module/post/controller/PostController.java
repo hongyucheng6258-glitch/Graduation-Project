@@ -16,6 +16,9 @@ import com.campus.platform.common.UserContext;
 import com.campus.platform.config.SystemConfigHolder;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -37,10 +40,19 @@ public class PostController {
     public R<PageResult<PostVO>> list(
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize) {
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(defaultValue = "false") boolean compactImages) {
         UserContext.CurrentUser current = UserContext.get();
         Long uid = current == null ? null : current.uid();
-        return R.ok(postService.list(uid, keyword, pageNum, pageSize));
+        return R.ok(postService.list(uid, keyword, pageNum, pageSize, compactImages));
+    }
+
+    @GetMapping("/{id}/images/{index}")
+    public ResponseEntity<byte[]> image(@PathVariable Long id, @PathVariable int index) {
+        var image = postService.image(id, index);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .contentType(MediaType.parseMediaType(image.contentType()))
+                .header("X-Content-Type-Options", "nosniff").body(image.bytes());
     }
 
     /** 动态详情（分享直达；仅返回审核通过的可见动态） */

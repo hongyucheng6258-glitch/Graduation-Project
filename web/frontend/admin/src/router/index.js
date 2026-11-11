@@ -17,6 +17,7 @@ const routes = [
     redirect: '/dashboard',
     children: [
       { path: 'dashboard', name: 'Dashboard', component: () => import('../views/dashboard/Dashboard.vue'), meta: { title: '数据大屏' } },
+      { path: 'search', name: 'AdminSearch', component: () => import('../views/search/AdminSearch.vue'), meta: { title: '全局搜索' } },
       { path: 'assistant', name: 'AdminAssistant', component: () => import('../views/ai/AdminAssistant.vue'), meta: { title: '管理智能助手' } },
       { path: 'user', name: 'UserList', component: () => import('../views/user/UserList.vue'), meta: { title: '用户管理' } },
       { path: 'audit/activity', name: 'ActivityAudit', component: () => import('../views/audit/AuditModule.vue'), props: { type: 'activity' }, meta: { title: '活动审核' } },
@@ -41,7 +42,14 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory('/admin/'),
-  routes
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to.name === 'AdminSearch' && from.name === 'AdminSearch' && to.query.q === from.query.q
+        && to.query.scope === from.query.scope) return false
+    if (to.name === 'AdminSearch' || from.name === 'AdminSearch') return { top: 0 }
+    if (from.name === 'Dashboard' && to.name === 'IdleAudit' && to.query.record) return { top: 0 }
+  }
 })
 
 // 权限守卫：未登录跳登录页；superOnly 页面校验角色

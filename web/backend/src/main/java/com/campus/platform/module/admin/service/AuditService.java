@@ -3,6 +3,8 @@ package com.campus.platform.module.admin.service;
 import com.campus.platform.module.message.service.MessageService;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
@@ -97,22 +99,37 @@ public class AuditService {
     }
 
     /** 全量内容列表：自动通过、人工通过、待审核、已驳回均可管理。 */
-    public PageResult<?> allList(String type, int pageNum, int pageSize) {
+    public PageResult<?> allList(String type, String keyword, Long record, int pageNum, int pageSize) {
         return switch (type) {
-            case Constants.BIZ_IDLE -> PageResult.of(idleItemMapper.selectPage(
-                    new Page<>(pageNum, pageSize), new LambdaQueryWrapper<IdleItem>().orderByDesc(IdleItem::getId)));
-            case Constants.BIZ_ACTIVITY -> PageResult.of(activityMapper.selectPage(
-                    new Page<>(pageNum, pageSize), new LambdaQueryWrapper<Activity>().orderByDesc(Activity::getId)));
-            case Constants.BIZ_LOSTFOUND -> PageResult.of(lostFoundMapper.selectPage(
-                    new Page<>(pageNum, pageSize), new LambdaQueryWrapper<LostFound>().orderByDesc(LostFound::getId)));
-            case Constants.BIZ_POST -> PageResult.of(postMapper.selectPage(
-                    new Page<>(pageNum, pageSize), new LambdaQueryWrapper<Post>().orderByDesc(Post::getId)));
-            case Constants.BIZ_PARTNER -> PageResult.of(studyPartnerMapper.selectPage(
-                    new Page<>(pageNum, pageSize), new LambdaQueryWrapper<StudyPartner>().orderByDesc(StudyPartner::getId)));
-            case Constants.BIZ_QA -> PageResult.of(questionMapper.selectPage(
-                    new Page<>(pageNum, pageSize), new LambdaQueryWrapper<CampusQuestion>().orderByDesc(CampusQuestion::getId)));
+            case Constants.BIZ_IDLE -> searchList(idleItemMapper, pageNum, pageSize, keyword, record,
+                    IdleItem::getId, IdleItem::getTitle, IdleItem::getDescription);
+            case Constants.BIZ_ACTIVITY -> searchList(activityMapper, pageNum, pageSize, keyword, record,
+                    Activity::getId, Activity::getTitle, Activity::getDescription);
+            case Constants.BIZ_LOSTFOUND -> searchList(lostFoundMapper, pageNum, pageSize, keyword, record,
+                    LostFound::getId, LostFound::getTitle, LostFound::getDescription);
+            case Constants.BIZ_POST -> searchList(postMapper, pageNum, pageSize, keyword, record,
+                    Post::getId, Post::getContent);
+            case Constants.BIZ_PARTNER -> searchList(studyPartnerMapper, pageNum, pageSize, keyword, record,
+                    StudyPartner::getId, StudyPartner::getSubject, StudyPartner::getGoal, StudyPartner::getIntro);
+            case Constants.BIZ_QA -> searchList(questionMapper, pageNum, pageSize, keyword, record,
+                    CampusQuestion::getId, CampusQuestion::getTitle, CampusQuestion::getContent);
             default -> throw new BizException(ResultCode.BAD_REQUEST, "不支持的内容类型: " + type);
         };
+    }
+
+    @SafeVarargs
+    private <T> PageResult<T> searchList(BaseMapper<T> mapper, int pageNum, int pageSize,
+                                       String keyword, Long record, SFunction<T, Long> id,
+                                       SFunction<T, String> firstField, SFunction<T, String>... otherFields) {
+        var query = new LambdaQueryWrapper<T>().eq(record != null, id, record);
+        if (keyword != null && !keyword.isBlank()) {
+            String text = keyword.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+            query.and(fields -> {
+                fields.like(firstField, text);
+                for (var field : otherFields) fields.or().like(field, text);
+            });
+        }
+        return PageResult.of(mapper.selectPage(new Page<>(pageNum, pageSize), query.orderByDesc(id)));
     }
 
     /** 审核通过 → 通知作者 */

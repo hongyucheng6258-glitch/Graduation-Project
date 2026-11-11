@@ -1,0 +1,136 @@
+TAP version 13
+# Subtest: uses the existing localhost addresses by default
+ok 1 - uses the existing localhost addresses by default
+  ---
+  duration_ms: 0.9596
+  type: 'test'
+  ...
+# Subtest: allows an isolated browser environment to override every address
+ok 2 - allows an isolated browser environment to override every address
+  ---
+  duration_ms: 0.1755
+  type: 'test'
+  ...
+# Subtest: uses a repository-relative directory for local E2E image fixtures
+ok 3 - uses a repository-relative directory for local E2E image fixtures
+  ---
+  duration_ms: 0.1968
+  type: 'test'
+  ...
+# Subtest: allows E2E image fixtures to live outside the repository
+ok 4 - allows E2E image fixtures to live outside the repository
+  ---
+  duration_ms: 0.1588
+  type: 'test'
+  ...
+# Subtest: returns zero when all executed checks pass
+ok 5 - returns zero when all executed checks pass
+  ---
+  duration_ms: 0.7585
+  type: 'test'
+  ...
+# Subtest: returns zero for documented uncovered checks without failures
+ok 6 - returns zero for documented uncovered checks without failures
+  ---
+  duration_ms: 0.0944
+  type: 'test'
+  ...
+# Subtest: returns non-zero when any check fails or is blocked
+ok 7 - returns non-zero when any check fails or is blocked
+  ---
+  duration_ms: 0.0654
+  type: 'test'
+  ...
+# Subtest: returns non-zero when a test category throws before recording a result
+ok 8 - returns non-zero when a test category throws before recording a result
+  ---
+  duration_ms: 0.0652
+  type: 'test'
+  ...
+# Subtest: runs all categories when no filter is supplied
+ok 9 - runs all categories when no filter is supplied
+  ---
+  duration_ms: 0.105
+  type: 'test'
+  ...
+# Subtest: accepts known categories and rejects empty or unknown filters
+ok 10 - accepts known categories and rejects empty or unknown filters
+  ---
+  duration_ms: 0.74
+  type: 'test'
+  ...
+# Subtest: rejects a bare --only flag instead of silently running every category
+ok 11 - rejects a bare --only flag instead of silently running every category
+  ---
+  duration_ms: 0.1747
+  type: 'test'
+  ...
+# Subtest: captures an ended canvas only for its drawer and keeps the source image
+ok 12 - captures an ended canvas only for its drawer and keeps the source image
+  ---
+  duration_ms: 0.9245
+  type: 'test'
+  ...
+# Subtest: converts a preserved data URL into an uploadable PNG blob
+ok 13 - converts a preserved data URL into an uploadable PNG blob
+  ---
+  duration_ms: 0.3387
+  type: 'test'
+  ...
+# Subtest: rebuilds persisted pen and eraser strokes on a detached canvas
+ok 14 - rebuilds persisted pen and eraser strokes on a detached canvas
+  ---
+  duration_ms: 0.9294
+  type: 'test'
+  ...
+# Subtest: rejects malformed, empty, and unrenderable stored strokes
+ok 15 - rejects malformed, empty, and unrenderable stored strokes
+  ---
+  duration_ms: 0.1527
+  type: 'test'
+  ...
+# Subtest: maps only unique pending artworks that are not already saved
+ok 16 - maps only unique pending artworks that are not already saved
+  ---
+  duration_ms: 0.2632
+  type: 'test'
+  ...
+# Subtest: draw game socket uses its own endpoint and sends the one-time ticket only in the query
+ok 17 - draw game socket uses its own endpoint and sends the one-time ticket only in the query
+  ---
+  duration_ms: 0.5425
+  type: 'test'
+  ...
+# Subtest: normalizes pointer coordinates and ignores zero-sized canvases
+ok 18 - normalizes pointer coordinates and ignores zero-sized canvases
+  ---
+  duration_ms: 0.5164
+  type: 'test'
+  ...
+# Subtest: limits strokes to the server cap while preserving the first and last points
+ok 19 - limits strokes to the server cap while preserving the first and last points
+  ---
+  duration_ms: 0.6287
+  type: 'test'
+  ...
+# Subtest: sends stroke fields in the flat shape accepted by the server
+ok 20 - sends stroke fields in the flat shape accepted by the server
+  ---
+  duration_ms: 0.1381
+  type: 'test'
+  ...
+# Subtest: parses only typed events and keeps reconnect delay bounded
+ok 21 - parses only typed events and keeps reconnect delay bounded
+  ---
+  duration_ms: 0.2113
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 208.3351

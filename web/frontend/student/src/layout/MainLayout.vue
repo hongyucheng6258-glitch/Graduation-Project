@@ -446,7 +446,7 @@ onUnmounted(() => {
 /* 顶栏搜索 */
 .header-search {
   display: grid;
-  grid-template-columns: 57px minmax(90px, 132px) auto;
+  grid-template-columns: minmax(64px, max-content) minmax(90px, 132px) auto;
   align-items: center;
   height: 38px;
   border: 1px solid var(--line);
@@ -652,9 +652,13 @@ onUnmounted(() => {
   .footer-links > span { font-size: 10px; }
 }
 @media (max-width: 370px) {
-  .header-inner { padding: 0 12px; gap: 7px; }
-  .header-inner .brand b { font-size: 18px; }
+  .header-inner { padding: 0 8px; gap: 4px; }
+  .header-inner > .brand { gap: 5px; }
+  .header-inner .brand b { font-size: 16px; }
   .header-inner .brand-symbol { height: 26px; width: 26px; }
   .header-inner .top-actions { gap: 3px; }
+  .top-actions .icon-btn { padding: 5px; }
+  .top-actions :deep(.wt-theme) { width: 32px; height: 32px; }
+  .header-publish { width: 32px; }
 }
 </style>

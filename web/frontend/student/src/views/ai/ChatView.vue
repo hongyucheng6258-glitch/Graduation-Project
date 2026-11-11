@@ -2,6 +2,7 @@
   <AssistantShell ref="assistantShell" v-model:mode="tab" v-model:question="question" :tabs="sceneTabs"
     :title="sceneTitle" :subtitle="sceneSubtitle" :sessions="sessions" :active-id="currentSession?.id"
     :placeholder="placeholder" :prompts="!messages.length && tab !== 'pdf' ? quickPrompts : []"
+    :empty-title="!messages.length && !asking && !switching ? welcomeTitle : ''" :empty-description="welcomeDescription"
     :busy="asking || switching" footnote="AI 回答由 DeepSeek 生成，关键信息请自行核对。"
     @new-session="newSession" @select-session="switchSession" @send="send" @prompt="askQuick">
     <template #session-actions="{ session }">
@@ -32,6 +33,14 @@
     <template v-for="(m, i) in messages" :key="i">
       <AssistantBubble :role="m.role" :content="m.content" :streaming="m.streaming"
         :render-markdown="renderMarkdown" :nickname="userStore.userInfo?.nickname || '我'" :user-avatar="userStore.userInfo?.avatar" />
+      <AssistantCard v-if="m.guideUnavailable">
+        <div class="guide-fallback-links" aria-label="继续使用校园服务">
+          <RouterLink to="/activity/publish">发布活动</RouterLink>
+          <RouterLink :to="{ name: 'MySignup', query: { tab: 'published' } }">查看我的活动</RouterLink>
+          <RouterLink to="/idle">查找闲置</RouterLink>
+          <RouterLink to="/idle/appointments">查看我的预约</RouterLink>
+        </div>
+      </AssistantCard>
       <IdleGuideCards v-if="m.idleItems?.length" :items="m.idleItems" :contacting="contactingIdle" :numbered="m.idleSearch"
         @contact="contactIdle" />
       <AssistantCard v-for="resource in m.resources || []" :key="`${resource.kind}-${resource.id}`" class="resource-card">
@@ -82,7 +91,6 @@
         </el-button>
       </AssistantCard>
     </template>
-    <WtEmptyState v-if="!messages.length" type="empty" title="开始提问吧" description="支持多轮上下文追问，AI 会记得聊过的内容" />
   </AssistantShell>
 </template>
 
@@ -142,14 +150,17 @@ const pdfIndexLabel = computed(() => {
 })
 
 const sceneTabs = [
-  { value: 'chat', label: '💬 AI答疑' },
-  { value: 'guide', label: '🏫 校园向导' },
-  { value: 'pdf', label: '📄 PDF问答' }
+  { value: 'chat', label: 'AI答疑' },
+  { value: 'guide', label: '校园向导' },
+  { value: 'pdf', label: 'PDF问答' }
 ]
 
 const sceneTitle = computed(() => tab.value === 'pdf' ? 'PDF 问答' : tab.value === 'guide' ? 'AI 校园向导' : 'AI 自由对话')
 const sceneSubtitle = computed(() => tab.value === 'guide'
   ? (capabilities.value.enabled ? '查活动、校园资料和闲置，生成发布草稿' : '实时校园数据问答') : '学习助手')
+const welcomeTitle = computed(() => tab.value === 'pdf' ? '和课件聊一聊' : tab.value === 'guide' ? '想了解校园的什么？' : '今天想聊点什么？')
+const welcomeDescription = computed(() => tab.value === 'pdf' ? '上传 PDF 课件，或从历史会话继续提问。'
+  : tab.value === 'guide' ? sceneSubtitle.value : '可以问一道题、梳理知识点，也可以从下面的问题开始。')
 const placeholder = computed(() => tab.value === 'pdf' ? '针对 PDF 文档内容提问…'
   : tab.value === 'guide' ? '问问校园，例如周末有什么活动？' : '输入你的问题，按回车发送')
 
@@ -408,7 +419,12 @@ async function send() {
         refreshSessionList().catch(() => {})
       }
     } catch (e) {
-      onError(e?.code || 1002, e?.message || 'AI服务调用失败')
+      const code = e?.code || 1002
+      if (isCurrent() && !responseAction(code)) {
+        msg.guideUnavailable = true
+        if (!question.value) question.value = q
+      }
+      onError(code, e?.message || 'AI服务调用失败')
     } finally {
       if (!isCurrent()) return
       msg.streaming = false
@@ -601,14 +617,17 @@ function activityDraftStatus(status) {
 </script>
 
 <style scoped>
+.guide-fallback-links { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.guide-fallback-links a { color: var(--brand-strong); }
 .pdf-bar {
   padding: 10px 16px;
   border-bottom: 1px solid var(--line);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
 }
-.pdf-info { font-size: 13px; color: var(--success); }
+.pdf-info { font-size: 13px; color: var(--success); overflow-wrap: anywhere; }
 .pdf-tip { font-size: 13px; color: var(--ink-3); }
 .s-more { color: var(--ink-3); cursor: pointer; }
 .s-more:hover { color: var(--ink); }

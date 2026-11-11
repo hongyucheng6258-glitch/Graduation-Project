@@ -3,11 +3,25 @@
     <WtPageHeader title="内容管理" subtitle="管理已发布内容的下架与恢复。" />
 
     <div class="admin-list-toolbar">
-      <el-select v-model="type" aria-label="内容类型" style="width: 160px" @change="resetType">
+      <RouterLink v-if="record" :to="{ name: 'ContentManage', query: { type } }">查看全部{{ contentTypes[type] }}</RouterLink>
+      <el-select v-else v-model="type" aria-label="内容类型" style="width: 160px" @change="resetType">
         <el-option v-for="(label, value) in contentTypes" :key="value" :label="label" :value="value" />
       </el-select>
     </div>
-    <el-table class="admin-list-table" :data="list" :scrollbar-tabindex="0" v-loading="loading" empty-text="暂无此类内容">
+    <div v-if="record" v-loading="loading">
+      <AdminRecordCard v-if="list[0]" :id="record" :title="titleOf(list[0]) || contentTypes[type]"
+        :status="statusText(list[0])" :tone="isOff(list[0]) ? 'info' : 'success'"
+        :fields="[['类型', contentTypes[type]], ['作者 ID', list[0].userId], ['发布时间', formatTime(list[0].createTime) || '—']]"
+        :description="list[0].description || list[0].intro || list[0].content || ''">
+        <template v-if="canManage(list[0])" #actions>
+          <el-button v-if="!isOff(list[0])" type="danger" plain @click="doOff(list[0])">下架</el-button>
+          <el-button v-else type="primary" @click="doOn(list[0])">恢复上架</el-button>
+          <el-button v-if="type === 'activity' && !isOff(list[0])" @click="openReport(list[0])">签到报表</el-button>
+        </template>
+      </AdminRecordCard>
+      <p v-else-if="!loading" role="status">{{ loadError || '没有找到该内容。' }}</p>
+    </div>
+    <el-table v-else class="admin-list-table" :data="list" :scrollbar-tabindex="0" v-loading="loading" empty-text="暂无此类内容">
       <el-table-column label="类型" width="110">
         <template #default>
           <el-tag size="small" round type="info">{{ contentTypes[type] }}</el-tag>
@@ -46,7 +60,7 @@
         </template>
       </el-table-column>
     </el-table>
-    <el-pagination class="admin-list-pagination" v-model:current-page="pageNum" :total="total" :page-size="10"
+    <el-pagination v-if="!record" class="admin-list-pagination" v-model:current-page="pageNum" :total="total" :page-size="10"
                    :pager-count="5" layout="total, prev, pager, next" />
 
     <!-- 签到报表弹窗 -->
@@ -85,12 +99,15 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
+import AdminRecordCard from '../../components/AdminRecordCard.vue'
 import { ElMessage } from 'element-plus'
 import { auditAll } from '../../api/audit'
 import { contentOff, contentOn, signinReport, exportMembers, exportSignins } from '../../api/content'
 import { formatTime } from '../../utils/date'
+import { searchRecordId } from '../../utils/searchQuery.mjs'
 
 const contentTypes = {
   activity: '活动',
@@ -100,11 +117,15 @@ const contentTypes = {
   qa: '互助问答',
 }
 
-const type = ref('activity')
+const route = useRoute()
+const record = computed(() => searchRecordId(route.query.record))
+const readType = value => typeof value === 'string' && Object.hasOwn(contentTypes, value) ? value : 'activity'
+const type = ref(readType(route.query.type))
 const list = ref([])
 const total = ref(0)
 const pageNum = ref(1)
 const loading = ref(false)
+const loadError = ref('')
 let requestVersion = 0
 
 const reportVisible = ref(false)
@@ -156,11 +177,18 @@ function resetType() {
 async function load() {
   const version = ++requestVersion
   loading.value = true
+  loadError.value = ''
   try {
-    const res = await auditAll({ type: type.value, pageNum: pageNum.value, pageSize: 10 })
+    const res = await auditAll({ type: type.value, record: record.value, pageNum: pageNum.value, pageSize: 10 })
     if (version !== requestVersion) return
     list.value = res.list
     total.value = res.total
+  } catch (error) {
+    if (version === requestVersion) {
+      list.value = []
+      total.value = 0
+      loadError.value = error.message || '无法读取内容记录。'
+    }
   } finally {
     if (version === requestVersion) loading.value = false
   }
@@ -188,7 +216,11 @@ async function openReport(row) {
   }
 }
 
-watch([type, pageNum], load, { immediate: true })
+watch([() => route.query.type, record], ([value]) => {
+  type.value = readType(value)
+  resetType()
+})
+watch([type, pageNum, record], load, { immediate: true })
 </script>
 
 <style scoped>

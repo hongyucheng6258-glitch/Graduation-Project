@@ -37,6 +37,7 @@
         <span class="error-icon" aria-hidden="true">!</span>
         <strong>3D场景暂时无法打开</strong>
         <p>{{ errorMessage }}</p>
+        <button type="button" class="primary-button" @click="mapOpen = true">从导览打开校园服务</button>
         <button class="primary-button" type="button" @click="boot">重新加载场景</button>
       </div>
 
@@ -120,6 +121,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch 
 import { useRouter } from 'vue-router'
 import { createCampusScene } from '../../features/campus3d/campus-scene.js'
 import { GROUPS, SERVICES, getRoomProfile } from '../../features/campus3d/campus-data.js'
+import { SERVICE_PATHS } from '../../features/campus3d/room-router.mjs'
 import CampusWorkspace from './CampusWorkspace.vue'
 import { useUserStore } from '../../store/user'
 import { useChatStore } from '../../store/chat'
@@ -221,8 +223,13 @@ function goHall() {
 
 function navigateToService(id) {
   mapOpen.value = false
+  if (!scene.value || errorMessage.value) {
+    const path = SERVICE_PATHS[id]
+    if (path) router.push(path)
+    return
+  }
   if (!explorationStarted.value) startExplore()
-  scene.value?.navigate(id, { instant: comfort.value })
+  scene.value.navigate(id, { instant: comfort.value })
 }
 
 function cancelTravel() {

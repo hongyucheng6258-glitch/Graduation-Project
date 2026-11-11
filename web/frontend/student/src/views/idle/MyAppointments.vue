@@ -1,58 +1,42 @@
 <template>
-  <WtPageHeader title="我的预约" subtitle="我申请交换的闲置物品" eyebrow="我的" />
-
-  <div class="my-appointments">
+  <div class="my-appointments record-page">
+    <WtPageHeader title="我的预约" subtitle="查看发起和收到的闲置互换预约" eyebrow="我的" />
     <el-card>
-      <template #header><h3>我的预约（闲置互换）</h3></template>
-      <el-tabs v-model="role" @tab-change="load">
-        <el-tab-pane label="我发起的（买家）" name="buyer" />
-        <el-tab-pane label="我收到的（卖家）" name="seller" />
+      <el-tabs v-model="role" @tab-change="changeRole">
+        <el-tab-pane label="我发起的" name="buyer" />
+        <el-tab-pane label="我收到的" name="seller" />
       </el-tabs>
-      <el-table :data="list" v-loading="loading">
-        <el-table-column label="物品" min-width="180">
-          <template #default="{ row }">
+      <div v-loading="loading" class="record-list">
+        <article v-for="row in list" :key="row.id" class="record-row">
+          <header class="record-head">
             <div class="item-cell">
-              <el-image v-if="row.itemImage" :src="row.itemImage" fit="cover" class="thumb" />
-              <span>{{ row.itemTitle }}</span>
+              <el-image v-if="row.itemImage" :src="row.itemImage" fit="contain" class="thumb" />
+              <strong>{{ row.itemTitle }}</strong>
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column :label="role === 'buyer' ? '卖家' : '买家'" width="120">
-          <template #default="{ row }">{{ role === 'buyer' ? row.sellerNickname : row.buyerNickname }}</template>
-        </el-table-column>
-        <el-table-column prop="message" label="留言" min-width="160" show-overflow-tooltip />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="220">
-          <template #default="{ row }">
-            <!-- 卖家处理待确认预约 -->
+            <el-tag :type="statusType(row.status)" size="small">{{ statusText(row.status) }}</el-tag>
+          </header>
+          <div class="record-meta">
+            <span>{{ role === 'buyer' ? '卖家' : '买家' }} {{ (role === 'buyer' ? row.sellerNickname : row.buyerNickname) || '校园同学' }}</span>
+          </div>
+          <p v-if="row.message" class="record-note">{{ row.message }}</p>
+          <div class="record-actions">
             <template v-if="role === 'seller' && row.status === 0">
               <el-button size="small" type="success" @click="handle(row, true)">接受</el-button>
               <el-button size="small" type="danger" @click="handle(row, false)">拒绝</el-button>
             </template>
-            <!-- 已接受 → 确认完成 -->
             <el-button v-if="row.status === 1" size="small" type="primary" @click="finish(row)">确认完成</el-button>
-            <!-- 已完成 → 互评 -->
             <el-button v-if="row.status === 3 && !row.reviewed" size="small" type="warning" @click="openReview(row)">评价</el-button>
             <span v-if="row.status === 3 && row.reviewed" class="done-text">已评价</span>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination
-        v-model:current-page="pageNum"
-        :total="total"
-        :page-size="10"
-        layout="prev, pager, next"
-        style="margin-top: 16px"
-        @current-change="load"
-      />
+          </div>
+        </article>
+        <EmptyBox v-if="!loading && !list.length" description="暂无预约记录" />
+      </div>
+      <el-pagination v-if="total > 10" v-model:current-page="pageNum" :total="total" :page-size="10"
+        class="record-pager" layout="prev, pager, next" :pager-count="5" small @current-change="load" />
     </el-card>
 
     <!-- 互评弹窗 -->
-    <el-dialog v-model="reviewVisible" title="交易互评" width="420px">
+    <el-dialog v-model="reviewVisible" title="交易互评" width="min(420px, calc(100vw - 24px))">
       <div class="rate-row">
         <span>评分：</span>
         <el-rate v-model="reviewForm.score" />
@@ -69,6 +53,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import EmptyBox from '../../components/EmptyBox.vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import { ElMessage } from 'element-plus'
 import { myAppointments, handleAppoint, finishAppoint, reviewAppoint } from '../../api/idle'
@@ -89,6 +74,11 @@ const STATUS = ['待确认', '已接受', '已拒绝', '已完成', '已取消']
 const TYPES = ['warning', 'success', 'danger', 'info', 'info']
 const statusText = (s) => STATUS[s] ?? ''
 const statusType = (s) => TYPES[s] ?? 'info'
+
+function changeRole() {
+  pageNum.value = 1
+  load()
+}
 
 async function load() {
   loading.value = true
@@ -135,6 +125,8 @@ async function doReview() {
 onMounted(load)
 </script>
 
+<style scoped src="../../styles/records.css" />
+
 <style scoped>
 .item-cell {
   display: flex;
@@ -142,9 +134,11 @@ onMounted(load)
   gap: 8px;
 }
 .thumb {
+  flex: none;
   width: 40px;
   height: 40px;
   border-radius: 4px;
+  background: var(--surface-2);
 }
 .rate-row {
   display: flex;

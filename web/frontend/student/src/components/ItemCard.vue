@@ -1,9 +1,9 @@
 <template>
   <!-- 通用内容卡片：封面图 + 标题 + 摘要 + 底部信息（闲置/活动/失物列表复用）
        第9项修复：module/category 传入兜底语义；加载失败换兜底图（防递归）；兜底时标注"示意图"；懒加载 -->
-  <el-card class="item-card" shadow="hover" @click="$emit('click')">
+  <el-card class="item-card" :class="{ 'item-card--feed': feed }" :shadow="feed ? 'never' : 'hover'" @click="$emit('click')">
     <div class="cover" v-if="resolvedCover">
-      <el-image :src="resolvedCover" fit="cover" class="cover-img" lazy @error="onError" />
+      <el-image :src="resolvedCover" fit="contain" class="cover-img" lazy @error="onError" />
       <span v-if="isSchematic" class="schematic-tag">示意图</span>
       <span v-if="$slots.badge" class="cover-badge"><slot name="badge" /></span>
     </div>
@@ -31,6 +31,7 @@ import { fromNow } from '../utils/date'
 import { fallbackFor, onImageError, isFallbackSrc } from '../utils/content-assets.mjs'
 
 const props = defineProps({
+  feed: Boolean,
   cover: { type: String, default: '' },
   title: { type: String, default: '' },
   desc: { type: String, default: '' },
@@ -69,7 +70,9 @@ function onError(event) {
 .cover {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 10;
+  min-height: 160px;
+  max-height: 230px;
   background: var(--surface-2);
   display: flex;
   align-items: center;
@@ -129,4 +132,19 @@ function onError(event) {
   font-size: 12px;
   color: var(--ink-3);
 }
+.item-card--feed {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.item-card--feed .cover {
+  aspect-ratio: 1;
+  min-height: 0;
+  max-height: none;
+  border-radius: 8px;
+}
+.item-card--feed .body { padding: 9px 0 0; }
+.item-card--feed .desc:empty { display: none; }
+.item-card--feed .title { min-height: 0; overflow-wrap: anywhere; line-height: 1.45; }
+.item-card--feed .footer { margin-top: 4px; }
 </style>

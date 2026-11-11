@@ -1,5 +1,4 @@
 <template>
-  <!-- 聊天气泡：用户右侧蓝色，AI 左侧白色 + Markdown 渲染 -->
   <div class="bubble-row" :class="{ mine: role === 'user' }">
     <span v-if="role !== 'user'" class="avatar ai-avatar" aria-hidden="true">AI</span>
     <div class="bubble" :class="role">
@@ -45,20 +44,20 @@ watch(() => props.userAvatar, () => { avatarFailed.value = false })
 .avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; overflow: hidden; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
 .ai-avatar {
-  background: linear-gradient(140deg, var(--brand), var(--accent));
-  color: #fff;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
   font-size: 12px;
   flex: none;
 }
 .user-avatar {
-  background: linear-gradient(140deg, var(--brand), var(--brand-strong));
-  color: var(--brand-ink);
+  background: var(--surface-2);
+  color: var(--ink-2);
   font-size: 12px;
   flex: none;
 }
 .bubble {
-  max-width: 78%;
-  padding: 12px 16px;
+  min-width: 0;
+  padding: 7px 0;
   border-radius: var(--r-md);
   font-size: 14px;
   line-height: 1.7;
@@ -66,14 +65,15 @@ watch(() => props.userAvatar, () => { avatarFailed.value = false })
   overflow-wrap: anywhere;
 }
 .bubble.user {
-  background: linear-gradient(140deg, var(--brand), var(--brand-strong));
-  color: var(--brand-ink);
-  border-top-right-radius: 4px;
+  max-width: min(84%, 590px);
+  padding: 9px 14px;
+  background: var(--brand-soft);
+  color: var(--ink);
+  border-radius: 16px;
 }
 .bubble.assistant {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-top-left-radius: 4px;
+  max-width: calc(100% - 44px);
+  color: var(--ink);
 }
 .plain {
   white-space: pre-wrap;

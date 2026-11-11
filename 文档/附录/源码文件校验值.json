@@ -1,0 +1,2574 @@
+{
+  "createdAt": "2026-10-29 11:44:19 Asia/Shanghai",
+  "algorithm": "SHA256",
+  "files": [
+    {
+      "path": "测试素材/02-机械键盘.png",
+      "sha256": "edb76a82f59b2d2699ba28ce5b47b06b8fc4c3b304245f34ad0baf8bffe4ae59"
+    },
+    {
+      "path": "测试素材/03-山地自行车.png",
+      "sha256": "789c435940af29a7e507b6564d4f53b59d2c3d02e3c48e2a96d32d12759bf866"
+    },
+    {
+      "path": "测试素材/05-校园晚霞.png",
+      "sha256": "10d8796a0b530d935c5849764a8a8d3d1350619a5eccb963fc6ef10ea52b2d9c"
+    },
+    {
+      "path": ".dockerignore",
+      "sha256": "c4de70437a9283fb37cca22e3c34cda2acea879e48822019cfa1a0cc065d163e"
+    },
+    {
+      "path": ".env.example",
+      "sha256": "6c4af51806140b349d1ac434a8dda425b5c31b731c56e1e7826ad23e3167457e"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "e6666a78b78aef51673691c0ec2d0e0d11120ef3f3bcad650d3dc4458a9288dd"
+    },
+    {
+      "path": "README.md",
+      "sha256": "2540539b228aac5da815166327b373527d2e17539698e1a26884dc3f9f9f212a"
+    },
+    {
+      "path": "docker-compose.e2e.yml",
+      "sha256": "03b2b93aa65ae5f31f94ac8a723e6bf10d1a0329f4bcb483f6154d8e03450224"
+    },
+    {
+      "path": "docker-compose.yml",
+      "sha256": "a876a08a63febdd9fee73777a308ddfaf4a58e20c62ce56cbff1cad855e91c67"
+    },
+    {
+      "path": "docker/Dockerfile.admin",
+      "sha256": "9099a8cde451b52949210871450d55900836e5274958921e576d7a55db068a2f"
+    },
+    {
+      "path": "docker/Dockerfile.backend",
+      "sha256": "3a3f0f1cad2239cdc41b003d92633e56bc011c4061df708639bc3f81250b5ca5"
+    },
+    {
+      "path": "docker/Dockerfile.student",
+      "sha256": "a6f04fbaa00a663aee977b6368909513339007910aeb12e0e9a668cbd9913e29"
+    },
+    {
+      "path": "docker/mysql/02-app-extension.sql",
+      "sha256": "9bea3e7c1eec107561dc6c936cd12fb05dc1a728dc48ebabc8e2c8f20b99f7bc"
+    },
+    {
+      "path": "docker/nginx/admin.conf",
+      "sha256": "941ea83c23ada13d9bd7a9f7a1332097dd4069580c66b1ac65349830dc8e5731"
+    },
+    {
+      "path": "docker/nginx/student.conf",
+      "sha256": "36ddca469df19d2c2767586d0c445331b1045aa0dc4440b0c59fa1dd90db558e"
+    },
+    {
+      "path": "docker/scripts/init_demo_data.py",
+      "sha256": "e1e11795a08d6b3c24e59e3a1595224ef3762faee34b5973a06ecc9591d8c29c"
+    },
+    {
+      "path": "docker/scripts/init_demo_data_docker.py",
+      "sha256": "5e4e7c3e88fa1e000c32e6f85c92798a22af80ee2e04c2744bdde7067c33c51c"
+    },
+    {
+      "path": "tests/browser/e2e/cleanup.cjs",
+      "sha256": "3fa4be1b9707dc9dc9926e3209a8305ff5097d491186696002762c79c16dfb43"
+    },
+    {
+      "path": "tests/browser/e2e/config.cjs",
+      "sha256": "a412c4f557292930a3aecd671811a14ad777f332cf9063785c6f50e3e3602528"
+    },
+    {
+      "path": "tests/browser/e2e/config.test.cjs",
+      "sha256": "8f9b2958564b9582bafd5098116b408f588533403adba9bd8971b0c221612891"
+    },
+    {
+      "path": "tests/browser/e2e/helpers.cjs",
+      "sha256": "f7bc6f87d7d102b470ff90ed5680d44ec465258f49152fa7c324009f33c2f265"
+    },
+    {
+      "path": "tests/browser/e2e/run-all.cjs",
+      "sha256": "0907125b8b7e6cc42d23436e15d89dbed67c19eefc424f957284468550c94a0e"
+    },
+    {
+      "path": "tests/browser/e2e/run-status.cjs",
+      "sha256": "7414b9da4e4ec6d2f5d862633ea8c8c556b1b3ef354d92347b3b7c23af0e5fbe"
+    },
+    {
+      "path": "tests/browser/e2e/run-status.test.cjs",
+      "sha256": "061b6f3339f23ad2c73d777410d1e40affc0b2dc46a484587415a24d8b629362"
+    },
+    {
+      "path": "tests/browser/e2e/test-01-auth.cjs",
+      "sha256": "8d1892b3d2c2392da19d86137ab70a56a0c6124e2b2217507a0f615223f1e11f"
+    },
+    {
+      "path": "tests/browser/e2e/test-02-audit.cjs",
+      "sha256": "9d6935d77ec2f363f0c08f2440c84c807d14f89f4da30832df94a3f92c77abb8"
+    },
+    {
+      "path": "tests/browser/e2e/test-03-idle-appoint.cjs",
+      "sha256": "af59b68e206a99dcba12e06ad7c16e9afe7e3d69666e7b545c95ef3474a6e357"
+    },
+    {
+      "path": "tests/browser/e2e/test-04-activity.cjs",
+      "sha256": "e4cafb7f97c2b07b0737e3e85ac131cc66d464e8140ce960c85255f9c1176948"
+    },
+    {
+      "path": "tests/browser/e2e/test-05-lostfound.cjs",
+      "sha256": "06ea5ac83722667f90711abbbd4b36c2be86632fc129cc1b7c60a94df32bb707"
+    },
+    {
+      "path": "tests/browser/e2e/test-06-partner.cjs",
+      "sha256": "ee7c5de350742156f1843f38721a0da5aeba972078f24cede71b870307beb288"
+    },
+    {
+      "path": "tests/browser/e2e/test-07-qa.cjs",
+      "sha256": "77fbf2d3f6ebffcee243225b57b30d8a238a2645cbe1fac70c85eb896f7ee378"
+    },
+    {
+      "path": "tests/browser/e2e/test-08-social.cjs",
+      "sha256": "6eeb33e3895abe2fc411c4031b2269c34462060586a9beb53c71dab950b9bf54"
+    },
+    {
+      "path": "tests/browser/e2e/test-09-notice.cjs",
+      "sha256": "b0fdb9dc5548bcb525134339929fd9dad5fb8195f8409bb4c98e2d2329820b11"
+    },
+    {
+      "path": "tests/browser/e2e/test-10-message.cjs",
+      "sha256": "c49417bfbbf9d85a7b1dd546383caa55d02712618c75e323aa77c79d40b0bae8"
+    },
+    {
+      "path": "tests/browser/e2e/test-11-favorite.cjs",
+      "sha256": "a99b7dab03e4f0cf6bd8a369d01fcc65b248c7895bdb9d902f5ad978d56b5198"
+    },
+    {
+      "path": "tests/browser/e2e/test-12-report.cjs",
+      "sha256": "55eed6665b27d151179f915953fba69e50b18efe3df2b5217928be7ddcbc326f"
+    },
+    {
+      "path": "tests/browser/e2e/test-13-chat.cjs",
+      "sha256": "6834a2bb483ce380e6f591de95d0b10852a22acdf476b6e096875539bac369c7"
+    },
+    {
+      "path": "tests/browser/e2e/test-14-upload.cjs",
+      "sha256": "fbbeaa8016480b8e74a9f9708ca4f1ddb2c1a23bb8bf54151ce8a3422d892d23"
+    },
+    {
+      "path": "tests/browser/e2e/test-15-ai.cjs",
+      "sha256": "338b87067a3dfd9dc450a0d2f2b0ceb21c450f03eaa2ab0c354e77155a18bea0"
+    },
+    {
+      "path": "tests/browser/e2e/test-16-ai-fault.cjs",
+      "sha256": "03b31f93ad2001d8dff8b0f5b65fd0386551d495de104129172a528dd12cd966"
+    },
+    {
+      "path": "tests/browser/e2e/test-17-search.cjs",
+      "sha256": "5e83f37a9850b0ead78cade04c59e337c782d5f2754e42f2dbdfa6d797c4cb2b"
+    },
+    {
+      "path": "tests/browser/e2e/test-18-campus3d.cjs",
+      "sha256": "b36572913580eb133862dc972d432d7bd6e6684081a0f2dc3489c4923faa6dc6"
+    },
+    {
+      "path": "tests/browser/e2e/test-19-responsive.cjs",
+      "sha256": "227eecfc2f51e8f3e254230c84ecd7966e7e84731691b3369eedb681bdc60c99"
+    },
+    {
+      "path": "tests/browser/e2e/test-20-concurrency.cjs",
+      "sha256": "ccf8dad0a9db81ec6f3249bc25f541611d31046bed25cd138cbdc7ad0365dc67"
+    },
+    {
+      "path": "tests/browser/system-admin.cjs",
+      "sha256": "10cf4b9711238f42fc36d48ba4f6839cb7a5ca140e54037e8f31bfefec21199f"
+    },
+    {
+      "path": "tests/browser/system-all-rooms.cjs",
+      "sha256": "ef86079b5d652fcd907d9049900677495105d225b577e55d08baf6acfdd9c03c"
+    },
+    {
+      "path": "tests/browser/system-auth.cjs",
+      "sha256": "53b2fcd5044ab9a9d770884ad2a6a842113c3044feec97203cda4fad536d4bf1"
+    },
+    {
+      "path": "tests/browser/system-interactions.cjs",
+      "sha256": "1373ae12993f46c64a637d09037873784f0408352877ecca90e3e8eda2d0c083"
+    },
+    {
+      "path": "tests/browser/system-scene-and-fallback.cjs",
+      "sha256": "c6f3e1bdc9ef3ec1dc82617cfabe494f8a1057bc7b4f3283d1db7ffb33865959"
+    },
+    {
+      "path": "web/backend/pom.xml",
+      "sha256": "2be77ad3119f52f7bc00e6c70193a2e12a963924d57a778afb825884e01cb83c"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/PlatformApplication.java",
+      "sha256": "01007a51fbdd369948523213f5e1f68961ecc648110af0ab04b159ac9f5b9e0e"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/common/BizException.java",
+      "sha256": "414a6dad0a00d7aa23b9891ec3810a050cca51a22a9b054b531b511c3081badd"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/common/Constants.java",
+      "sha256": "74cdb8ab59a059814eec2585bca22d2f24d5a7e77179af68e8118694b1e29efc"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/common/GlobalExceptionHandler.java",
+      "sha256": "3130bb399bb95e12e8718b7c420c3bd9f103f42ebdb3d3080b3b0c879dfaf34f"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/common/PageQuery.java",
+      "sha256": "bb3c9b706849136ddbaa1c10f81bc4da5891a02564d260e90a260b230d617aa2"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/common/PageResult.java",
+      "sha256": "3b84c2017971a453c5df70bbaa20dd3d0b7792bb86d4451cdfbbc11f75684c08"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/common/R.java",
+      "sha256": "bfbb35b8f7bfee3ad69211c2b63c868197bcb337d5e2a7f987c1b768739a57b1"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/common/ResultCode.java",
+      "sha256": "1c2b0109ad09840eb946bfe66e7ebbf918c8fa3088cd00f71393a692c6b04484"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/common/UserContext.java",
+      "sha256": "7e561646e9da17b856827902f974e9242c0f4c5316d6044712458bac2199f035"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/config/MinioConfig.java",
+      "sha256": "c6cd6bbaeb7959be5d72d3f8e41064245e75d5714a6eb9de50aee24cd224d2e8"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/config/MybatisPlusConfig.java",
+      "sha256": "9771e1bf195afcc7fb67ca86a7db48b966b3aa100924d23c285664233b32be63"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/config/RedisConfig.java",
+      "sha256": "8d50aa19cf1adbecf4ee751ae6be6688ba7515904737140bacab90a913ee1716"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/config/SystemConfigHolder.java",
+      "sha256": "3377e94629fe0c07daa0232266a3f9bdd743270c9042a1e1a4517d7f0be1eb14"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/config/WebMvcConfig.java",
+      "sha256": "82e5979378effb3fe56ef619075e6dc31ef369ed8128c02fe5400f23389b79c8"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/interceptor/AdminInterceptor.java",
+      "sha256": "c1eb4aeeb91cf5a0a4467ec44ed04718e6e11ec9fccf312f3e6426e621a368f6"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/interceptor/JwtInterceptor.java",
+      "sha256": "af0a9dd7915dca3a16daa984e3a40e603c77568cc709dc4434fea1cedce84fcd"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/interceptor/MaintenanceInterceptor.java",
+      "sha256": "47e2e7a266e46a2f2e89cced01958afc0a3be345fee6b90e31d740b86bccf00c"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/controller/ActivityController.java",
+      "sha256": "82427df729df5d6787854881532ca3606f020ed4d8100cfccfcf7408e08d825d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/dto/ActivityPublishDTO.java",
+      "sha256": "d40f728043519c104fc375ff6792f6f8b5e956e8ca53c1f2cbd100ff19e2be52"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/dto/MemberHandleDTO.java",
+      "sha256": "3b689b383a5d7cc85c1ef1270a689c0591e1c65b428e42476ca7447152137b3a"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/dto/SigninDTO.java",
+      "sha256": "13daea43e1e02f51b82efc6472620a3162c135209e789cb5a42a46a7c1c4b1bd"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/dto/SignupDTO.java",
+      "sha256": "4683826f804cb9cdd5ff9052934dec7658940556b566b2cf665b789115b13fed"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/entity/Activity.java",
+      "sha256": "6cf5def24eae07b051426f45592a38d891e20c6dd066e24df56f172eda06508c"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/entity/ActivityMember.java",
+      "sha256": "634db76fca3cdd2e931a59a2a81c428ed42aaafea901f5d78d6ef7fdfe635ba7"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/entity/ActivitySignin.java",
+      "sha256": "1fa828659d6a7d709f4d791d60dd0f2927672bed087b391c4293749ab1085be9"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/mapper/ActivityMapper.java",
+      "sha256": "a8a0aa6afba1e9e71f9a63fc384941cb137c2459cea8d5d3fe19d8275a30430b"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/mapper/ActivityMemberMapper.java",
+      "sha256": "42881b02175fdbe00af51029aab5c4edbdbf847e714c4b1048521d3256956830"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/mapper/ActivitySigninMapper.java",
+      "sha256": "3d9915d7468a1d4372a70d3a2e488cfa038514338140c60c2f0b03bd894f378d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/service/ActivityRecommendService.java",
+      "sha256": "7dfce54fb26f5cee6b5ab4f45fe307d67030c9a937bb1d0792d5a8bb563ad1ac"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/service/ActivityService.java",
+      "sha256": "142d143aec2cd06f9e911c3a16cf64047ae1d1a9e155db7976674b117a374718"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/service/ActivityStatusSyncTask.java",
+      "sha256": "351f3633f35124bdb3b75a6f1798805042ddae162b5dfc140d185f9ef48032cc"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/vo/ActivityDetailVO.java",
+      "sha256": "61c5b7dd35b3ebe78db8617fecc033e889c1ba0cf22cbecaa6f5d3949ac5c815"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/vo/ActivityRecommendVO.java",
+      "sha256": "5be2c7ae811fe82bab45d60e76ca89b30e0276bde5eaee8ceb6f7f0c86f9885c"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/vo/ActivityVO.java",
+      "sha256": "f203a332f2853b077c8369b8cc1c3bbbcdbf4f0c6aa3b0e8cfe016b84568b131"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/activity/vo/MemberVO.java",
+      "sha256": "77f324bfbda30a69fc1a171f499a6809606a4cc13ebb6705ec83810fca9f0e60"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/controller/AdminAiController.java",
+      "sha256": "1ec863ba0670eb56345182f488b0665b5ae57a9e284a1c8ce9cb8f534e4fe565"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/controller/AdminAuditController.java",
+      "sha256": "8192f1edbbcb508f5334ba4f0e5ed9b5533672f2d178a5430a1a598fa949ecd4"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/controller/AdminContentController.java",
+      "sha256": "c7b1cad3364f4bfd6227887d640024ff05ddf2408657faa33a398806a5267f98"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/controller/AdminExportController.java",
+      "sha256": "b2d268e389963bbcabcb454c593014ebc29401a7e168979d20f095674ba1829b"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/controller/AdminNoticeController.java",
+      "sha256": "cc3f9ba4e5fdbc6c669174f54b0bb8dfe94a2f13a719aef56d3c2009d0e3ad9c"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/controller/AdminReportController.java",
+      "sha256": "29d04c84a49c877ee76b167bb2f637fad5c7aa3cf8325db1ef77dd30a0471210"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/controller/AdminStatsController.java",
+      "sha256": "163cb4cde88adc07e7f6c3ac30f07f3dbecb2219e2a80c2b4398c59d78e800ce"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/controller/AdminSystemConfigController.java",
+      "sha256": "36d054395e1bea70a9559e97a64f18e6e9d7c81416fcc12bb9453bba9d279dd8"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/controller/AdminSystemController.java",
+      "sha256": "2d20384049a563229a46426d9811b7266624643be46aa9e44bd2eefa4693f87a"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/controller/AdminUserController.java",
+      "sha256": "5483cb54f620594885c58307fbe45b395f16b05b259bdfe4705d34bc2cc9f8df"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/dto/AdminSaveDTO.java",
+      "sha256": "717c9a0ca052777158d2b01797d94cfe8cf1c1d52ecae593d806dff296051656"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/dto/AuditDTO.java",
+      "sha256": "f6ff4ed77d2273e5daba90594622c8cd93d61463a588031248dadb2a29af2cf5"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/entity/Admin.java",
+      "sha256": "bc1b949ea5629e776fa8d7d667513f8c3465afec72f94267a74187a0fc539671"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/mapper/AdminMapper.java",
+      "sha256": "e583b856dccf6153d69ec8735ae292c21558495886c3430860b2492a23cf5a94"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/service/AdminContentService.java",
+      "sha256": "9fb41c7dc38bb89db569f6b357ca36bf756ae239198decad94a87fd3b980548b"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/service/AdminExportService.java",
+      "sha256": "87e98e8c7e047730dc67c802cb40fca47ccf13f63f5f111d585b74c9f51efa5b"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/service/AdminNoticeService.java",
+      "sha256": "1f52a1d6ab620474f75a62bf438dbcd2b7ef9d0ba64e1ecaffab043f954a021d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/service/AdminPermissionService.java",
+      "sha256": "49589bc7e03397c5d218b4579225897d74f85724fbaae5afb0b600e0b633ac45"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/service/AdminUserService.java",
+      "sha256": "e553b0082bb297f6df7d4c89bb777b9f8dd09d81729784b2f7e5bfd3058ac6bb"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/service/AiAdminService.java",
+      "sha256": "519750ae4fcb89fa56fc9a3abeceee9bdc96627b27fd3e70b4d9dfe12d736caa"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/service/AuditService.java",
+      "sha256": "2295f266a3f03e063c3d3e80a392b39f8182f9eeb61a5248b8e326a9debd34f9"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/service/StatsService.java",
+      "sha256": "87e571dfb2078f6d30482dd31ce4c6b768be41321921a528c7deb4b1469dee23"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/vo/SigninMemberVO.java",
+      "sha256": "d3f4e5a0fb103a14149ebdf74201b6141a24a95b1f12bbb318b99fb6d7edf4b9"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/vo/SigninReportVO.java",
+      "sha256": "bc0248d4a88342e75782f1d6eb2551bd32b396f603f71b21632649cd72bedc81"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/admin/vo/StatsOverviewVO.java",
+      "sha256": "adf7582a8b459b36692e70642e40c777d8c377e945ef15f0b96419f730b1e95c"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/controller/AiController.java",
+      "sha256": "96e590a4646107bb2c89a483e0bbbf02149bb00c25e8f1122b46ed4b424d284a"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/controller/PdfController.java",
+      "sha256": "202d28c2c23d8db79232b6ec219c9d0bc3f473fd62a22fc23075b24559a0b4b9"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/controller/WrongQuestionController.java",
+      "sha256": "3d00af484102a3b26fe2cf047f2886deddc4aec1e5c5d845b42d7cf28b4bc768"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/AiChatDTO.java",
+      "sha256": "ac0d628954a04987be20cdfd180eb759cefacc7f394459d05a44043b26c522d8"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/AiConfigUpdateDTO.java",
+      "sha256": "f4228ec623fb87d9c497c0aec5b525c8e83d1c5d58ef7c8473f720e5275fee6d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/AssistComposeDTO.java",
+      "sha256": "4e2593a1af55b8704ebbd91c32bc0c8d6a3d0db126f5e81cd59b6de0e6c98360"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/AssistPolishDTO.java",
+      "sha256": "b15ba9accb7c4d268c1b3d0a9cef3c9053d7e182926a939a0ae31141403e9aca"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/CodeFixDTO.java",
+      "sha256": "b2c5f098f77d8f42caa2e6fbc44cb3fc52654193248d8ff38d2c6af4b82b62b5"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/GuideAskDTO.java",
+      "sha256": "29f5e88e4748a079e11b073f9a6fce7552cd7578bc8ed7b1ca7e6b54687b5372"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/OutlineDTO.java",
+      "sha256": "2d6e6a2df3fe53e5d0b657daf5eae0364eceb04c42abbe74924e09ae7e1b04b8"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/PdfAskDTO.java",
+      "sha256": "56fbf0c8d56eda2c33f9c2fddd3b9ea0e796988b459f43ff18f46a0c98ceba25"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/PromptTemplateDTO.java",
+      "sha256": "7096d7613be9557bf2caa55269dac9360863c447c918e3768d3bac43e5065455"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/QuizDTO.java",
+      "sha256": "d598f2374d324a090bdc47900b3e456938f27f0d24e36576991daf2d9e3efdee"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/SessionCreateDTO.java",
+      "sha256": "441608ff75d113d1231418053391289ba7fe67fefb59e0737fb56f978d33f47d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/WrongQuestionDTO.java",
+      "sha256": "17555fe3bbc2a2fe4ef1cfa6180e718588ddf2aad6d5515e1ece0faf1e2fe146"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/dto/WrongReviewDTO.java",
+      "sha256": "9afdd9ee1fca28f2973a0e9d6bae0666e624fce481c7dfa81ae2623d62cd7d48"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/entity/AiAuditResult.java",
+      "sha256": "d5ccd6f8c94717d197b632cd8d976a59bb28333dad3f08fa96a48a869b7391c0"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/entity/AiCallLog.java",
+      "sha256": "49cc10d4690837cd499d5061d72d38b9725c96ada0bf7f090650672eb160b396"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/entity/AiConfig.java",
+      "sha256": "34c5a09e5f7d44855eb4770587545a0a2213ecc1cb6d77fea367e7fd733f69d3"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/entity/AiMessage.java",
+      "sha256": "477cdd7a822ccddbaf4ddae6ce00a77263aea3f03e2aabf3f772480316f4b851"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/entity/AiSession.java",
+      "sha256": "21d884388956355b74a6972e6547f512a0d3d035713c556ea56bd813c231010a"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/entity/PdfDocument.java",
+      "sha256": "2ec4bdd6eda8e8dbe46ffcb840a724fede54908a46285894e5f1af894bef419f"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/entity/PromptTemplate.java",
+      "sha256": "5737fd62b1db746d542d633d9d7be53f20712e0b9359bce3de4d77be6c90be5e"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/entity/SensitiveWord.java",
+      "sha256": "534a8334b065667161e7ed879cf55351bdddc1b314d1c3b14a21df499fb22ed4"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/entity/WrongQuestion.java",
+      "sha256": "ef69555d6a718d9923152bf6015deb660a24f505b446166b91cfe69ce6c8002f"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/entity/WrongQuestionGenerated.java",
+      "sha256": "5492411deb8ebe06d7d448d89673370f3e2237b0484d7f3b2be387b2514c121d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/entity/WrongQuestionReview.java",
+      "sha256": "583fadf04c1a838db71533a172c4f13cdf551f1f3b2b74491416140fcb061b2d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/gateway/AiConfigHolder.java",
+      "sha256": "185f59a9e469f5f1ce737624fa1bef33dbf8a8a7951287ba565a450ac912ba44"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/gateway/AiGatewayService.java",
+      "sha256": "36e7d9a0a35021c470328736bf88d371310ead1087d1897839e9a202da0d65aa"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/gateway/ChatMemoryService.java",
+      "sha256": "4eb47a8b0c414e5d4690cfe1541ef8ebe4e034d78d453941262e2d49de1c439d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/gateway/SensitiveWordService.java",
+      "sha256": "f7feff38c5de76d81ba984660086f3357db8b5176481b3f20d0fc62bfd97c3cd"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/mapper/AiCallLogMapper.java",
+      "sha256": "b6500c3ae9c52ab0cf5ca66dcf25560ef0b893bd357726e183943260c10ce806"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/mapper/AiConfigMapper.java",
+      "sha256": "820d04997961f25e4eb15ef95f17d41d29bd4bfaf0f5a93e57b6b96ab83712b1"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/mapper/AiMessageMapper.java",
+      "sha256": "ea01121225e8288429a4c617c68101e3daf84e04d825caabb37685b0ba0e5eb9"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/mapper/AiSessionMapper.java",
+      "sha256": "1ace7407e671546b0ec0941001259a4cb31af67ea72830bfa6b7a8d2b461dc0e"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/mapper/PdfDocumentMapper.java",
+      "sha256": "8350e620b668fe698f3b7cf2aee0be738d59f7e41bb97ff6a8501cac34289fff"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/mapper/PromptTemplateMapper.java",
+      "sha256": "3b10b8cd758059fb007a67f422ba9d110732fb795973c3d7ddb39964269f74db"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/mapper/SensitiveWordMapper.java",
+      "sha256": "05e362663669a566a7ba5594535399815eea756c3f0f05d764c303d5efa3867d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/mapper/WrongQuestionGeneratedMapper.java",
+      "sha256": "2def98ff0fdd1fd2afbad16733b11cec62088cfc74e706f2e366654f9a637fe2"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/mapper/WrongQuestionMapper.java",
+      "sha256": "990ad4a9b306d1cd13af3bcfb74f3b76b277d40e6f948fec8e74a140a1d1af07"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/mapper/WrongQuestionReviewMapper.java",
+      "sha256": "719ab454c7b39a5c4527d814d83667c479c25682f0bf631b0b81f0cb547ab92e"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/service/AiAssistService.java",
+      "sha256": "ebd31d5f48a7cda63e3ea52ddb76340a938a446b7fd4e04877c85faab10471ee"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/service/AiChatService.java",
+      "sha256": "393c3c92582fb7b7454e31e42d38ed58dcfe0e8eb12a040be7a63ef26f0baca4"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/service/CampusGuideService.java",
+      "sha256": "87713c141b0c7579919c788df1e2f67a81595ee1a32aa72f5e50663971f01eee"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/service/ContentAiAuditService.java",
+      "sha256": "bc4f5997e2ee09aab8b21e675b645d5cb6f7c0a7e36c8dace2acc2c15b3d16d8"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/service/PdfService.java",
+      "sha256": "8b05b25286cf7897636276c353738e523a321384c18cb9574a03836f548c31a4"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/service/WrongQuestionService.java",
+      "sha256": "171d808cffe5a0ce83eb5c87c24fe1caf84baec00db2197a840a26f2da13e076"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/vo/GeneratedQuestionVO.java",
+      "sha256": "29cb0d3cf3eec990aa2f3f8804192e14c1d70b59c6a082d19d7f443270597abb"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/vo/PdfDocVO.java",
+      "sha256": "87af06231da4e160d1cac25cdd1feb73cb78f63c23db1c4418717dcf96132e95"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/vo/SessionVO.java",
+      "sha256": "3c36942dfe2ef1993cde711b6d82d4db77296148afaa1cd7644d50fea4d8f666"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/vo/WeakPointsVO.java",
+      "sha256": "61e6b63ca1a6aab0d5ec2d0c32c6632c71c5370d1db7ca37d48f566f1dd5b950"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/ai/vo/WrongQuestionStatsVO.java",
+      "sha256": "836929861e441539b70ca33f2a1bff4492694fb1ec0c41f2cf4585093dac2b6b"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/auth/controller/AdminAuthController.java",
+      "sha256": "bc52939509407056b417018b614d0bf253a4555aaa63f9161e3fe023ea19fa81"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/auth/controller/AuthController.java",
+      "sha256": "e39fe0473c5b4e3eed7475e15f633d2d776e0f51e4207b420960a86671975cf7"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/auth/controller/CaptchaController.java",
+      "sha256": "f251f8f1bad60acb46b1708b85cd167206e0900e8ad59272886ad7dcb0148dc8"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/auth/dto/AdminLoginDTO.java",
+      "sha256": "79a09cf05f2ef59ad18ed838c1bfd11e68e3a6f5edb23a886e3b5d8f2f0eae85"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/auth/dto/LoginDTO.java",
+      "sha256": "8a7556ed9594b22f6479c6931fd662cf25185c39f4d1eeccf7b09e73758c65a3"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/auth/dto/RegisterDTO.java",
+      "sha256": "f1ac34b5ce73a654539c90095de057b3128a7148f455331544b390ea9bb06925"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/auth/service/AuthService.java",
+      "sha256": "632928c65a824da8c6f7be237fa687fa6a8af8471b4e9021205593d6c49406a4"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/auth/service/CaptchaService.java",
+      "sha256": "6c73dc413d9e450bfb51bbb3928f95177c320f5375b69862288e2c81d0df360b"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/auth/vo/AdminLoginVO.java",
+      "sha256": "ae7cf17f58b44befc561bea00a5d2732beb55faed49eb7bc7c921579c44f6ff0"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/auth/vo/CaptchaVO.java",
+      "sha256": "30a8d8de1f2601e7297a85d713324b9ba454ca653d2363171e65d9326d551a53"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/auth/vo/LoginVO.java",
+      "sha256": "6c3d308985d93908781b77f9ef25d0997e9eb0c0bd6ab9d4fea347da14bb7935"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/controller/ChatController.java",
+      "sha256": "fdca00e3ca342e125e1ee661cc7c193ded01b640f7d0fee4e00807c470637803"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/dto/ChatReadDTO.java",
+      "sha256": "b845fa7113224a337dad243e362fc4a9202e088318168aadc0983ec78b67d9b6"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/dto/ChatReportDTO.java",
+      "sha256": "af8733ba3d421c71d7cb6ad35b2239d993a98d26c3854f6ac409ebc1f7162fbd"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/dto/ChatSendDTO.java",
+      "sha256": "b470af4df474fde576b506b76d6471122f47bb1d21a8905e23307e8dc2e8de64"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/dto/ConversationCreateDTO.java",
+      "sha256": "c6175aa916e0d5b7fe4c96429d6c4e5f3137ed3073f207126b2df61a11915b74"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/entity/ChatConversation.java",
+      "sha256": "24d74544c7d5bffd5fec98370859d1221522166c0a5a7196caf887870e98e895"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/entity/ChatConversationMember.java",
+      "sha256": "8e4330e2e5acbadd487c3706bb08a776cc561aa79f84fdb8aac8a77dacfa06b5"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/entity/ChatMessage.java",
+      "sha256": "98b042cebcce9af178a48833a683c9ec81e138be6ac13aa5a99f366c317293ed"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/entity/UserBlock.java",
+      "sha256": "452b9f9959bfcc2154c68083d1d6981db211a585e489e87f3df00d55393c52b8"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/mapper/ChatConversationMapper.java",
+      "sha256": "98248df4fe285e99866bbf2c9f3add5290a3a3676653e71816b88edcb71bf0db"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/mapper/ChatConversationMemberMapper.java",
+      "sha256": "574278ee78b4021c772b63d1d318f85997da142fb6ef240029a9402cd48a1c90"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/mapper/ChatMessageMapper.java",
+      "sha256": "b2eff43433dbe0ffebec349c913482975f97a0d31bdfda1eb5609777d5d6e4e6"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/mapper/UserBlockMapper.java",
+      "sha256": "b39350542ab1a4c493cb75b7215cec9e7f5ec2e1fec149b05428115f73c87b15"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/service/ChatContextValidator.java",
+      "sha256": "75c50510cd58b89da1ca759bb92a1920282fd0a267aed241e7f10e51d3af6fd5"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/service/ChatNotificationService.java",
+      "sha256": "f6d4499a543436e8594c7f0f9cd67eefc8f6339aa94ec2162527dcfb9f0a9ea2"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/service/ChatRateLimiter.java",
+      "sha256": "6840c61d6cbd5eac3bb639caf9ac20cb98967654a6285584664bd31ead0d2361"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/service/ChatService.java",
+      "sha256": "4f6e84e400f609e395f1d907e21efcbff6c8b188fdd4876cbea93f25764a1e59"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/service/UploadResourceService.java",
+      "sha256": "796ecfd15f29bfe8d68066d38beff09d5ad00aa7a350d6b7cbba456e1c4593a2"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/vo/BlockedUserVO.java",
+      "sha256": "d86ccf00bbb2d37bcba70274ac455caff4d5dff66905f85dafd2adfdb6618ec2"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/vo/ChatMessageVO.java",
+      "sha256": "12a7148375d78b28353fcefae5306e79eb695238cbd478096b115a9940d9563a"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/vo/ConversationVO.java",
+      "sha256": "f56510a4f3e7318bd4ea8a1f860aca2b93d4d6e968491d79bba41ad4512c7c44"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/websocket/ChatHandshakeInterceptor.java",
+      "sha256": "bc4de15981e8a1e93d208989a6a132ee9ebbbbe4bb108dd9da26643ac82c78c8"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/websocket/ChatRealtimePublisher.java",
+      "sha256": "74277b6b9605128fe93021d1a4d87a31637f6ee5a79d9122eb1d3cfb97fe42ac"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/websocket/ChatSessionRegistry.java",
+      "sha256": "6d225e7484f2bd87f1ca0e734565a972ea72b43d81707cf492ab8a09e4b3dce0"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/websocket/ChatWebSocketConfig.java",
+      "sha256": "9663020eec57d9123d4123a51ac79e9216bb5985758a9be686df2371eca421bf"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/websocket/ChatWebSocketHandler.java",
+      "sha256": "bcb9df9ddcdd2994bd13415eb24154764847cd3470c76fddd5744d76256f2fcb"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/chat/websocket/ChatWsTicketService.java",
+      "sha256": "6b40e4f4cfda8676953ad5d90db4f8e9cdeea49e3822a6a3e0a3129c4c2992b0"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/controller/DrawGuessController.java",
+      "sha256": "71dc9749b1f76bd2ad946f4d1b740c25d2bd772a9889c7b40565f619227f99ef"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/domain/DrawGuessGame.java",
+      "sha256": "dc2bdbf8b23b825a1f0ded6e9756dee032f6a3687aaadd7dc01a8718cfaecdcb"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/domain/DrawGuessRoomAccessPolicy.java",
+      "sha256": "17bf2bac7842613b5586080e2ce2dd472db841fbc45f81f4e0b40dbd7e353861"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/domain/DrawGuessStrokePolicy.java",
+      "sha256": "5d47dfa334d23f481b8d3f77fcb5b004f3ee5aefa9ddf95f79baf3ed129bd067"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/dto/DrawGuessCreateRoomDTO.java",
+      "sha256": "6712c2e7ac286cc3ee1547a624db5788b21b5fe03323c971082c040807670e3d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/dto/DrawGuessJoinRoomDTO.java",
+      "sha256": "57299b89014cea7b83d1947c2753e6bbf9f589feb0bb4ea4ba81a84484155963"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/dto/DrawGuessWsTicketDTO.java",
+      "sha256": "3bfb08f7ee97d2d22bd4e5e2569bf02758a4bee904c5aeccda62364d7d19148e"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/entity/DrawGuessMember.java",
+      "sha256": "6905dcc03eb3706fc5969de3fc89ef3c840e4e9b11362f56bdcbdf09c6415429"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/entity/DrawGuessRoom.java",
+      "sha256": "778d3575320a5d06aaaf8323d3a9fc47102df957e145fc0986c329144121b73b"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/entity/DrawGuessRound.java",
+      "sha256": "35f2b4b6ad6dfb2418a4791e9efe7a37d4ebdfc8f9ecefdab97156118eecdd97"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/entity/DrawGuessWord.java",
+      "sha256": "3263709536f5faae7dee6475a5e7bf70d0be8fd6c8c67bdf194b14732f24ebd2"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/mapper/DrawGuessMemberMapper.java",
+      "sha256": "784a15c85a34d34cad9fad4250e8be861ced8ba5d9d922223be35a38a161ea4f"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/mapper/DrawGuessRoomMapper.java",
+      "sha256": "13f7bb3cebd8ec29c4d67b2e78c64b668b449697c8070bc62a5b4f32cc66421b"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/mapper/DrawGuessRoundMapper.java",
+      "sha256": "41a9e7546108fa9a3977c4778605f4ec3b9c14d49bfae1ed96ad7e56a8e27ec4"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/mapper/DrawGuessWordMapper.java",
+      "sha256": "2c96a5bb3c70b28eda71cd9c444aa796272207c8b00a7c161a0da14c65aae4d1"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/service/DrawGuessRoomService.java",
+      "sha256": "fe688a72659d5f7145a5bd48cb35ee6b7ef3ab4091f3c97398e5e66d21a33b38"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/vo/DrawGuessChatMessageVO.java",
+      "sha256": "e91dc0e096e221204b6f3f271307b9a28986187954abfca08f6033a6e8f9a3f0"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/vo/DrawGuessCompletedArtworkVO.java",
+      "sha256": "2f6e41857ceeb5cd2f5990725c25ac2def7c673ccbb7794c63d3cfb983e1460c"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/vo/DrawGuessPlayerVO.java",
+      "sha256": "93151a60d6383d736c16d76007a1ff34c74f9bdb0e1035f77dfa7b49ceed1c09"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/vo/DrawGuessRecordVO.java",
+      "sha256": "4d1dd6a7d50571afa503723e330d43bd0c34cee0c9fc78af387099f36e578e4b"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/vo/DrawGuessRoomVO.java",
+      "sha256": "6d794d9bf81d9466ed38eb6fc242a2665e1c0937a952bf2307bda3e0b2a5f8ac"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/websocket/DrawGuessHandshakeInterceptor.java",
+      "sha256": "b150e18c54501be24e89d5c0d4300f684db5a5bbc286368708037c688e47f106"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/websocket/DrawGuessSessionRegistry.java",
+      "sha256": "9b7ea0842947a2e0818ba2643a33cfb86fbad15319ae345710f911f8228b12f7"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/websocket/DrawGuessWebSocketConfig.java",
+      "sha256": "ed45eab1fa807b067a94ad6be93900097afd7bb9d1e936c37bcaf9e5b1df9a21"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/websocket/DrawGuessWebSocketHandler.java",
+      "sha256": "730be102be0e47c98f0c5ec9791b27e7f8f80a6ef17d427209dcd6840e76b3b2"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/drawgame/websocket/DrawGuessWsTicketService.java",
+      "sha256": "bea279d49f3e90d76023ad42878fff0e2c1ceea383c1e1fea080711e400d2181"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/favorite/controller/FavoriteController.java",
+      "sha256": "603633cc45e1e70aba10c5095a637d6ba369d83f175fb516cb15015b414f8731"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/favorite/entity/Favorite.java",
+      "sha256": "5cc2351be511837ad901a84bb8bff548b86bdf5c95388a6c07a0f45b28ce50b4"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/favorite/mapper/FavoriteMapper.java",
+      "sha256": "af126e7a79ebf449624660e1a0506cc5495c92a48240d681f0e821aa28f1d908"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/favorite/service/FavoriteService.java",
+      "sha256": "70f2017afd17cd0a1daf5ebbe815b253a092b6614025e87940c3fa082c5311d2"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/favorite/vo/FavoriteVO.java",
+      "sha256": "6f25205f644f05d6a4db28a9cb016398073ace00e871aa1bfc6ab7e1d7cd765e"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/controller/IdleController.java",
+      "sha256": "6d2c9caefdd2fd8de134e7c9a86c76672ada4e1cb3b0482e0e1c129336182a83"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/dto/AppointDTO.java",
+      "sha256": "45668240b99f72cbf0d90a7c269f2d30ba7214be237cb13e622bacfaeb3ec75f"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/dto/AppointHandleDTO.java",
+      "sha256": "2658300b83295b200160ea943744381afebab48143ead2efba306cdf33786b59"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/dto/IdleEstimateDTO.java",
+      "sha256": "d6f009601f78f184140c1a9d73722560fc4190ec49ad4a3fb42220bb85486c84"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/dto/IdlePublishDTO.java",
+      "sha256": "f173ad58539034da12e45d2206ccf70f529205cb8cb8e2dc8d1b3b38e8ccf17f"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/entity/IdleAppointment.java",
+      "sha256": "5744d0f347c60954d9aef2b7275e903e810c2bb8c4033d85c094e948aee6b070"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/entity/IdleItem.java",
+      "sha256": "8bd7823f2837e7e175a549b734e3f7f33226b2e9e3b5813cd8737c299e8be4cb"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/entity/IdleReview.java",
+      "sha256": "e6eb7abc7bf0e8a56be6fdd1110fcc7117065b021829744fc2cc000d0643c3df"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/mapper/IdleAppointmentMapper.java",
+      "sha256": "19c43cd843dfd9aa2d732a99e95a95c41a7b6b160c6a52eb15ecbb0195980cea"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/mapper/IdleItemMapper.java",
+      "sha256": "b80426dfc0b8b8c265daf814b0d242762e1ac4fc69aaffc4adb808dbc3e1feb7"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/mapper/IdleReviewMapper.java",
+      "sha256": "7c7ed91f0463e88740c2daf57edcb87b21f5561be9d7789a459b7b97fc32d136"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/service/IdleEstimateService.java",
+      "sha256": "b84dede78d3d8b6e4ec70187f89b3faa7716267d7d536ae0da920b794f83f461"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/service/IdleService.java",
+      "sha256": "e21509a66294b0c58dfa4d502d9febdb307cc6b8e9d836df1d2ebf7f268a7908"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/vo/AppointmentVO.java",
+      "sha256": "246e2fb4e9e3f038dbe37a00dd43d0d5a3e38e1e2b6c8583b824eb37003087ff"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/vo/IdleDetailVO.java",
+      "sha256": "ab58240feff48fc775e78e58c71a16169e74111936f9b4f74d82bd2d116fe015"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/vo/IdleEstimateVO.java",
+      "sha256": "571e9e889028351a73f4bdb9ef850efc7eae7418139f99aec7eaa34ffe0d9366"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/vo/IdleItemVO.java",
+      "sha256": "7e44e8dc1f6fb7b65955a4669bf9a4cb89811d4af3cb43a82a34117dca191f77"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/idle/vo/PendingAppointmentVO.java",
+      "sha256": "445ebc2cfdaa4a5377364bbdb01bab60fde3f850fdaf36e8c08fe5d7df063104"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/controller/LostFoundController.java",
+      "sha256": "bd921580f9e718c16122825f1d49cec3c39123b09c6a22b09c5411bc1bdbe9af"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/dto/ClaimDTO.java",
+      "sha256": "2d264b816b915f5ecba1daadb1634163b7d1c53e5ab78f5d96b76310cee9f618"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/dto/ClaimHandleDTO.java",
+      "sha256": "e4284dfae8c418bd1dc9215c118a59735f080724b97d92d418e50c79c7640b9c"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/dto/LostFoundPublishDTO.java",
+      "sha256": "8ce1244fb614a0b98f02756d6f79a9b4877a68adf0ef06c78c9e199196008191"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/dto/LostMatchDTO.java",
+      "sha256": "554c85604d8bd7751f06869553ac5780f907d645527a250d5daf38a8e9c12166"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/entity/LostFound.java",
+      "sha256": "b7154a8e6ccf85d077197352990d41db82a27f1a722a27c11626cd7190fa9a79"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/entity/LostFoundClaim.java",
+      "sha256": "dbe5f105ba0fa1df0ef2a399d45bc30f011f6fb367d466b0f210962bd720f86e"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/mapper/LostFoundClaimMapper.java",
+      "sha256": "3d5922ce1e8d043ac61a80a752ef4d25c3a8883e0a48401e25400a3907fce7f7"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/mapper/LostFoundMapper.java",
+      "sha256": "21d45a27c0c06f805ddb304f530b1745cd9bdd735dbdfa5b712681ac2f33b847"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/service/LostFoundService.java",
+      "sha256": "c0367f3991588c164b1874916b96d60285630001956e039834dd0b1db3065478"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/service/LostMatchService.java",
+      "sha256": "cfc45a713c5a1ce7869b8bf8bca444d5739f61b0f7224adbb7c08191859cc7ab"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/vo/ClaimVO.java",
+      "sha256": "3aadcae55d5245a732f2fb2d38d44b36b2323006ca658a11f7eb5593b6f3d95a"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/vo/LostFoundVO.java",
+      "sha256": "e6feaa7bb5dc1692e0bcd004a1ef30733c9c1d17cd9096669fbb2510f02c7d44"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/lostfound/vo/LostMatchVO.java",
+      "sha256": "1c7316b2b02be8439bf0b0fb3379a6b80d2d407b6bce628c4baee6ad95c45cb7"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/message/controller/MessageController.java",
+      "sha256": "0e90e54eafafe0580bfe45c5df34378db1c541dfc56fbf334bf925980a450fe7"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/message/entity/Message.java",
+      "sha256": "372bb52347689cd94957e9b02dad42682c9898858829c261ad1e3e1bb4675dc4"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/message/mapper/MessageMapper.java",
+      "sha256": "892f21b1b58d39c3126879d1b7736bf361089c694e741946fca0d9226bd33340"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/message/service/MessageService.java",
+      "sha256": "8bc9a59847856600f389fc378e560a3082ca471a7c88e8d6c92d00679058363c"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/message/vo/UnreadCountVO.java",
+      "sha256": "a841b2b5c72a2ced7db825701b31592b3d2a005fd1dd61d9365d5e4a50bb7c9c"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/notice/controller/NoticeController.java",
+      "sha256": "1b6d3ddf23c3c46e1e72bd42ea56e7fbe305cd2d2a5b1af58aadaf499bc27098"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/notice/dto/NoticeSaveDTO.java",
+      "sha256": "6323055a9779788a4769026b6bbfbf5843f13ddabf0a538b2299cf35ac4154f5"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/notice/entity/Notice.java",
+      "sha256": "ddac7e5ff9a4193a4db14f13dcddb33e8706fbbc331a660ff77f538ab75b3cfb"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/notice/mapper/NoticeMapper.java",
+      "sha256": "5cc3fb25c693c65a418082a6a53e1f61d19cb92c7b757ddd49f36f26a3730192"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/notice/service/NoticeService.java",
+      "sha256": "8286e58b7ba4534049b2575781f1a66046bffe26c4899aaa73763dbf042f3048"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/partner/controller/StudyPartnerController.java",
+      "sha256": "f94361a15b765749419805b4bfbb72f89021c53d947fdb49b874c8a359f78e0e"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/partner/dto/StudyPartnerDTO.java",
+      "sha256": "0c9af103d8ad8683121eb8c57fcc5228f7071ded61c95db60626bf4aff76830d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/partner/entity/StudyPartner.java",
+      "sha256": "34fede63ff893be756f534859e4c05b65e9af987b0fc7853a9e7191edef73a92"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/partner/mapper/StudyPartnerMapper.java",
+      "sha256": "86b1c54f5a17cb8e6982ae70c36b1f5cce7d3ad56b6a23c49b8ae1503c771053"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/partner/service/StudyPartnerService.java",
+      "sha256": "53206c2fcf5a9c9f55d8a11edb3fe84680491170583142a95b0a09a8a8fee8f2"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/partner/vo/StudyPartnerVO.java",
+      "sha256": "52ef96fb0a104da7ee7f364699cfb097110756545bdf1d9a0c98966ff19bf476"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/controller/PostController.java",
+      "sha256": "1f3b639153a1ae2c8af66fafa4df71a579a3c3d078ee91664adcd971b72fbdc7"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/dto/CommentDTO.java",
+      "sha256": "3a02f8b9e57d22bf02e8953e0c75e1b72ebe2688fb985462b87bf7d252c4bbd2"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/dto/PostPublishDTO.java",
+      "sha256": "3ab49e9af35137115fe9a8e9cd4f9c9c4ca367c342cb720f7adcbb4c336f7570"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/dto/ReviewDTO.java",
+      "sha256": "1d58ca07899bbb50d92c688cc1cdeaaaeaa9dc26035576b90b2527d826bc26d0"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/entity/Post.java",
+      "sha256": "0286b3f121dd2d5a569c19297fa4f129ded4ab5c5c88ded72031209b9a8e84ca"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/entity/PostComment.java",
+      "sha256": "b7dda654e83a60fe5b160c716dfffdb15bd8df9a37a9154f70a3e37e0887675d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/entity/PostLike.java",
+      "sha256": "e5af26af2fd74d985cbb77b873b2cf0f2e75da99e9977627ef3f854f231ec78d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/mapper/PostCommentMapper.java",
+      "sha256": "c0183c9548d7198d069841e7b906202fbe9cff58c2ca60da8b03f9e7236f5046"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/mapper/PostLikeMapper.java",
+      "sha256": "9ac167b74a554583c45922dd6730c45714209c1bd2ca2f698b35958db7d04565"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/mapper/PostMapper.java",
+      "sha256": "8323ec451bbdf2b434aa9bd9fa96e1131eb36b749725b625e88425bcc9ce61a1"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/service/PostService.java",
+      "sha256": "6f21f224ea12cfb815c47e08adff18316a0d57a351a7fd3988177075745ef6e1"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/vo/CommentVO.java",
+      "sha256": "e6823ed67331c14efe0b896911441495fd46cbe5404f86bb0b6b3f1c0533980d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/post/vo/PostVO.java",
+      "sha256": "92a7256f8be5ee1fa324a44f657c074ec62945a9873096c75830ff52116766be"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/qa/controller/QuestionController.java",
+      "sha256": "9b8ca9d1c22ddc84f4fcba37557374634541ca2b478d6971dcda7241cf5d1dc2"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/qa/dto/AnswerDTO.java",
+      "sha256": "d688a2d68fd2a11fbe4b8df722ea350afcdb3d2180a9c092f954d64b2c31c001"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/qa/dto/QuestionDTO.java",
+      "sha256": "489a9389a9e751f2d50f8d1d8e537be9a6bb0049b1b5df9edb2b0577072825bd"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/qa/entity/CampusAnswer.java",
+      "sha256": "c9da2882ce2b66e72cff02c8a622983dfaaf9cff364f4d854e7087690c6ec60d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/qa/entity/CampusQuestion.java",
+      "sha256": "90897421712bf1f117dc1b741dcf76dd48107396b8241ba2feb16f391c8dfe89"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/qa/mapper/CampusAnswerMapper.java",
+      "sha256": "5f477f72e3d2d110a64d4eb32d13eb8838f34377c28b3878ea1258203b881fd5"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/qa/mapper/CampusQuestionMapper.java",
+      "sha256": "7382cc98d4d95ae8b24ecd31a118661776b7f272aeeeec73ce621c80a721c8eb"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/qa/service/QuestionService.java",
+      "sha256": "db29bee3c9bc793c6a09fb24c8dd77ef3866866ca5756079d58bec0bcf6307bd"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/qa/vo/AnswerVO.java",
+      "sha256": "9fb730a8f07f985319ca322f74f973139b2764c3b78fe00b2c9c9f1e5dacc2f9"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/qa/vo/QuestionVO.java",
+      "sha256": "fc0517c466c22dbbf3b018eb9530ccaa7c4def23d7c4dfb14b8d4e82c9ac1810"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/report/controller/ReportController.java",
+      "sha256": "ccc85e03129bbe7382f7caf28f704e5079e8f5d76eeb4c42ba3f2e84f720b52a"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/report/dto/ReportDTO.java",
+      "sha256": "1b6c95f775824cff0f155d6514ee96b1f5f146728727165e802234eb90b43839"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/report/dto/ReportHandleDTO.java",
+      "sha256": "b1d70cdecea60dfeaf7134d270c827a7af30ddb600158c11b8cea7b1c41f9219"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/report/entity/Report.java",
+      "sha256": "d124a93109cf1400a0f05eea6e6591263ad56152ea4c3d7671690d400a275f44"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/report/mapper/ReportMapper.java",
+      "sha256": "d6d4429411043244c87b0970f953f5536f86d1976ebf89fafd256b3894fdaf2c"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/report/service/ReportAdminService.java",
+      "sha256": "366282714357f3589b87580c3b04a19da2e1129959df9f6ebe46cff728946913"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/report/service/ReportService.java",
+      "sha256": "cec7a05e34cbcd604693a169f629472dc9df3c4dd1e86683395b15695d018cd7"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/site/controller/HealthController.java",
+      "sha256": "a006d45c5d1fea977efdcf88a6d7c792c59893e8836c9e652bffcdee482eef0b"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/site/controller/HomeController.java",
+      "sha256": "4e0f9ef146014a959c3c321e401c13b8e20d6fb55f95df272665585ede0efa58"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/site/controller/SiteConfigController.java",
+      "sha256": "465334d7358aea427fd22c8a401d8d46f3b817ed0c178482e55251d33bd3f60b"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/site/entity/SystemConfig.java",
+      "sha256": "b1052966a844ce8b307807c12e9e945151d058b2fe6e1f165bab1b72eec0088d"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/site/mapper/SystemConfigMapper.java",
+      "sha256": "3174450eb330d3b361d33b300c513306105e1d21c7b255caa46d147bb3b1e53a"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/site/service/SystemConfigService.java",
+      "sha256": "cb376bcafdaa522a743a5d8fd4c8b6f31a1be1116906b500ba8584c17ffea663"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/site/vo/HomeAggregateVO.java",
+      "sha256": "a086e94bc663e3786ff0133057bd68b9c883023a7697becb3d6cfce950239111"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/upload/controller/AssetController.java",
+      "sha256": "fa14433ef7db13e978df9bc5d8eb5ecf332d198961e58a0b7921c67a5bb2c13e"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/upload/controller/UploadController.java",
+      "sha256": "0ea620fe0261cceee9ad824a9e40cb8cf8df41778be377d5f68db80e4f6db0f4"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/upload/entity/UploadResource.java",
+      "sha256": "7adeaf89f43a42ff4fc0e5d1d8fc372ffd2f684944b77eed6c4fe96a7b73daaa"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/upload/mapper/UploadResourceMapper.java",
+      "sha256": "e9402f7b7236f2e6aeea4b8f1b33c8a52be1666ef26bd9b41aabc189e699adbd"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/upload/service/UploadService.java",
+      "sha256": "851d0348b074a44f76af4d9e8a33e7c2ef04ae81967149edf35e84ef683e97a4"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/upload/vo/UploadVO.java",
+      "sha256": "c838a2db53c46504284a86b1a2a814716295332a66d55b8ec7b8bc6424464e57"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/user/controller/UserController.java",
+      "sha256": "80b11a77f551be88dadb042ccca28dfebed99d991d74c07eba852112911a4150"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/user/dto/PasswordUpdateDTO.java",
+      "sha256": "e948e9d37bfd48c36b1ab60723246ab1773370ee19e3130cc17693266addf66a"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/user/dto/ProfileUpdateDTO.java",
+      "sha256": "1c49eaec107f08374a0a66f9475bdeae402a7780b6e3d7da5eb16901a9b5d3cb"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/user/dto/UserStatusDTO.java",
+      "sha256": "a99bde0cf18127d6093ed238fc13dd91ee5383bc7fea37c4d2f9e785ef7c89b3"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/user/entity/User.java",
+      "sha256": "52e84dfc4417bd8b208f61fa7c59510309c1f7e40bcc90924717eb4751565f56"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/user/mapper/UserMapper.java",
+      "sha256": "b3658868b2fa5f4e62ab0c1db31c3f834c2629e827f18c8369b9f2f60255be01"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/user/service/UserPublicService.java",
+      "sha256": "fd3b732e03070de383c9179c33468d30567fa7f93e9e4cb5fdc9203b994574c6"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/user/service/UserService.java",
+      "sha256": "14df68eb3c37ee4d1995ab3d5bea47d3964cc4b26e4cf6d45ea528aba8ce0819"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/user/vo/UserContentVO.java",
+      "sha256": "9ca7c3ca163e9a912fec03f8a913309273c125de421563fd5f46a5bf8ec0cfe2"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/user/vo/UserProfileVO.java",
+      "sha256": "59c551a4c7b8ca981bc0f1f68653c8e552d074b7a5787e0c4dfb32320c52e6ce"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/module/user/vo/UserReviewVO.java",
+      "sha256": "0dd30970d747e7713fc44f845fb51518bef253a0717a0be481136e4a810bf3ae"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/utils/DataUriUtils.java",
+      "sha256": "f03598abf490f1d07b0b6132f9f6e460de6381c25465ef4ef69d2fe5d893f641"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/utils/JwtUtils.java",
+      "sha256": "58e162c1c0c9fa0a7c11271ccfd2cd3eaa56944e364a7eb0eb102a927567c3d6"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/utils/MinioUtils.java",
+      "sha256": "a9c318690d083bd8b4a9d47f59e645faf5f34b6892d9fd752735b415a21e909a"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/utils/PdfUtils.java",
+      "sha256": "b20251a2a202658012c15864f9428413fe2fae4e34354b8650934e27bc65b219"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/utils/RedisUtils.java",
+      "sha256": "8e8eadb783586198a7bb7f16b0f33ffb8f43594340ef942948a5fed975fc550f"
+    },
+    {
+      "path": "web/backend/src/main/java/com/campus/platform/utils/SignTokenUtils.java",
+      "sha256": "8551b576b7539a87355f8fac8eaf18a0bda454f107218c054506e6ad7a7099b7"
+    },
+    {
+      "path": "web/backend/src/main/resources/application.yml",
+      "sha256": "9dc81f6768feed6074d913f0ab52d75209a57c04b0f562c726d4a8511fcf8855"
+    },
+    {
+      "path": "web/backend/src/main/resources/db/2026-08-05-chat-blocker-high-migration.sql",
+      "sha256": "4c56ae4b9b7c0979296e1ced71991e1376d4ca4a28904ac2003706c2c677505e"
+    },
+    {
+      "path": "web/backend/src/main/resources/db/2026-08-07-ai-content-audit-migration.sql",
+      "sha256": "6bfe1afa62ab1af7ec59d1f463e1e907551a8de6430cfc7f36e060702d6d2eb5"
+    },
+    {
+      "path": "web/backend/src/main/resources/db/migrate_v2_wrongbook.sql",
+      "sha256": "4a42c83845c1d43602a7ff4b347d02d88c62dfeb26b6fe059b311a8d743d35a4"
+    },
+    {
+      "path": "web/backend/src/main/resources/db/migrate_v3_wrongbook_analyze.sql",
+      "sha256": "90a749fd0ed34d720d8fcb9182ce331f1d9c478fd1ec51fdb4d02170a7278cdc"
+    },
+    {
+      "path": "web/backend/src/main/resources/db/migrate_v4_wrongbook_generated.sql",
+      "sha256": "1e401c5f629086da7106625d6dffc2a90537f6c0053875cde5f831ee501115b3"
+    },
+    {
+      "path": "web/backend/src/main/resources/db/migrate_v5_images_to_db.sql",
+      "sha256": "5b311b8439a1c51458c30f234afea2be391096d15fa844162bf8cef8110c8e26"
+    },
+    {
+      "path": "web/backend/src/main/resources/db/migrate_v6_all_uploads_to_db.sql",
+      "sha256": "2933422f06039141cbcb8ef2fb38ba4cc5c2730f6bb4ee463abaa04a2dac2e6f"
+    },
+    {
+      "path": "web/backend/src/main/resources/db/migrate_v7_system_config.sql",
+      "sha256": "46f3f530f319fa6e31618b143c09fa522616f3743af3bafbbcdc4272f109a729"
+    },
+    {
+      "path": "web/backend/src/main/resources/db/migrate_v8_draw_guess.sql",
+      "sha256": "e5e9912f8faf9b3c57aba1b64d14cb15751acb7a9ffc42a3568d60bed280c4fa"
+    },
+    {
+      "path": "web/backend/src/main/resources/db/migrate_v9_draw_guess_artwork.sql",
+      "sha256": "187dedf471aa1e4060f5bbb2975d5f78e9834ce021251dd09a72d6c33b218cc7"
+    },
+    {
+      "path": "web/backend/src/main/resources/db/reset_and_testdata.sql",
+      "sha256": "e1de239f1b12e48d54ff9f6ddef56658451c1abd09e11dae61eee6fa6fa86e79"
+    },
+    {
+      "path": "web/backend/src/main/resources/db/schema.sql",
+      "sha256": "aaf65f32615d6ff0c3989a987f56d35f7b641a0025cefd02820d90025c8b982b"
+    },
+    {
+      "path": "web/backend/src/main/resources/sensitive-words.txt",
+      "sha256": "27feb1894cf4cbbed294238a498926f01b52a941dba56f67c453612795767987"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/config/SystemConfigHolderTest.java",
+      "sha256": "b586a1a89cb71a6d22a1dd7750d06b20189939998f30d94453ba40a7fec7c633"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/config/TrustedOriginsConfigTest.java",
+      "sha256": "bf9a84ef7a6d48b033261035fccc053dc6d6708552f1a871cba488a716e46303"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/interceptor/JwtInterceptorTest.java",
+      "sha256": "0c214a17c03e68fb19df109eb67b6e699efa03e619b73d8f5fb4e9204c21aaeb"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/activity/ActivityPublishDTOTest.java",
+      "sha256": "e055f1385f2ec5154b8b1c9d596d8e6fecb5df99e237d831cc0edded501107e2"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/activity/ActivityServiceTest.java",
+      "sha256": "a030ca37176b468104070554d9a89f6de650d7c17c1d6a987e68264122ef856d"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/admin/AdminPermissionServiceTest.java",
+      "sha256": "90556bc8757c8b1ebb7c12961581bfff1b9978890fddd5ba1193b9ac2f2f84ed"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/admin/AdminUserServiceTest.java",
+      "sha256": "76362506ac434d95cd63faa7b382ec38dbb7295f52b6f036d7abdd8cb944c01d"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/admin/AuditServiceTest.java",
+      "sha256": "54848659702c058cc2c6ed1c3415fbc88d1918413eb954e9c41f04f7f38fba74"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/ai/AiChatServiceTest.java",
+      "sha256": "3bac759f89852f50aa2c22b48c8f25d3268d88535746544fd06e32e6e777e593"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/ai/ContentAiAuditServiceTest.java",
+      "sha256": "378c687d139b43b3a4031c1d9b53fdee5f5e4764904a315f913354aa821364ff"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/ai/WrongQuestionServiceTest.java",
+      "sha256": "d769c76741ba4384c91b486b0776727758cad24c52977883806a6af99386bad7"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/ai/gateway/AiGatewayServiceTest.java",
+      "sha256": "d44252adb7bd0b9b343cf7fc829ec33e6cdca7100c184cc9907ccdc09401b8e0"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/ai/gateway/DeepSeekClientSseTest.java",
+      "sha256": "93d721a966f69a6dfabe0d4ee4c3b1d4add1ef04aa0d0fbfabf25e575922cb91"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/ai/gateway/SensitiveWordServiceTest.java",
+      "sha256": "72cd8ef21fad4456a59cf00f58529a4bf2202071891ba573a86745f06fed6807"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/auth/AuthServiceTest.java",
+      "sha256": "872da7059f578aec99d966562afd507bdc2633b57419f4432ce8c0d723e34653"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/chat/controller/ChatControllerTest.java",
+      "sha256": "12ad35a568dc1ce31872eb2fc8dd5326b478c490857aa7d991ca396560cac8cc"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/chat/service/ChatContextValidatorTest.java",
+      "sha256": "1dd6699e599c224a9af217591a589365a5ec2268b8997743de8e27af493f5ff8"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/chat/service/ChatRateLimiterTest.java",
+      "sha256": "b5551dc77c7a60205c0cafeb2dd1d1eae09e52eed1125150cc3f248d2ebda4e5"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/chat/service/ChatServiceTest.java",
+      "sha256": "8d94862c69a84e14e54a011e0f8bd78c9ceff5d62833c20f72595a6d1a984af1"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/chat/service/UploadResourceServiceTest.java",
+      "sha256": "ea0809a086255a00f4f123c348c1ebd193a0eeccf28a14a9b552b933a8ca0369"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/chat/websocket/ChatRealtimePublisherTest.java",
+      "sha256": "71fe05112bde185db18f2713e9364df7aa3594e10e39b2538460d780b87dafc9"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/chat/websocket/ChatWebSocketHandlerTest.java",
+      "sha256": "dac442b6bbf03c9721c4bd7dba254c7d2ff484f75dc8ee552a7904c6688a6ab7"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/chat/websocket/ChatWebSocketTest.java",
+      "sha256": "48185c776efd85593a32d03acf337b9bc94798dd6ebbe4255cbd44da26447ba6"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/chat/websocket/ChatWsTicketServiceTest.java",
+      "sha256": "eb7d96071e4cdf085dddfc3fd9cc81cb7908c5ccd4f04956eda6b02399ae8d30"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/drawgame/db/DrawGuessGalleryQueryTest.java",
+      "sha256": "5b9e8b6df8a5c170aab28987be23af32421a48c2d17ed815b5019be21b7d6974"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/drawgame/db/DrawGuessMigrationTest.java",
+      "sha256": "b57501fc323fc8e56930011e410fbc4ac4ba8db6f8ccc2e77603970e057a8a98"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/drawgame/domain/DrawGuessGameTest.java",
+      "sha256": "01888468ba686dc9c8eb656ed68ef6e5b730b2b8d91655325e1f108ebf6c981e"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/drawgame/domain/DrawGuessRoomAccessPolicyTest.java",
+      "sha256": "4c8ed01d45951d219f5ecda155e301df93587a3b561ef405aeb91b8f4203e3c2"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/drawgame/domain/DrawGuessStrokePolicyTest.java",
+      "sha256": "ee4a1a6f874f4e63374565715550798ab02bf08b6809fd3fb833d20e8f069bcc"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/drawgame/service/DrawGuessRoomServiceTest.java",
+      "sha256": "eca928ecbd79c3c3ecdde9ab9e29dca661e57308f4a09a23ab716ae901334c28"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/drawgame/websocket/DrawGuessHandshakeInterceptorTest.java",
+      "sha256": "1277ff802ee060162cb4a310647814577de82680898ba2f9b85473bc50a26e76"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/drawgame/websocket/DrawGuessSessionRegistryTest.java",
+      "sha256": "093104c94483c8d6bcedf4b168f95fb838e4ff737433cf927115598bff32d4aa"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/drawgame/websocket/DrawGuessWsTicketServiceTest.java",
+      "sha256": "8f0ce6b267bf2af37863c067a5e98789c87e2fcd7c9b4db5aed97c8e2c46c31f"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/idle/IdleDetailPendingAppointmentTest.java",
+      "sha256": "7c7b8c10e36fe564ec14034c2c44ba7662c7a560745a501c7ac6b0b61a8740a4"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/idle/IdleDetailReviewEntryTest.java",
+      "sha256": "19ff84e10e8c63493b9a0af656ac97397829ef4f6e1227aa5b772e7e057b5bae"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/idle/IdleNotificationBizIdTest.java",
+      "sha256": "723680101367819d25b22e2fbfaeb0a6ac6614518c6c8804d53102770f44b095"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/idle/IdleServiceTest.java",
+      "sha256": "f2234dd46222bbd9dd0c02c0dcd5b83162f383cc875d9634c33b5ccc466cf492"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/lostfound/LostFoundServiceTest.java",
+      "sha256": "da2c639b2627ed058543a865afcf284009cce0565450925f6b46a3c648ba70bf"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/message/MessageServiceTest.java",
+      "sha256": "89a04198b55ca7366e6b1c8969cfe15856170dbfa3717b9d4d2e3ae097157db2"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/post/PostServiceConcurrencyTest.java",
+      "sha256": "58ae9c5cd9f6883d9bf10ad950eb52352bb5a6f4d346fa43ddbd530a27173411"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/post/PostServiceSearchTest.java",
+      "sha256": "8cc9597b591c87865512ea8e980fc5fda7e550a4c899308bd01d24cbf5b48234"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/module/site/SystemConfigServiceTest.java",
+      "sha256": "32798e71c4d9aead857c614e85c02b78a9aabc9fff404cf0c6f3a4943fb4d1d8"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/utils/DataUriUtilsTest.java",
+      "sha256": "8814df46cb4dd8f355fb9f4a9144c8bad2dfb80dd247749442c5b77e20397757"
+    },
+    {
+      "path": "web/backend/src/test/java/com/campus/platform/utils/JwtUtilsTest.java",
+      "sha256": "3cd78cde272f137c1d81230419b894b94c9207e40442ce7d106258349e155561"
+    },
+    {
+      "path": "web/frontend/admin/index.html",
+      "sha256": "278dafa0eaee13151556e186b9b5030665cd131ac6bfee5c18bbf148c10e59d6"
+    },
+    {
+      "path": "web/frontend/admin/package-lock.json",
+      "sha256": "4b0ad2d751169ba17613045961a9cc4db727620291c5db63ee2321d4f73f8ece"
+    },
+    {
+      "path": "web/frontend/admin/package.json",
+      "sha256": "8e85af7fa8b640a2523a1ff66bbafdf27feebf4696d2d8353cb4f88857b7232f"
+    },
+    {
+      "path": "web/frontend/admin/public/apple-touch-icon.png",
+      "sha256": "5a897d3b5f8d2b40f318ad4b5f96ffce10681d0aa421102ae2aea08bdad5c88b"
+    },
+    {
+      "path": "web/frontend/admin/public/favicon.ico",
+      "sha256": "54b53f6605ae73b8770a17f06022f6224fbd8dc48d478b1b4c000932864401fa"
+    },
+    {
+      "path": "web/frontend/admin/public/favicon.png",
+      "sha256": "6966bf10d02aa09ce38f811135b30f54fa9528764884465c9dabf7870db27d4f"
+    },
+    {
+      "path": "web/frontend/admin/public/favicon.svg",
+      "sha256": "4034f56c6ef5e60f56630815313634a52d36e9bff4a1f9578cf0f88a5ffbd59b"
+    },
+    {
+      "path": "web/frontend/admin/public/images/idle-badminton.jpg",
+      "sha256": "87b1985123d936c921700fd7388ca995db241ead85263afa88ba50b84a666f8a"
+    },
+    {
+      "path": "web/frontend/admin/public/images/idle-calculator.jpg",
+      "sha256": "6ee016eeb74acb5cf383311b062019af9dc9316fbacc7c562f5fa83784c64d8e"
+    },
+    {
+      "path": "web/frontend/admin/src/App.vue",
+      "sha256": "30d15752b1f027c2e305a017aaf24a8086ab8763089a9a08f87f1af0b1c7663d"
+    },
+    {
+      "path": "web/frontend/admin/src/api/aiConfig.js",
+      "sha256": "62bfe9fb6d62119e2008c821bc077667279ae084c900c81517e03a37d0464ff7"
+    },
+    {
+      "path": "web/frontend/admin/src/api/audit.js",
+      "sha256": "085309addaeaf9696c1f77dc5e2ad3e8b613104cb0ff701f1b8eac58ac8b1fa0"
+    },
+    {
+      "path": "web/frontend/admin/src/api/auth-token.js",
+      "sha256": "346e3ba65bce3c6bf0a3595010236a797f171f4132958eb97ec14a66b48ffa97"
+    },
+    {
+      "path": "web/frontend/admin/src/api/auth-token.test.mjs",
+      "sha256": "72ae99691e2463160c138e6c46af3f98c0f4b74461daa1ad84dacdef69c7d949"
+    },
+    {
+      "path": "web/frontend/admin/src/api/auth.js",
+      "sha256": "750e0c6062542055f15cfa1d5ca5e78ce4f20fc2a8a2e944afdc9cfb35407a54"
+    },
+    {
+      "path": "web/frontend/admin/src/api/content.js",
+      "sha256": "07be6cbc805d1e42c40cf79e82cfdc5ccd3ce0f1ed8090dbba96e1602e385304"
+    },
+    {
+      "path": "web/frontend/admin/src/api/notice.js",
+      "sha256": "94dd944c864de4a73712131be2a6ea5f85e821a494639741dfdfa735ca15bfe0"
+    },
+    {
+      "path": "web/frontend/admin/src/api/report.js",
+      "sha256": "ec58191c89e61dad1e81a8e9f9da0929b45ee0dfe7e8bc6e9e1ac0a08a99fab1"
+    },
+    {
+      "path": "web/frontend/admin/src/api/request.js",
+      "sha256": "fb138a1f7aff83668e474789651a0f8d525d3678f19352d54b01d2bc8c62a4ef"
+    },
+    {
+      "path": "web/frontend/admin/src/api/request.test.mjs",
+      "sha256": "a534bb6b73a936e8d0ea6fae54dddd67d2eaae8a2536dce1b7d3919bb417cdf9"
+    },
+    {
+      "path": "web/frontend/admin/src/api/stats.js",
+      "sha256": "81c40f52c9e26f196996a1c3b77db107895201829df9d20b704a69d1b2c4f257"
+    },
+    {
+      "path": "web/frontend/admin/src/api/systemConfig.js",
+      "sha256": "30c10bd94e4b59b14cb3fa8762f7274293f64809be4c027a8a89259531a1ebf0"
+    },
+    {
+      "path": "web/frontend/admin/src/api/user.js",
+      "sha256": "3d1c2fe53af8cffeab4e5a529eafd413e4a18b2935df92f2dea69fccab460010"
+    },
+    {
+      "path": "web/frontend/admin/src/components/wt/WtPageHeader.vue",
+      "sha256": "c70086f48017fd2f3e20bd88f689269d88292fda9f83eb489e8f87d1daa4ef2f"
+    },
+    {
+      "path": "web/frontend/admin/src/layout/AdminLayout.vue",
+      "sha256": "6d58317bd84a23ef8e43096a29bf0e668a25db6e44226b4b16fba12368d41daf"
+    },
+    {
+      "path": "web/frontend/admin/src/layout/adminSidebarNavigation.mjs",
+      "sha256": "bb4bc3f4e1b8dae637686a2f56fcafec6ca6dbbae2860a32a1faf380e9923ed5"
+    },
+    {
+      "path": "web/frontend/admin/src/layout/adminSidebarNavigation.test.mjs",
+      "sha256": "1719c32bfa1f4f469fe3d8fb27a399b7f8986740c2a22f3812e9852011e1d7b4"
+    },
+    {
+      "path": "web/frontend/admin/src/main.js",
+      "sha256": "e64d44fd6e386d18a5e0e62983aedfebe9873378499e7940882e36580ad7e70a"
+    },
+    {
+      "path": "web/frontend/admin/src/router/index.js",
+      "sha256": "42e0d42fdb2c0a51624d3207a0e5e641f157d47f687a6692ddc85e5fe89cc64d"
+    },
+    {
+      "path": "web/frontend/admin/src/store/admin.js",
+      "sha256": "d1809e35f4361db7bccab24e93758150b7d537f5fd0ce0b10374de1f4ec123cf"
+    },
+    {
+      "path": "web/frontend/admin/src/styles/base.css",
+      "sha256": "845b942c3d5c89ecfe42375b779ca32395082fad12e8d24cc8a4b9d1d1249a88"
+    },
+    {
+      "path": "web/frontend/admin/src/styles/element-theme.css",
+      "sha256": "dc45ece04ce3ca73984b94938458e6907d54a11258e3815e891c54be4cfef8d8"
+    },
+    {
+      "path": "web/frontend/admin/src/styles/tokens.css",
+      "sha256": "e77a8fc1769b343f6d3ad970ae52aae04264f7b6b016b398831bd51359bf32d8"
+    },
+    {
+      "path": "web/frontend/admin/src/utils/chartTheme.js",
+      "sha256": "ceaf75036624ea365103c6d8a0d9932f52fab73d1f254276952473aa0ad943aa"
+    },
+    {
+      "path": "web/frontend/admin/src/utils/date.js",
+      "sha256": "e149c5ce7b500f084e9eae1e33021d3a89939b1ea4f1b11a07e170cdfedc8261"
+    },
+    {
+      "path": "web/frontend/admin/src/utils/date.test.mjs",
+      "sha256": "e3a3350cc4bb999ac9692d6892c56bd74afb425ed8a51adc21f05a3af146111e"
+    },
+    {
+      "path": "web/frontend/admin/src/utils/image.js",
+      "sha256": "3ec533925170bb8773b446591fe19cdd6ef51fb7bf23b5ad311270a76441b019"
+    },
+    {
+      "path": "web/frontend/admin/src/utils/image.test.mjs",
+      "sha256": "8c656ed046bd6eb984a9cad49b4f8e49a277edf77245b7cff235080e91fd033d"
+    },
+    {
+      "path": "web/frontend/admin/src/views/ai/AiConfig.vue",
+      "sha256": "35776ad5f2e2c22d5905d12a7f18e2ad26032b9850e4a443cff06e5a1e22262e"
+    },
+    {
+      "path": "web/frontend/admin/src/views/ai/AiContentAudit.vue",
+      "sha256": "42de65f836d3ebd1d6032b0e36fb83ca5ac3f20099359a809e9729a0ffa4a0d7"
+    },
+    {
+      "path": "web/frontend/admin/src/views/ai/AiLogs.vue",
+      "sha256": "aa5057818a99418bef1b9a63a38387d99327bd2130ba0d5758f8488c4d7b1580"
+    },
+    {
+      "path": "web/frontend/admin/src/views/audit/AuditModule.vue",
+      "sha256": "3d37f1789f6952c6019954ee3ab5fe461553b84dfc14d97b670cb3dd4da66e20"
+    },
+    {
+      "path": "web/frontend/admin/src/views/content/ContentManage.vue",
+      "sha256": "5d1cb0b612b4a4d24c93598b5bd9658b9030258033f956a267dd5a83eb6b776e"
+    },
+    {
+      "path": "web/frontend/admin/src/views/dashboard/Dashboard.vue",
+      "sha256": "33f56edafc6bb588852656f95832a16e0e626ed6a0b9a0453608899eb415fa24"
+    },
+    {
+      "path": "web/frontend/admin/src/views/login/Login.vue",
+      "sha256": "e8b8f879ae57eff483894905d7b10226bbdf2b606cb469632493f02d8022f196"
+    },
+    {
+      "path": "web/frontend/admin/src/views/notice/NoticeEdit.vue",
+      "sha256": "6016b8c2fd981042bad0f8bd8dce87f227e09e63cd2a902b5a16c508e86d7956"
+    },
+    {
+      "path": "web/frontend/admin/src/views/notice/NoticeManage.vue",
+      "sha256": "1c0855f23bd8b1fea6848956728399ed64a6e150db6b6915f8ea3e2b4e0d68fc"
+    },
+    {
+      "path": "web/frontend/admin/src/views/report/ReportList.vue",
+      "sha256": "738a74fbf71e6e605a00130ac679510ae98fbbe6c5ea62335295fe91ae6a337e"
+    },
+    {
+      "path": "web/frontend/admin/src/views/system/AdminList.vue",
+      "sha256": "2e7c758dd86a1e911e2a0fe50b3460d7d14ed52493790aee7fe315dd0f9eaa90"
+    },
+    {
+      "path": "web/frontend/admin/src/views/system/SystemConfig.vue",
+      "sha256": "6b50bb75cd6edad6b2a6a78f3a79cb12e67aa1005dda88134274d47818476c2c"
+    },
+    {
+      "path": "web/frontend/admin/src/views/user/UserList.test.mjs",
+      "sha256": "c98c0f87eb2ae6d7eb4376ad71e598a36906e0be14ad7384bf9dcca72fd6900e"
+    },
+    {
+      "path": "web/frontend/admin/src/views/user/UserList.vue",
+      "sha256": "22d2a8e11b452a755bbc1e0228236b4ec1b2a9192f9a1175cc2a13af07c6b95a"
+    },
+    {
+      "path": "web/frontend/admin/vite.config.mjs",
+      "sha256": "4b8fc8a7e7cc96ba494abe91869914f2e332438aa83861ead15092df4a438f39"
+    },
+    {
+      "path": "web/frontend/admin/vite.qa.config.mjs",
+      "sha256": "8e7a5a513f9304f077ae5b2f82ba84072e48f74747c13c41b8dc4edfd9ee29a2"
+    },
+    {
+      "path": "web/frontend/student/index.html",
+      "sha256": "1b2a3a43fb6c6d6db4c57c8f6b4c387a7646dddd6412a155fc67d9e9773688f1"
+    },
+    {
+      "path": "web/frontend/student/package-lock.json",
+      "sha256": "b6cc58735d173530564e9a835911457933c23eaaf745bc9a29ceaa92869cb049"
+    },
+    {
+      "path": "web/frontend/student/package.json",
+      "sha256": "9b04589c126f2b29b4ea66e066227642d3f5e0b7c3dbd5a48cb9f7786639819e"
+    },
+    {
+      "path": "web/frontend/student/public/apple-touch-icon.png",
+      "sha256": "5a897d3b5f8d2b40f318ad4b5f96ffce10681d0aa421102ae2aea08bdad5c88b"
+    },
+    {
+      "path": "web/frontend/student/public/favicon.ico",
+      "sha256": "54b53f6605ae73b8770a17f06022f6224fbd8dc48d478b1b4c000932864401fa"
+    },
+    {
+      "path": "web/frontend/student/public/favicon.png",
+      "sha256": "6966bf10d02aa09ce38f811135b30f54fa9528764884465c9dabf7870db27d4f"
+    },
+    {
+      "path": "web/frontend/student/public/favicon.svg",
+      "sha256": "4034f56c6ef5e60f56630815313634a52d36e9bff4a1f9578cf0f88a5ffbd59b"
+    },
+    {
+      "path": "web/frontend/student/public/images/05-校园晚霞.png",
+      "sha256": "10d8796a0b530d935c5849764a8a8d3d1350619a5eccb963fc6ef10ea52b2d9c"
+    },
+    {
+      "path": "web/frontend/student/public/images/activity-card.jpg",
+      "sha256": "a91b8da04ef36f24fb0a166900da4f9a1844618d18e8e0d10acc581af113c2ef"
+    },
+    {
+      "path": "web/frontend/student/public/images/ai-bg.jpg",
+      "sha256": "90265d11fde404181a7d829bef83c38ef5a4361c4f7e0241193585cc17f4286f"
+    },
+    {
+      "path": "web/frontend/student/public/images/avatar-default.jpg",
+      "sha256": "02a5ff7571763803bec768b85bdadc53b93bbed44171b0df74a594fd4713ec95"
+    },
+    {
+      "path": "web/frontend/student/public/images/campus-v2.png",
+      "sha256": "390da5a6c6ffbb431cf0970cc43c436c6392627c3c2c25ad64e2a34e26aa5464"
+    },
+    {
+      "path": "web/frontend/student/public/images/campus-v2.webp",
+      "sha256": "44f3457ec9f75baa4606e8360d83b067f4693d0245e4395ccf5dfb0b7b2e3626"
+    },
+    {
+      "path": "web/frontend/student/public/images/generated-activity-campus.png",
+      "sha256": "26a3fb81f5eb5b00b64bb793494ec21373f7ec967c35a5fa70997e2146fbe0b1"
+    },
+    {
+      "path": "web/frontend/student/public/images/generated-activity-campus.webp",
+      "sha256": "b824e2b8fe36a35825d1ff0219912c590153b486491010b6d4c4051ce4cce18e"
+    },
+    {
+      "path": "web/frontend/student/public/images/generated-ai-study.png",
+      "sha256": "61e4c18ca8c0c604f1d702616eeb66dea61ebcf9d23c197234b456131a86dc2c"
+    },
+    {
+      "path": "web/frontend/student/public/images/generated-ai-study.webp",
+      "sha256": "67db22935547b7df2ed8d0e6bbcff2b98d414728b7559593e34afec3e0f24fb4"
+    },
+    {
+      "path": "web/frontend/student/public/images/generated-idle-items.png",
+      "sha256": "a4455b281413038245d22bcfa5750f274f9d3891694ab27aac6f230731ce7e0a"
+    },
+    {
+      "path": "web/frontend/student/public/images/generated-idle-items.webp",
+      "sha256": "10c66b661d34aaf728a7adbd064d3e8a455bbce986568787b5a8b5014de0789b"
+    },
+    {
+      "path": "web/frontend/student/public/images/generated-lost-found.png",
+      "sha256": "2e18d0d41acd4184cc8af4ba083203518cf1c10e29117afe105c4e4615da2ee5"
+    },
+    {
+      "path": "web/frontend/student/public/images/generated-lost-found.webp",
+      "sha256": "26cc3e35889181658619799fcefd3d18283bc29dca975e796a2c449c9f30cafc"
+    },
+    {
+      "path": "web/frontend/student/public/images/generated-social-campus.png",
+      "sha256": "9afbd048e924c4ed3191d49d77fd35676f7f8220ee030f35215389d798f0d2bc"
+    },
+    {
+      "path": "web/frontend/student/public/images/generated-social-campus.webp",
+      "sha256": "fc653af397e11faf0c8db6817a60a853dc1ee567630584c2092c53f48ea80385"
+    },
+    {
+      "path": "web/frontend/student/public/images/generated-study-partner.png",
+      "sha256": "24f9f90aa84f189145664a3121cf400b2898589847d3d77e665d79d604f1e4e2"
+    },
+    {
+      "path": "web/frontend/student/public/images/generated-study-partner.webp",
+      "sha256": "6ab9bee5258973fc00b136a9284426d37c09fe341479126c71935c57daf46479"
+    },
+    {
+      "path": "web/frontend/student/public/images/hero-bg.png",
+      "sha256": "24b599ea9b58b9152feeb5fd0786dbe3da9f0314f5af2a2c011fd0da0781e774"
+    },
+    {
+      "path": "web/frontend/student/public/images/hero-campus.jpg",
+      "sha256": "ad84deec29b0389f6ca77e682fd4ca9a3f5f876cf1718d0d9d56b99cc573a846"
+    },
+    {
+      "path": "web/frontend/student/public/images/idle-badminton.jpg",
+      "sha256": "87b1985123d936c921700fd7388ca995db241ead85263afa88ba50b84a666f8a"
+    },
+    {
+      "path": "web/frontend/student/public/images/idle-calculator.jpg",
+      "sha256": "6ee016eeb74acb5cf383311b062019af9dc9316fbacc7c562f5fa83784c64d8e"
+    },
+    {
+      "path": "web/frontend/student/public/images/idle-card.jpg",
+      "sha256": "08c7e5403cf2ff4a424246285fd7ec180372d395c097ce7f5ec2aa598e8d429a"
+    },
+    {
+      "path": "web/frontend/student/public/images/idle-schematic-book.jpg",
+      "sha256": "d3f7ef4c9dd2e5f3080e4f7c137771868ce8aabf00ff4b09d301cfb29b5690bf"
+    },
+    {
+      "path": "web/frontend/student/public/images/idle-schematic-clothes.jpg",
+      "sha256": "28aefc7a21e0c222a40662b8a2448dc8136bdd968e3c7cb13c76ca6003c9b82a"
+    },
+    {
+      "path": "web/frontend/student/public/images/idle-schematic-life.jpg",
+      "sha256": "060eab85beda685a53719967d43f0c2fbd220ecde75803e3f6f32a2951bec524"
+    },
+    {
+      "path": "web/frontend/student/public/images/idle-schematic-other.jpg",
+      "sha256": "0e2acd763d0004e930414848904d4b5ad4d53ce18724934766164db0c8cd3ce9"
+    },
+    {
+      "path": "web/frontend/student/public/images/login-bg.jpg",
+      "sha256": "46690f060e95e248ee2f968fe2b81fef4fb7b592235cc03bbc1e83e2cb762240"
+    },
+    {
+      "path": "web/frontend/student/public/images/lost-card.jpg",
+      "sha256": "9ce650ad462362e66b3b1987b9ff9305f72ab3d2ccb19fdea70bad7f043e804c"
+    },
+    {
+      "path": "web/frontend/student/public/images/register-bg.png",
+      "sha256": "5d462bc3f20d49fe32b8c81fbfb7e561d01556e9e895018cecf3c72cb77bc7c4"
+    },
+    {
+      "path": "web/frontend/student/public/images/social-card.jpg",
+      "sha256": "4e6c9c4c37248c25d9080005938d410356bc10734200c1ed2341b8cd3f347c8e"
+    },
+    {
+      "path": "web/frontend/student/public/images/study-banner.jpg",
+      "sha256": "6810fdd5b989898db36f20476c76f6eb90a1596846d17c490e0b0600bbceec0e"
+    },
+    {
+      "path": "web/frontend/student/public/images/wrong-bg.jpg",
+      "sha256": "57cc0c38ba60d98b8b48583d39f9a83c1da464d45be5efde56f23d22925f019a"
+    },
+    {
+      "path": "web/frontend/student/public/ocr/chi_sim.traineddata.gz",
+      "sha256": "b8a23f10c7de500891eb458a8adc9cc58ab7f242f08b7d149f5e9aea4ad5db7c"
+    },
+    {
+      "path": "web/frontend/student/public/ocr/eng.traineddata.gz",
+      "sha256": "45b4cb346724ac1774f1c36f42f182b887bcdb28ebe63e6fff90ac41f3fcff91"
+    },
+    {
+      "path": "web/frontend/student/public/ocr/tesseract-core-relaxedsimd-lstm.wasm",
+      "sha256": "7985c92d4c64e7267d24cadffe1b2a1da6bf8aa55fdcaf953fe94fe122a24545"
+    },
+    {
+      "path": "web/frontend/student/public/ocr/tesseract-core-relaxedsimd-lstm.wasm.js",
+      "sha256": "ab2b65f0ee7ab593c4bbcbcf6375720033732a7e96156c9d97eb56c4ccd69bb0"
+    },
+    {
+      "path": "web/frontend/student/public/ocr/tesseract-core-simd-lstm.wasm",
+      "sha256": "34e8d50cac216427d86bf397d610fdd9f49492539bbcdfbfccc4eda20c810bea"
+    },
+    {
+      "path": "web/frontend/student/public/ocr/tesseract-core-simd-lstm.wasm.js",
+      "sha256": "364a1d3ced9378b3610dd218b695c7bb5e63c6d9ee8cd7d76394043b22c2fff7"
+    },
+    {
+      "path": "web/frontend/student/public/ocr/worker.min.js",
+      "sha256": "19ee5cda4a70f74f419bc9d40f02118c415fe76b9b07494797b710d3211a5630"
+    },
+    {
+      "path": "web/frontend/student/src/App.vue",
+      "sha256": "9da8a71b1f0e243576cceaa1287abb43582aac87adfab0c640bfeaad8a81ee9c"
+    },
+    {
+      "path": "web/frontend/student/src/api/activity.js",
+      "sha256": "0bdc3b085883edea6793aeb728db1dbe37fdb28ab66aa2ebb6e0306ffef25cc0"
+    },
+    {
+      "path": "web/frontend/student/src/api/ai.js",
+      "sha256": "418e84829fb66cd3bc8105096c45000e2024597a4841200cf7b3ebfbdc7e0071"
+    },
+    {
+      "path": "web/frontend/student/src/api/auth.js",
+      "sha256": "b0788eca5b23c652be7bdaee8b7e6e73258735974c9921fc479dcae311769fd3"
+    },
+    {
+      "path": "web/frontend/student/src/api/chat.js",
+      "sha256": "0e278baef03391dd95be9d72a8ffbb84aef6b46632e7960ce1307658c639380e"
+    },
+    {
+      "path": "web/frontend/student/src/api/drawGuess.js",
+      "sha256": "3fd30c75f65d662685206ecac3e3f8c6d09571600a041f896393d8095a41d758"
+    },
+    {
+      "path": "web/frontend/student/src/api/favorite.js",
+      "sha256": "e9892b94736a1d81587bad72ba5b5aa35f3167a381afe01905a90e9809658a1d"
+    },
+    {
+      "path": "web/frontend/student/src/api/idle.js",
+      "sha256": "18d8eb7ed6e3dba93b0a2e59dd1a03dbc1772e33ab8625bedab982860fa93123"
+    },
+    {
+      "path": "web/frontend/student/src/api/lostfound.js",
+      "sha256": "fff203e0a96b5c4f3776960309d5bd181e42217bb13eadf0f7c659a54261fcc2"
+    },
+    {
+      "path": "web/frontend/student/src/api/message.js",
+      "sha256": "5ad19fb8a1a1700ef73f53699c8767e91d3f039c40e18f42ab8ffc0c32475c7f"
+    },
+    {
+      "path": "web/frontend/student/src/api/notice.js",
+      "sha256": "b54dc8dc98790ecb9cd2219339d6d86952b16febaca6d33021adecc574d4728e"
+    },
+    {
+      "path": "web/frontend/student/src/api/partner.js",
+      "sha256": "96e3e9f0d5c1a99f2d634fdc21a4035a55575bb5902a674db708ce7d968d6acc"
+    },
+    {
+      "path": "web/frontend/student/src/api/post.js",
+      "sha256": "e9aa6f3011a21f118279a619e17b0489452dbd613bdc56c758974066926592bf"
+    },
+    {
+      "path": "web/frontend/student/src/api/qa.js",
+      "sha256": "b29ba6fb83c856dab49b2107c38b9e3db61e5f267c10ae8aee4d1fe3147daf35"
+    },
+    {
+      "path": "web/frontend/student/src/api/report.js",
+      "sha256": "3a6e412c6b9d5f3298da1aedcabbfa50e4f840f61ef61221960edc885dcfad84"
+    },
+    {
+      "path": "web/frontend/student/src/api/request.js",
+      "sha256": "18977d49d8f0eef0d90957a1a2b1677c5a823a181b103bd6a371743abadeb266"
+    },
+    {
+      "path": "web/frontend/student/src/api/user.js",
+      "sha256": "9d208b86f331dd57bfee303486a097b89689351bd34f87e35ceb1034bf145b60"
+    },
+    {
+      "path": "web/frontend/student/src/api/wrong.js",
+      "sha256": "b55df88cad9190ed18420ff813dd9833e01dbfd182515e87435ea8dbc5b052b9"
+    },
+    {
+      "path": "web/frontend/student/src/components/AiAssistPanel.vue",
+      "sha256": "877835071d38847ca83989183661b502cfa311a8fd8ad0c27c0f8f4244709f6c"
+    },
+    {
+      "path": "web/frontend/student/src/components/ChatBubble.vue",
+      "sha256": "35d7206c2cf748f3b34e9bb832092c858ff9a3514e62bf37c16daa376824573b"
+    },
+    {
+      "path": "web/frontend/student/src/components/CommentList.vue",
+      "sha256": "ec11547b4635c59c65ac56f1f3e2f4b6b999e6cabd8f42f54c76a9af545ae920"
+    },
+    {
+      "path": "web/frontend/student/src/components/EmptyBox.vue",
+      "sha256": "7457e7f395cdd3431de7012a3c37f2f7901b6b7c6da06c58451adccccd149e0f"
+    },
+    {
+      "path": "web/frontend/student/src/components/ItemCard.vue",
+      "sha256": "5166b46c4a7228ea505e2c08af3361ccdf80ab4f712e7bfa8a79dcccc60b3ce0"
+    },
+    {
+      "path": "web/frontend/student/src/components/UploadImg.vue",
+      "sha256": "615bca89f38310c8a5e7dee8260e7747c5f8211ec9961ea248677cd965bae049"
+    },
+    {
+      "path": "web/frontend/student/src/components/auth/AuthCampusShell.vue",
+      "sha256": "6bc6279f9c73eb6a2d0bf19b992f0e38e0f9596eafd95102ca0abaad878b4edb"
+    },
+    {
+      "path": "web/frontend/student/src/components/chat/BizContextCard.vue",
+      "sha256": "2b323f84c5ce12464d6320885da7b83fcecc3f7164631944b6f666e4721f44fc"
+    },
+    {
+      "path": "web/frontend/student/src/components/chat/ChatComposer.vue",
+      "sha256": "a1e1f1547d09f9f8470b7989eb5e0c76d9d51e28de53e1ff4205bfb0591cbefd"
+    },
+    {
+      "path": "web/frontend/student/src/components/chat/MessageBubble.vue",
+      "sha256": "7575c1c488e09cd6e44713195a11426912b383c3f4da0d8204a8119864c69a3b"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtAvatar.vue",
+      "sha256": "d2d742be2a8d7a4f48bd7022a7d1f38bfe9100baf7d43ad1ff3b8697a9c64356"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtButton.vue",
+      "sha256": "9130673e699dbf1a81d933544e29f8de13d4255fc4e24e4a7efa10a10cbb1db4"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtCard.vue",
+      "sha256": "4b37cfa6eb33a1c6a83f42f897c437dd88f28030f780d3210bd0775e803f137e"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtEmptyState.vue",
+      "sha256": "bb60300db03c861849b2f4e440d4d8aa3cf1a8e5abe550dad32aac808e628d34"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtEventArt.vue",
+      "sha256": "ac701e5620a5508d959279f4ca8b71a753ac71df434401528ae7b08d9f3f1066"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtFeedCard.vue",
+      "sha256": "f8d8b78da9f6cf61113c7cac0d3c0752849b9c93f5c84011d26b6ab41e89bf11"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtHero.vue",
+      "sha256": "eb0250d961ef4b3f00d0d8f2136c203a91d75eb6246122c2eebb9cd90b85aeb9"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtInput.vue",
+      "sha256": "ae35b703b8e2cbc8cb23fb5b72166f7f04ab672cf985ab56f175134f7a7c3e70"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtPageHeader.vue",
+      "sha256": "c70086f48017fd2f3e20bd88f689269d88292fda9f83eb489e8f87d1daa4ef2f"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtQuickEntry.vue",
+      "sha256": "186bfa78971c88bb884ff4693179b8fcf23c690e1cdc19d9f60818d09104bb9f"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtTabs.vue",
+      "sha256": "b02b34523843119e63e47f425c41cdb7c11818c2cbd682de5ab25aa42d7cd307"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtTag.vue",
+      "sha256": "b3a2144c4acd2701a17b4280352ccb0f08c6bff0e8c31c83b86ce33e49a76096"
+    },
+    {
+      "path": "web/frontend/student/src/components/wt/WtThemeToggle.vue",
+      "sha256": "58c44750088ea79f35d6c34bc3434b8446ba1debf2c6508c689029140c8c4525"
+    },
+    {
+      "path": "web/frontend/student/src/features/campus3d/campus-data.js",
+      "sha256": "7361952f5596ae18960c35ac06e34f708452d443dbc442b43395a130708878dd"
+    },
+    {
+      "path": "web/frontend/student/src/features/campus3d/campus-scene.js",
+      "sha256": "de1c2798f634acd62d05208542cb8ebab240a26d0574cf14a10e7dd3b8be641c"
+    },
+    {
+      "path": "web/frontend/student/src/features/campus3d/room-router.mjs",
+      "sha256": "4961220747a2ebe9754a7f122ee2e1d40992dd6e829149f11ebf9138c2af0ff8"
+    },
+    {
+      "path": "web/frontend/student/src/features/campus3d/room-router.test.mjs",
+      "sha256": "a10cee1fc3953bb48bdacdd6fd2c3c10b5b491856c1fc1529eb2cd7c6dfe124a"
+    },
+    {
+      "path": "web/frontend/student/src/features/campus3d/three.module.js",
+      "sha256": "eb3d763e4b958d7fd0f8823fcece491218e91cb353743b7fabd00459312a94a1"
+    },
+    {
+      "path": "web/frontend/student/src/features/drawGuess/completedArtwork.mjs",
+      "sha256": "45a5970a6d967068d62fdfd20812cd5a1c93f12677c1e9336ed4c1386cf9b3a0"
+    },
+    {
+      "path": "web/frontend/student/src/features/drawGuess/completedArtwork.test.mjs",
+      "sha256": "a94df21a09f6abc948f409ed54f98be49196b321681d7023881a7d1ac1f74dae"
+    },
+    {
+      "path": "web/frontend/student/src/features/drawGuess/drawGuessAccessibility.test.mjs",
+      "sha256": "ce5ffb649ba4315df7997ee2cbac283e0b84a015d835bd049bdc89998243e8c8"
+    },
+    {
+      "path": "web/frontend/student/src/features/drawGuess/drawGuessApi.mjs",
+      "sha256": "400820982a70c781aa00a8a84359d4c5666ceb9b786bb54baa8e82150fde402b"
+    },
+    {
+      "path": "web/frontend/student/src/features/drawGuess/drawGuessApi.test.mjs",
+      "sha256": "b7ac3a31b3a28717a35fa8dd9b82e15e7d780ef5d3688cd27b0006d79493a8fc"
+    },
+    {
+      "path": "web/frontend/student/src/features/drawGuess/drawGuessProtocol.mjs",
+      "sha256": "ec67a1b6262aa0295a6ada91aa1113ea30e27c779df8bd316bbe1b434e30da96"
+    },
+    {
+      "path": "web/frontend/student/src/features/drawGuess/drawGuessProtocol.test.mjs",
+      "sha256": "0eab1419bafcb9887644a0e935248596e0f73840b4abf80b68c3684b4c7ef6a3"
+    },
+    {
+      "path": "web/frontend/student/src/features/drawGuess/drawGuessSocket.mjs",
+      "sha256": "88d93fbe7d7976943b9309b44fb7d32bf5462fe318d7f377660f31fa4335ff8a"
+    },
+    {
+      "path": "web/frontend/student/src/features/drawGuess/drawGuessSocket.test.mjs",
+      "sha256": "0a15a164440b4c7d9810feeac8d32f9a10b6cec498bc5feab9cf51e8fbe26cf0"
+    },
+    {
+      "path": "web/frontend/student/src/features/drawGuess/galleryBindings.test.mjs",
+      "sha256": "f77e8b6ee35575e30e69635fa49346a17e97e1615b1ec011f296bbfbb2aeadfe"
+    },
+    {
+      "path": "web/frontend/student/src/layout/MainLayout.test.mjs",
+      "sha256": "70f8bdeae048e1093ac66720e3dc128c5df9f74393d4bd7c697528ddce47225c"
+    },
+    {
+      "path": "web/frontend/student/src/layout/MainLayout.vue",
+      "sha256": "04a059a9a28217ff19d9dc6dca18af56cb53c6f529977a5c96f940d1cb54107f"
+    },
+    {
+      "path": "web/frontend/student/src/main.js",
+      "sha256": "169fb47dd9b22fd704046863b37efee53bc9e934320cd65d1722cbfff69f730d"
+    },
+    {
+      "path": "web/frontend/student/src/router/index.js",
+      "sha256": "7e75264aee0f6108aa2629093ff588198c0576d7cdc094f62281cf33beb0a0b0"
+    },
+    {
+      "path": "web/frontend/student/src/router/routes.js",
+      "sha256": "d385e0f51c1d58ab0e056ec84913f6d11a59cd7f78e6cffb1af9e749dd7eddd5"
+    },
+    {
+      "path": "web/frontend/student/src/store/chat.js",
+      "sha256": "413c805379aa9c9b7df45cc7e59e0d94e65ee54760c8934178ae05d17d4f947a"
+    },
+    {
+      "path": "web/frontend/student/src/store/chatSendPolicy.mjs",
+      "sha256": "842a80f7666e5e988102800817480bc965218809fece1a563dea19fce77e41a7"
+    },
+    {
+      "path": "web/frontend/student/src/store/chatSendPolicy.test.mjs",
+      "sha256": "269fc31142bd19bda49caf5286edf650fd6b2e1c987646687e46ceed53344adc"
+    },
+    {
+      "path": "web/frontend/student/src/store/chatState.mjs",
+      "sha256": "184b60182a7d68acd479c96c43a7f1025b3bcb372afe23cbf762a220b42b4507"
+    },
+    {
+      "path": "web/frontend/student/src/store/chatState.test.mjs",
+      "sha256": "7c4507e8d0ff307a4bc6598e29a2eb35152c05286d0b7447882be94c2b7a6f09"
+    },
+    {
+      "path": "web/frontend/student/src/store/message.js",
+      "sha256": "b27c178b35bfe5b49497a18927dc37a9b8434a85c264b67647573580ecf3ce2b"
+    },
+    {
+      "path": "web/frontend/student/src/store/user.js",
+      "sha256": "05aa32639ea648b25e5374c3be00d75404604f646ea4ead9fe72d63c287bd643"
+    },
+    {
+      "path": "web/frontend/student/src/styles/base.css",
+      "sha256": "26796dd50186ba161331fb350f19816a484e949296f10370fad6f0ae51785542"
+    },
+    {
+      "path": "web/frontend/student/src/styles/element-theme.css",
+      "sha256": "c615b0a9016a31571233263635b576f8cf9047c1e6fe9a785ae7745040ec707e"
+    },
+    {
+      "path": "web/frontend/student/src/styles/tokens.css",
+      "sha256": "d80866dbe53c38e6edad11d1f34faf8a0b97fce81a5902b8cead546803a7fd32"
+    },
+    {
+      "path": "web/frontend/student/src/utils/auth.js",
+      "sha256": "aec72f9b751e5c0453f78f2056fc3311c98c0a63661edeccdf1f9ffdcaa3b499"
+    },
+    {
+      "path": "web/frontend/student/src/utils/chatSocket.js",
+      "sha256": "dae9e41f1545f2f98e7fb28d46eef38bf5337d3304af281d2d100dcbf5489222"
+    },
+    {
+      "path": "web/frontend/student/src/utils/chatSocket.test.mjs",
+      "sha256": "e63efc8c042e02d98680890c751c652c934c642e65cdf00c99c0144a0d833beb"
+    },
+    {
+      "path": "web/frontend/student/src/utils/chatSocketCore.mjs",
+      "sha256": "554363899d2abae492112daa90e589148df3e38fd1f6fb10d5e5ef1bb4ecac66"
+    },
+    {
+      "path": "web/frontend/student/src/utils/chatSocketLifecycle.test.mjs",
+      "sha256": "6d6fa2c9eeade769c4ef060388779e7208291a9fb23163af2e6f87db8ffa331f"
+    },
+    {
+      "path": "web/frontend/student/src/utils/code-editor.js",
+      "sha256": "2aa772b34651c3474dc3e6dd4befbaa70da1e83bf904e0fb226d5a753c1a5846"
+    },
+    {
+      "path": "web/frontend/student/src/utils/content-assets.mjs",
+      "sha256": "749da035d3c20bacad849c88eeeda70a4a5ef89b61a2fc76caaf6f66e560dc40"
+    },
+    {
+      "path": "web/frontend/student/src/utils/content-assets.test.mjs",
+      "sha256": "d0d95a21e73e805261b906607986d367308c8226d69a1d47af2a18069c9482dc"
+    },
+    {
+      "path": "web/frontend/student/src/utils/date.js",
+      "sha256": "97442f299869f7a038d05b7fe9190e1f39d06fe25728b16c8ddc9cec57ebb529"
+    },
+    {
+      "path": "web/frontend/student/src/utils/image.mjs",
+      "sha256": "a6b337cd75a883368bc10f897ac1ebb53cb622346f62c32154d68814af4b9186"
+    },
+    {
+      "path": "web/frontend/student/src/utils/image.test.mjs",
+      "sha256": "c04d98492ea27263cff2ba3b3a5641f547832b395b08cdd155df6d7896652940"
+    },
+    {
+      "path": "web/frontend/student/src/utils/list-return.test.mjs",
+      "sha256": "6a9e6ea351ff9ca493aca3476d6e619541033ca5ab97c39df9c30125ed9baef5"
+    },
+    {
+      "path": "web/frontend/student/src/utils/list-state.js",
+      "sha256": "2d16060bccc16d0f7e5a99e0a86018a72b4db615267d67487e4ebcb754ce302a"
+    },
+    {
+      "path": "web/frontend/student/src/utils/markdown.js",
+      "sha256": "0418a3c099e9910cdeca0f53660f33ad449f579d2ea3db2fb0c2cf7672755f38"
+    },
+    {
+      "path": "web/frontend/student/src/utils/message-navigation.mjs",
+      "sha256": "b7d9053c7a5fcc5d9de59117610d85fbfb8339e177823b295a69e1d43f616d98"
+    },
+    {
+      "path": "web/frontend/student/src/utils/message-navigation.test.mjs",
+      "sha256": "4980ac2d0398c0fe8a744ee02983ec23a8db9af62c1b8988a7625cf800bda0cf"
+    },
+    {
+      "path": "web/frontend/student/src/utils/ocr.js",
+      "sha256": "4632deea2acef32f6f508159266277b8f61260bd17a9746a5913b67d2824dcea"
+    },
+    {
+      "path": "web/frontend/student/src/utils/request-navigation.js",
+      "sha256": "afa8612e16fd890ba46858303611020c4631469dc72ef0b3f098938af2534d23"
+    },
+    {
+      "path": "web/frontend/student/src/utils/request-policy.mjs",
+      "sha256": "c26a646022b33d4c1db7c4074f62e981f07df8b03140fc1ce87396ea540e3020"
+    },
+    {
+      "path": "web/frontend/student/src/utils/request-policy.test.mjs",
+      "sha256": "e492612d9c5f9706640097356f4d2357cc508ff6f92c3087e6279d9edce1d100"
+    },
+    {
+      "path": "web/frontend/student/src/utils/request.js",
+      "sha256": "257d7657394d710f3c49efe3dd7b9a4b38e1e572343407cbcc58da5d40cce937"
+    },
+    {
+      "path": "web/frontend/student/src/utils/signinQr.mjs",
+      "sha256": "af6adac9651109e307c0aba1daf6e9fdd21288368523124d8d25d8dfaed756c5"
+    },
+    {
+      "path": "web/frontend/student/src/utils/signinQr.test.mjs",
+      "sha256": "0fb60132962e720e7835b4f0b3a0dde4681707d19e97069303cfb53ab4a93f21"
+    },
+    {
+      "path": "web/frontend/student/src/utils/startChat.js",
+      "sha256": "74dc55346c489db4b04a4b900c9ea67a6d4e625b7a53056b83517610073b1d8c"
+    },
+    {
+      "path": "web/frontend/student/src/utils/wrongbook.js",
+      "sha256": "4a6008111e06e680c7373226248dab01e90dbcb59ce9257556d476c1af99aa44"
+    },
+    {
+      "path": "web/frontend/student/src/views/Maintenance.vue",
+      "sha256": "ec879f751ed8f6769d785ef601e10a84c80db1ea1f35bcef08349d1b7a9bcc79"
+    },
+    {
+      "path": "web/frontend/student/src/views/activity/Detail.vue",
+      "sha256": "f6458599300d1a9bba10e52e6e3836353d4c973652563c750697e2a1d0d1427c"
+    },
+    {
+      "path": "web/frontend/student/src/views/activity/List.vue",
+      "sha256": "89d86dd537559a3217d6c0797b3efc75960c13477b1a72513e14d30aab20e49f"
+    },
+    {
+      "path": "web/frontend/student/src/views/activity/MySignup.vue",
+      "sha256": "b7b63417651f0bb0024d815163f69ff32d31e60f69d5b40ee8c8491eeea47c94"
+    },
+    {
+      "path": "web/frontend/student/src/views/activity/Publish.vue",
+      "sha256": "4668c13454686f27d35546b66529dbbf8c530ef604936c3c9c590ec5a9af40e4"
+    },
+    {
+      "path": "web/frontend/student/src/views/ai/ChatView.vue",
+      "sha256": "112c3e4e646eea175866f077ac7541090aff94c4fcaca85b0b5d367e65a9005d"
+    },
+    {
+      "path": "web/frontend/student/src/views/ai/CodeFix.vue",
+      "sha256": "bf9c9467d0eee471ccb1b46f2696a28dc9d094a5edfe73668f75da6fce77303f"
+    },
+    {
+      "path": "web/frontend/student/src/views/ai/WrongBook.vue",
+      "sha256": "92993db879bda45056d8aa9f69561bb09f95c062cee5ea4c52a5e29b0ec855d9"
+    },
+    {
+      "path": "web/frontend/student/src/views/ai/components/WrongOutlineDialog.vue",
+      "sha256": "9dcd05dfe2ca3f42ab59682fb47654a9371597785768cef1783deb4051220b61"
+    },
+    {
+      "path": "web/frontend/student/src/views/ai/components/WrongPlanDialog.vue",
+      "sha256": "c74981f815ef78c32797651329bc4cad538bd05751e60d05c4e7353cfd51cc9c"
+    },
+    {
+      "path": "web/frontend/student/src/views/ai/components/WrongQuickAdd.vue",
+      "sha256": "26b47ed7013ff20ae986caff54423e4d7ae70be3bc8131c764a472e82b62a099"
+    },
+    {
+      "path": "web/frontend/student/src/views/ai/components/WrongQuizDrawer.vue",
+      "sha256": "bc1134b0573d5ef50773166ceb9f3d51fbb4d73cae277c004a850533514e8510"
+    },
+    {
+      "path": "web/frontend/student/src/views/ai/components/WrongReviewDrawer.vue",
+      "sha256": "fbd45afb508d7821915e8cb19dbe4959f8d4e2f80cff0e8a6d4a2469b5111c0e"
+    },
+    {
+      "path": "web/frontend/student/src/views/campus3d/Campus3D.test.mjs",
+      "sha256": "4f095bbaf288032566d1e7065ce4e01ba58f63342aaa8674b1bf3f8d5aa486cf"
+    },
+    {
+      "path": "web/frontend/student/src/views/campus3d/Campus3D.vue",
+      "sha256": "92026aa479ae77e4817fcf9de96d54d69c5e440b3a481ea173e83deaac0da5b9"
+    },
+    {
+      "path": "web/frontend/student/src/views/campus3d/CampusWorkspace.vue",
+      "sha256": "eaf56db88130076dad392841ff3785ea128f31cd4234ddc7aa6559dde82af623"
+    },
+    {
+      "path": "web/frontend/student/src/views/chat/ChatRoom.vue",
+      "sha256": "368ee4af3c7024d550b74de8b7515e3d9051f802eb40d40819cbeb3ce78ec578"
+    },
+    {
+      "path": "web/frontend/student/src/views/chat/ConversationList.vue",
+      "sha256": "83695f9dce7d6a20ba076f0266c14b41a4b3316c00a2a539067aa9c18c6d784c"
+    },
+    {
+      "path": "web/frontend/student/src/views/drawGuess/Lobby.vue",
+      "sha256": "efa2e2a6ddc78957f0662cce82365d29d1b4ee8c80a4b786e5dd1734fc08cf85"
+    },
+    {
+      "path": "web/frontend/student/src/views/drawGuess/Room.vue",
+      "sha256": "1a3ab0813a88c6bed90c9496ad854ff0eb9ef167ececff8e59845895b06c0efc"
+    },
+    {
+      "path": "web/frontend/student/src/views/home/Home.test.mjs",
+      "sha256": "ea26b31cfd3e70c8c85d0e2913c9cddc0b12bd408293c13d122763101a129d02"
+    },
+    {
+      "path": "web/frontend/student/src/views/home/Home.vue",
+      "sha256": "200d6d20304ccfa563f4babed5fa0eb39dbfd76748321fe3553f74c5ec4478a9"
+    },
+    {
+      "path": "web/frontend/student/src/views/idle/Detail.test.mjs",
+      "sha256": "9e9a503923ae4afe6105746399b24f191b4e57d71edd7373c69b6ab44fb5271b"
+    },
+    {
+      "path": "web/frontend/student/src/views/idle/Detail.vue",
+      "sha256": "2a73d42320094b939b4e51fc6ebea05ed1869904aabf077962a657809e57a08e"
+    },
+    {
+      "path": "web/frontend/student/src/views/idle/List.vue",
+      "sha256": "11d6931c23bdf68a39d1bd7a592ee271952f67c4a1e483bec3e29ab37ac14bd5"
+    },
+    {
+      "path": "web/frontend/student/src/views/idle/MyAppointments.vue",
+      "sha256": "4196daddd23acedb3b82495aded9662c4cffa46712cdca7faed0920995837e9d"
+    },
+    {
+      "path": "web/frontend/student/src/views/idle/Publish.vue",
+      "sha256": "d723f6f1b32294303696a6e71678ac50035d891b05e860c3bc83b088a019cbd8"
+    },
+    {
+      "path": "web/frontend/student/src/views/login/Login.vue",
+      "sha256": "dea99c2a15881084d391d364d958585cee3061792d99f08c510f017a7390c0cb"
+    },
+    {
+      "path": "web/frontend/student/src/views/login/Register.vue",
+      "sha256": "3316d7b645357bd1f51fb4f8a3abde0892ba5b34e75de759b26cd569cc2613b7"
+    },
+    {
+      "path": "web/frontend/student/src/views/lostfound/Detail.vue",
+      "sha256": "75624bde1a5d4d661aaae4e12e4018d8cdad46b85fb7b2b1226cbe68902dc7e9"
+    },
+    {
+      "path": "web/frontend/student/src/views/lostfound/List.vue",
+      "sha256": "acd160eeb38bd7ada4ce447289c3e265d2d6ebc3a8dfae7db5270a4675b605c3"
+    },
+    {
+      "path": "web/frontend/student/src/views/lostfound/Publish.vue",
+      "sha256": "8c5431cc47ebc1fce9a0ac3c1a0d4583f1d6dec507d753c38d6bc931460f8838"
+    },
+    {
+      "path": "web/frontend/student/src/views/message/MessageCenter.vue",
+      "sha256": "5096e99d85e2cb256faccd7521a748c670fc94d3a1cd823295c9a43baeba7f66"
+    },
+    {
+      "path": "web/frontend/student/src/views/notice/Detail.vue",
+      "sha256": "e5d3ab2c467403df4141305190659b8dda418dddbe40f6f19091c613bc056054"
+    },
+    {
+      "path": "web/frontend/student/src/views/notice/List.vue",
+      "sha256": "8628ff94dee0ab556d46836bcbc345806231a0b89d1b1c1fdec71ea369c42acb"
+    },
+    {
+      "path": "web/frontend/student/src/views/partner/List.vue",
+      "sha256": "d953e2babcfdba1860e0e7f44f8528a4d1694eab6ac7c2d747002e5be6b27d12"
+    },
+    {
+      "path": "web/frontend/student/src/views/partner/Publish.vue",
+      "sha256": "956294084503c040075fabd73d3b210eba210467d34eeac7ce0d9a682ad43153"
+    },
+    {
+      "path": "web/frontend/student/src/views/profile/Profile.vue",
+      "sha256": "8fc4d6e9d8643caafd71aef9dcc4d5923ea3851afb6dd479ae5ecbc06bf3c8e9"
+    },
+    {
+      "path": "web/frontend/student/src/views/qa/Detail.vue",
+      "sha256": "72b486168f9bd6695ce83e97eb6b6716bd2fbe465b18c5dd015a8eda12eda42a"
+    },
+    {
+      "path": "web/frontend/student/src/views/qa/List.vue",
+      "sha256": "540e570888ad3f305a6f05c1d037ffd3ba18b87cdf93a27c4075ef0e7a68365b"
+    },
+    {
+      "path": "web/frontend/student/src/views/qa/My.vue",
+      "sha256": "ea3cd86dab395df8510f49e7dfb9a4d25ea952c17c684fe3574fbfc329a09a5f"
+    },
+    {
+      "path": "web/frontend/student/src/views/qa/Publish.vue",
+      "sha256": "9dca6eb633d0ccdc8f1cc46aa5e6a895cea927561b2156354be356bb732fa3b5"
+    },
+    {
+      "path": "web/frontend/student/src/views/search/SearchResults.vue",
+      "sha256": "ff1d70593e02e31b8867f9a1585495e97d5f6e001a5997fe86a479e2872957c7"
+    },
+    {
+      "path": "web/frontend/student/src/views/social/PostSquare.vue",
+      "sha256": "bee651e17044828edca855a56873c6d4297f8fae971c67dd59a6c48691311a66"
+    },
+    {
+      "path": "web/frontend/student/src/views/user/UserHome.vue",
+      "sha256": "31057edd9052ea1af659482922a4373965cc60816e96280606bac060097fc2ba"
+    },
+    {
+      "path": "web/frontend/student/vite.config.mjs",
+      "sha256": "92dcab4bffbcd02d628ce30fe7ddbd8bf234a409c9627b860ba68a2b97c5c595"
+    },
+    {
+      "path": "web/frontend/student/vite.qa.config.mjs",
+      "sha256": "c3326a9e93ee89493bd19a6c9a878239c4810762e532989b0a3d3f7ba9033925"
+    },
+    {
+      "path": "部署说明.md",
+      "sha256": "dad5931beb35db02b542017f6977af48905c77f93ff746ea4736bfab92e5a77e"
+    }
+  ]
+}

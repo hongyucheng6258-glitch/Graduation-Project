@@ -241,7 +241,7 @@ const ContentList = {
           style: 'display:flex;align-items:center;gap:12px;background:#fafcfb;border:1px solid #e8f0ea;border-radius:10px;padding:10px 12px;cursor:pointer;'
         }, [
           item.image
-            ? h('img', { src: item.image, style: 'width:56px;height:56px;border-radius:8px;object-fit:cover;flex:none;' })
+            ? h('img', { src: item.image, style: 'width:56px;height:56px;border-radius:8px;object-fit:contain;background:var(--surface-2);flex:none;' })
             : h('div', { style: 'width:56px;height:56px;border-radius:8px;background:#eef4f0;flex:none;display:flex;align-items:center;justify-content:center;color:#9db5a9;font-size:22px;' },
               props.type === 'post' ? '📝' : props.type === 'more' ? '🗂' : '🛍'),
           h('div', { style: 'flex:1;min-width:0;' }, [

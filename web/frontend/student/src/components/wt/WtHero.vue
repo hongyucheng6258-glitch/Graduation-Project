@@ -1,9 +1,12 @@
 <script setup>
+import { RouterLink } from 'vue-router'
+
 defineProps({
   hello: { type: String, default: '' },
   title: { type: String, default: '' },
   description: { type: String, default: '' },
   photo: { type: String, default: '' },
+  photoTo: { type: String, default: '' },
   photoNote: { type: String, default: '' },
   primary: { type: Object, default: null },
   secondary: { type: Object, default: null },
@@ -36,10 +39,12 @@ defineProps({
       </RouterLink>
     </div>
 
-    <div v-if="photo" class="hero-photo">
-      <img :src="photo" alt="秋日校园的教学楼和林荫广场" fetchpriority="high" />
-      <span v-if="photoNote" class="photo-note">{{ photoNote }}</span>
-    </div>
+    <component :is="photoTo ? RouterLink : 'div'" v-if="photo" class="hero-photo" :to="photoTo || undefined">
+      <img :src="photo" :alt="photoTo && photoNote ? '' : '秋日校园的教学楼和林荫广场'" fetchpriority="high" />
+      <span v-if="photoNote" class="photo-note">
+        {{ photoNote }} <span v-if="photoTo" aria-hidden="true">→</span>
+      </span>
+    </component>
   </section>
 </template>
 
@@ -49,10 +54,10 @@ defineProps({
   grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
   gap: 32px;
   align-items: center;
-  padding: 44px;
+  padding: 28px;
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  background: linear-gradient(135deg, var(--brand-soft), var(--paper) 60%, var(--accent-soft) 130%);
+  background: var(--surface);
 }
 .hello-line {
   display: flex;
@@ -118,30 +123,32 @@ defineProps({
 .hero-event-date small { font-size: var(--fs-cap); }
 .hero-event strong { display: block; font-size: var(--fs-sm); }
 .hero-event > span:last-child small { display: block; color: var(--ink-2); font-size: var(--fs-xs); }
-.hero-photo { position: relative; border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); box-shadow: var(--shadow-lg); }
-.hero-photo > img { display: block; width: 100%; height: 320px; object-fit: cover; }
+.hero-photo { display: block; position: relative; border-radius: 10px; overflow: hidden; background: var(--surface-2); }
+.hero-photo > img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.hero-photo:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
 .photo-note {
   position: absolute;
-  left: 14px;
-  bottom: 14px;
-  padding: 6px 12px;
-  border-radius: var(--r-pill);
-  background: rgba(27, 36, 55, .72);
+  inset: auto 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 26px 14px 12px;
+  background: linear-gradient(transparent, rgba(15, 23, 42, .83));
   color: #fff;
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
+  font-weight: 650;
 }
+.hero-photo:hover .photo-note { text-decoration: underline; }
 @media (max-width: 950px) {
   .campus-hero { padding: 28px; gap: 24px; }
   .hero-copy h1 { font-size: 32px; }
   .hero-description { font-size: var(--fs-body); }
   .btn { padding: 0 16px; font-size: var(--fs-body); }
-  .hero-photo > img { height: 270px; }
 }
 @media (max-width: 700px) {
   .campus-hero { grid-template-columns: minmax(0, 1fr); padding: 20px; gap: 20px; }
   .hero-copy h1 { font-size: 30px; }
   .hero-description { margin: 12px 0 20px; }
   .hero-event { margin-top: 18px; }
-  .hero-photo > img { height: clamp(170px, 49vw, 240px); }
 }
 </style>

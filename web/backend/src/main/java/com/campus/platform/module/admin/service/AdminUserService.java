@@ -33,13 +33,14 @@ public class AdminUserService {
     private final AdminPermissionService adminPermissionService;
 
     /** 用户列表/搜索（学号/昵称/状态） */
-    public PageResult<User> listUsers(String keyword, Integer status, int pageNum, int pageSize) {
+    public PageResult<User> listUsers(String keyword, Integer status, Long record, int pageNum, int pageSize) {
         Page<User> page = userMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<User>()
                         .and(StrUtil.isNotBlank(keyword), w -> w
                                 .like(User::getStudentNo, keyword)
                                 .or().like(User::getNickname, keyword))
                         .eq(status != null, User::getStatus, status)
+                        .eq(record != null, User::getId, record)
                         .orderByDesc(User::getId));
         return PageResult.of(page);
     }

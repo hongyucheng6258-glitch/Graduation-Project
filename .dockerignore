@@ -15,5 +15,6 @@ ui-prototype
 测试素材
 测试截图
 db-backup-*.sql
+数据库备份/
 .local-browser
 *.log

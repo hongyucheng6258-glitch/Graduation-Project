@@ -49,6 +49,14 @@ class AgentActivityPublishRoutingTest {
         verifyNoInteractions(model);
     }
 
+    @Test
+    void preparesAnExplicitlyNamedCustomActivityWithoutTheModel() {
+        var reply = service().ask(1L, "帮我发布活动：《松林阅读会A17》", null);
+        assertEquals(List.of(ActivityPublishDrafts.PREPARE), reply.toolsUsed());
+        assertEquals("松林阅读会A17", reply.activityDrafts().get(0).title());
+        verifyNoInteractions(model);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"帮我发布一个闲置键盘", "帮我发布一个名为《读书会》的活动",
             "帮我发布一个明天下午三点在图书馆举办的读书会", "帮我发布活动：《读书会》地点《图书馆》"})

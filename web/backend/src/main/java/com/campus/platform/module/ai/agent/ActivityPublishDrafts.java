@@ -117,6 +117,9 @@ public class ActivityPublishDrafts implements AgentToolSource {
             }
             return draft;
         }
+        if (form.getLocation() == null || form.getStartTime() == null || form.getEndTime() == null) {
+            throw new BizException(ResultCode.BAD_REQUEST, "请补充活动地点、开始时间和结束时间后再提交");
+        }
         checkOwnedImages(uid, form.getImages());
         var activity = activities.publish(uid, form);
         jdbc.update("""

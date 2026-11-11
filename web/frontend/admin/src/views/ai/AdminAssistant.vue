@@ -1,18 +1,22 @@
 <template>
   <el-alert v-if="available === false" title="管理智能助手尚未启用" type="info" :closable="false" />
-  <AssistantShell v-else ref="assistantShell" v-model:mode="workspace" v-model:question="question"
+  <AssistantShell v-else ref="assistantShell" v-model:mode="workspace" v-model:question="question" class="admin-assistant"
     title="管理智能助手" subtitle="查看实时待办，从结果直接打开处理页面。" :tabs="workspaceTabs"
     tabs-label="管理助手功能" :sessions="sessions" :active-id="activeId"
-    :prompts="workspace === 'tasks' && available && !turns.length && !busy ? suggestions : []"
+    :prompts="showWelcome ? suggestions : []" :empty-title="showWelcome ? '从今天的待办开始' : ''"
+    empty-description="可以查询待办数量、待审核活动或闲置，以及指定举报的证据。"
     :show-composer="workspace === 'tasks'" :busy="busy" :input-disabled="busy || !available" :sessions-disabled="busy"
     :max-length="1200" input-label="向管理助手提问" placeholder="例如，现在有多少待处理举报？"
     @new-session="newSession" @select-session="selectSession" @send="send(question)" @prompt="send">
     <template v-if="workspace === 'tasks'">
-      <p v-if="error" class="assistant-error" role="alert">{{ error }}</p>
-      <div v-if="!turns.length && !busy && available" class="starter">
-        <h2>从今天的待办开始</h2>
-        <p class="muted">可以查询待办数量、待审核活动或闲置，以及指定举报的证据。</p>
-      </div>
+      <template v-if="error">
+        <p class="assistant-error" role="alert">{{ error }}</p>
+        <nav class="record-actions" aria-label="继续处理管理待办">
+          <RouterLink :to="destinations.activity.route">待审活动</RouterLink>
+          <RouterLink :to="destinations.idle.route">待审闲置</RouterLink>
+          <RouterLink :to="destinations.report.route">待处理举报</RouterLink>
+        </nav>
+      </template>
       <template v-for="(turn, index) in turns" :key="index">
         <AssistantBubble role="user" :content="turn.question" :nickname="nickname" />
         <AssistantBubble role="assistant" :content="turn.answer" />
@@ -22,11 +26,13 @@
               <h3>待办快照</h3>
               <time :datetime="turn.queriedAt">{{ formatTime(turn.queriedAt) }}</time>
             </header>
-            <RouterLink v-for="task in turn.tasks" :key="task.key" :to="destinations[task.key].route" class="task-link">
-              <span>{{ destinations[task.key].label }}</span>
-              <strong>{{ task.count }} 项</strong>
-              <span class="muted" aria-hidden="true">查看 →</span>
-            </RouterLink>
+            <div class="task-grid">
+              <RouterLink v-for="task in turn.tasks" :key="task.key" :to="destinations[task.key].route" class="task-link">
+                <span>{{ destinations[task.key].label }}</span>
+                <strong>{{ task.count }} <small>项</small></strong>
+                <span class="task-arrow" aria-hidden="true">↗</span>
+              </RouterLink>
+            </div>
             <p v-if="turn.tasks.some(task => task.key === 'ai')" class="risk-note">AI 预审风险提示是待审核内容的子集。</p>
           </section>
         </AssistantCard>
@@ -34,7 +40,7 @@
           <template v-for="record in turn.records" :key="recordKey(record.kind, record.id)">
             <AssistantCard wide>
               <article class="evidence-card results">
-                <header><strong>{{ record.title }}</strong><span class="muted">{{ recordStatus(record) }}</span></header>
+                <header><strong>{{ record.title }}</strong><span class="record-status" :class="{ pending: record.status === 0 }">{{ recordStatus(record) }}</span></header>
                 <p v-if="record.excerpt">内容节选　{{ record.excerpt }}</p>
                 <div v-if="record.activity" class="record-details muted">
                   <span v-if="record.activity.location">地点 {{ record.activity.location }}</span>
@@ -49,12 +55,13 @@
                   <p>被举报内容　{{ record.target.title || '原记录暂不可用' }}</p>
                   <p v-if="record.target.excerpt">被举报内容节选　{{ record.target.excerpt }}</p>
                 </template>
-                <RouterLink :to="recordRoute(record)">{{ reviewKindNames[record.kind] ? `打开${reviewKindNames[record.kind]}审核记录` : '打开举报记录' }}</RouterLink>
-                <RouterLink v-if="record.target?.title && reviewKindNames[record.target.kind]" class="target-link"
-                  :to="recordRoute(record.target)">查看被举报{{ reviewKindNames[record.target.kind] }}</RouterLink>
-                <el-button v-if="reviewKindNames[record.kind] && record.status === 0 && isLatestEvidence(record, index)"
-                  text :disabled="busy"
-                  @click="openReview(record)">准备审核</el-button>
+                <footer class="record-actions">
+                  <RouterLink :to="recordRoute(record)">{{ reviewKindNames[record.kind] ? `打开${reviewKindNames[record.kind]}审核记录` : '打开举报记录' }}</RouterLink>
+                  <RouterLink v-if="record.target?.title && reviewKindNames[record.target.kind]"
+                    :to="recordRoute(record.target)">查看被举报{{ reviewKindNames[record.target.kind] }}</RouterLink>
+                  <el-button v-if="reviewKindNames[record.kind] && record.status === 0 && isLatestEvidence(record, index)"
+                    plain type="primary" size="small" :disabled="busy" @click="openReview(record)">准备审核</el-button>
+                </footer>
               </article>
             </AssistantCard>
             <AdminReviewCards v-if="reviewKindNames[record.kind] && isLatestEvidence(record, index)"
@@ -141,6 +148,7 @@ const workspaceTabs = computed(() => available.value ? [
   { value: 'notice', label: '公告草稿' },
   { value: 'diagnostics', label: '运行诊断' }
 ] : [])
+const showWelcome = computed(() => workspace.value === 'tasks' && available.value && !turns.value.length && !busy.value)
 const lastEvidenceTurn = computed(() => {
   const placements = new Map()
   turns.value.forEach((turn, index) => {
@@ -288,15 +296,26 @@ async function send(text) {
 
 <style scoped>
 .results header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
-.results h3 { margin: 0 0 6px; font-size: 14px; }
-.starter { padding: var(--s-6) var(--s-3); text-align: center; }
-.starter h2 { margin: 0; font-size: 17px; }
+.results h3 { margin: 0; font-size: 15px; }
 .muted, time, .risk-note { color: var(--ink-2); font-size: 13px; }
-.task-link { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); color: inherit; text-decoration: none; }
-.task-link:hover, .evidence-card a { color: var(--brand-strong); }
-.task-link strong { font-variant-numeric: tabular-nums; }
+.task-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 144px), 1fr)); gap: 8px; margin-top: 11px; }
+.task-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 6px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); color: var(--ink-2); text-decoration: none; font-size: 12px; }
+.task-link:hover, .task-link:focus-visible { color: var(--brand-strong); border-color: var(--brand-line); }
+.task-link strong { grid-row: 2; color: var(--ink); font-size: 20px; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.task-link small { font-size: 11px; font-weight: 500; }
+.task-arrow { grid-row: 1; grid-column: 2; color: var(--brand-strong); }
+.risk-note { margin: 8px 0 0; font-size: 12px; }
 .evidence-card p { margin: 6px 0; }
+.record-status { padding: 2px 7px; border-radius: 6px; color: var(--ink-2); background: var(--surface-2); font-size: 12px; }
+.record-status.pending { background: var(--warning-soft); color: var(--gold-strong); }
 .record-details { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 6px 0; }
-.target-link { margin-left: 12px; }
+.record-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-top: 9px; margin-top: 8px; border-top: 1px solid var(--line); }
+.record-actions a { color: var(--brand-strong); font-size: 13px; }
+.record-actions .el-button { margin-inline-start: auto; }
 .assistant-error { color: var(--danger, #ae2929); }
+@media (max-width: 420px) {
+  .admin-assistant :deep(.ai-top__tools) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .task-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .record-actions .el-button { margin-inline-start: 0; }
+}
 </style>

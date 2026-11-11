@@ -36,7 +36,8 @@ const formatTime = (value) => value ? dayjs(value).format('MM-DD HH:mm') : ''
 .bubble { padding:11px 14px; border-radius:4px 18px 18px 18px; background:var(--surface); border:1px solid var(--line); box-shadow:var(--shadow-sm); line-height:1.65; white-space:pre-wrap; word-break:break-word; }
 .mine .bubble { color:var(--brand-ink); background:linear-gradient(145deg,var(--brand),var(--brand-strong)); border:0; border-radius:18px 4px 18px 18px; }
 .bubble.image { padding:5px; overflow:hidden; background:var(--surface); }
-.bubble.image :deep(.el-image) { display:block; max-width:360px; max-height:420px; border-radius:13px; }
+.bubble.image :deep(.el-image) { display:block; max-width:min(100%, 360px); border-radius:13px; }
+.bubble.image :deep(.el-image__inner) { display:block; height:auto; max-height:420px; }
 .bubble.failed { outline:2px solid color-mix(in srgb,var(--error) 45%,transparent); }
 .meta { display:flex; gap:8px; justify-content:flex-start; margin-top:5px; font-size:11px; color:var(--ink-3); }
 .mine .meta { justify-content:flex-end; }

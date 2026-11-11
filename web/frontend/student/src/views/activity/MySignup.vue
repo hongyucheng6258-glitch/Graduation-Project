@@ -1,71 +1,53 @@
 <template>
-  <WtPageHeader title="我的报名" subtitle="我参与和发起的活动" eyebrow="我的" />
-
-  <div class="my-signup">
+  <div class="my-signup record-page">
+    <WtPageHeader title="我的报名" subtitle="查看报名状态和已发布的活动" eyebrow="我的" />
     <el-card>
-      <template #header><h3>我的活动</h3></template>
       <el-tabs v-model="tab">
-        <!-- 我的报名 -->
         <el-tab-pane label="我的报名" name="signup">
-          <el-table :data="signups" v-loading="loading">
-            <el-table-column prop="activityTitle" label="活动" min-width="180" show-overflow-tooltip>
-              <template #default="{ row }">
-                <router-link :to="`/activity/detail/${row.activityId}`">{{ row.activityTitle }}</router-link>
-              </template>
-            </el-table-column>
-            <el-table-column prop="remark" label="报名说明" min-width="160" show-overflow-tooltip />
-            <el-table-column label="报名时间" width="170">
-        <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
-      </el-table-column>
-            <el-table-column label="状态" width="100">
-              <template #default="{ row }">
-                <el-tag :type="['warning','success','danger'][row.status]">
-                  {{ ['待审批','已通过','已拒绝'][row.status] }}
-                </el-tag>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-pagination v-model:current-page="signupPage" :total="signupTotal" :page-size="10"
-                         layout="prev, pager, next" style="margin-top: 16px" @current-change="loadSignups" />
+          <div v-loading="loading" class="record-list">
+            <article v-for="row in signups" :key="row.id" class="record-row">
+              <header class="record-head">
+                <RouterLink :to="'/activity/detail/' + row.activityId">{{ row.activityTitle }}</RouterLink>
+                <el-tag :type="['warning','success','danger'][row.status]" size="small">{{ ['待审批','已通过','已拒绝'][row.status] }}</el-tag>
+              </header>
+              <p v-if="row.remark" class="record-note">{{ row.remark }}</p>
+              <time v-if="row.createTime" class="record-meta" :datetime="row.createTime">{{ formatTime(row.createTime) }} 报名</time>
+            </article>
+            <EmptyBox v-if="!loading && !signups.length" description="暂无报名记录" />
+          </div>
+          <el-pagination v-if="signupTotal > 10" v-model:current-page="signupPage" :total="signupTotal" :page-size="10"
+            class="record-pager" layout="prev, pager, next" :pager-count="5" small @current-change="loadSignups" />
         </el-tab-pane>
-        <!-- 我的发布 -->
         <el-tab-pane label="我的发布" name="published">
-          <el-table :data="published" v-loading="loading">
-            <el-table-column prop="title" label="活动" min-width="180" show-overflow-tooltip>
-              <template #default="{ row }">
-                <router-link :to="`/activity/detail/${row.id}`">{{ row.title }}</router-link>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="100">
-              <template #default="{ row }">
-                <el-tag :type="row.auditStatus === 2 ? 'danger' : row.status === 2 ? 'info' : row.status === 3 ? 'danger' : ['warning','success'][row.auditStatus]">
+          <div v-loading="loading" class="record-list">
+            <article v-for="row in published" :key="row.id" class="record-row">
+              <header class="record-head">
+                <RouterLink :to="'/activity/detail/' + row.id">{{ row.title }}</RouterLink>
+                <el-tag size="small" :type="row.auditStatus === 2 ? 'danger' : row.status === 2 ? 'info' : row.status === 3 ? 'danger' : ['warning','success'][row.auditStatus]">
                   {{ row.auditStatus === 0 ? '待审核' : row.auditStatus === 2 ? '已驳回' : row.status === 2 ? '已结束' : row.status === 3 ? '已下架' : '已通过' }}
                 </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="auditReason" label="驳回理由" min-width="120" show-overflow-tooltip />
-            <el-table-column label="报名数" width="90">
-              <template #default="{ row }">{{ row.memberCount }}</template>
-            </el-table-column>
-            <el-table-column label="发布时间" width="150">
-        <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
-      </el-table-column>
-            <el-table-column label="操作" width="180" fixed="right">
-              <template #default="{ row }">
+              </header>
+              <p v-if="row.auditReason" class="record-note">审核说明 {{ row.auditReason }}</p>
+              <div class="record-meta">
+                <span>{{ row.memberCount ?? 0 }} 人报名</span>
+                <time v-if="row.createTime" :datetime="row.createTime">{{ formatTime(row.createTime) }} 发布</time>
+              </div>
+              <div class="record-actions">
                 <el-button size="small" :disabled="row.status === 2 || row.status === 3" @click="editActivity(row)">编辑</el-button>
                 <el-button size="small" type="primary" plain :disabled="row.auditStatus !== 1 || row.status === 2 || row.status === 3"
-                           @click="openMembers(row)">报名管理</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-pagination v-model:current-page="pubPage" :total="pubTotal" :page-size="10"
-                         layout="prev, pager, next" style="margin-top: 16px" @current-change="loadPublished" />
+                  @click="openMembers(row)">报名管理</el-button>
+              </div>
+            </article>
+            <EmptyBox v-if="!loading && !published.length" description="暂无发布记录" />
+          </div>
+          <el-pagination v-if="pubTotal > 10" v-model:current-page="pubPage" :total="pubTotal" :page-size="10"
+            class="record-pager" layout="prev, pager, next" :pager-count="5" small @current-change="loadPublished" />
         </el-tab-pane>
       </el-tabs>
     </el-card>
 
     <!-- 报名管理弹窗 -->
-    <el-dialog v-model="memberDialog" title="报名管理" width="640px" destroy-on-close>
+    <el-dialog v-model="memberDialog" title="报名管理" width="min(640px, calc(100vw - 24px))" destroy-on-close>
       <template v-if="memberActivity">
         <div style="margin-bottom: 12px; font-weight: 600">{{ memberActivity.title }}</div>
         <el-table :data="members" v-loading="memberLoading" size="small">
@@ -110,6 +92,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import EmptyBox from '../../components/EmptyBox.vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import { mySignups, myActivities, activityMembers, handleMember as handleMemberApi } from '../../api/activity'
 import { formatTime } from '../../utils/date'
@@ -199,6 +182,8 @@ onMounted(() => {
   loadPublished()
 })
 </script>
+
+<style scoped src="../../styles/records.css" />
 
 <style scoped>
 .member-pager { display: flex; justify-content: center; margin-top: 12px; }

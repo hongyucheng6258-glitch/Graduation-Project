@@ -109,6 +109,32 @@ class AgentModelClientTest {
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.AI_INVOKE_FAIL.getCode()));
     }
 
+    @Test
+    void timeoutDoesNotPreventTheNextRequest() {
+        server.createContext("/slow/chat/completions", exchange -> {
+            try (exchange) {
+                exchange.getRequestBody().readAllBytes();
+                try {
+                    Thread.sleep(250);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                exchange.sendResponseHeaders(204, -1);
+            }
+        });
+        String base = "http://127.0.0.1:" + server.getAddress().getPort();
+        when(config.getBaseUrl()).thenReturn(base + "/slow/chat/completions");
+        assertThatThrownBy(() -> client.complete(List.of(), List.of(), Duration.ofMillis(40)))
+                .isInstanceOf(BizException.class).hasMessageContaining("超时");
+
+        when(config.getBaseUrl()).thenReturn(base + "/v1");
+        responses.add("""
+                {"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":"恢复成功"}}]}
+                """);
+        assertThat(client.complete(List.of(), List.of(), Duration.ofSeconds(5)).path("content").asText())
+                .isEqualTo("恢复成功");
+    }
+
     static ObjectNode probeTool(ObjectMapper json) {
         ObjectNode tool = json.createObjectNode().put("type", "function");
         ObjectNode fn = tool.putObject("function").put("name", "get_probe_code")

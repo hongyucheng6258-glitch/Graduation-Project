@@ -2,7 +2,13 @@
   <section v-if="cards.length" aria-label="审核确认与回执">
     <AssistantCard v-for="card in cards" :key="card.id" wide>
       <article>
-        <header><strong>{{ card.title }}</strong><span>{{ card.decision === 'PASS' ? '审核通过' : '驳回审核' }}</span></header>
+        <header>
+          <strong>{{ card.title }}</strong>
+          <span class="review-state" :class="{ applied: card.state === 'APPLIED' }">
+            {{ card.state === 'APPLIED' ? '已执行' : card.state === 'EXPIRED' ? '已过期' : '待确认' }}
+          </span>
+        </header>
+        <p class="decision">审核决定 · {{ card.decision === 'PASS' ? '通过' : '驳回' }}</p>
         <p v-if="showRecordLink" class="muted">
           <RouterLink :to="{ path: `/audit/${card.kind === 'activity' ? 'activity' : 'idle'}`, query: { record: card.itemId } }">
             查看{{ card.kind === 'activity' ? '活动' : '闲置' }} #{{ card.itemId }} 的审核记录
@@ -14,8 +20,10 @@
         <p v-else-if="card.state === 'EXPIRED'" class="muted">确认卡已过期，请重新准备。</p>
         <template v-else>
           <p class="muted">{{ confirmationText(card) }}</p>
-          <el-button :type="card.decision === 'PASS' ? 'primary' : 'danger'" :disabled="busy"
-            @click="$emit('confirm', card)">确认执行审核</el-button>
+          <footer>
+            <el-button :type="card.decision === 'PASS' ? 'primary' : 'danger'" :disabled="busy"
+              @click="$emit('confirm', card)">确认执行审核</el-button>
+          </footer>
         </template>
       </article>
     </AssistantCard>
@@ -40,4 +48,8 @@ function confirmationText(card) {
 header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
 p { margin: 6px 0; }
 .muted { color: var(--ink-2); font-size: 13px; }
+.decision { color: var(--ink-2); font-size: 13px; font-weight: 650; }
+.review-state { padding: 2px 7px; border-radius: 6px; background: var(--surface-2); color: var(--ink-2); font-size: 12px; }
+.review-state.applied { background: var(--success-soft); color: var(--success); }
+footer { display: flex; justify-content: flex-end; margin-top: 10px; }
 </style>

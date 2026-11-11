@@ -20,13 +20,13 @@
         <el-form-item label="活动描述">
           <el-input v-model="form.description" type="textarea" :rows="4" />
         </el-form-item>
-        <el-form-item label="地点">
+        <el-form-item label="地点" :required="Boolean(draftId)">
           <el-input v-model="form.location" placeholder="如：东区操场 / 图书馆三楼" />
         </el-form-item>
-        <el-form-item label="开始时间">
+        <el-form-item label="开始时间" :required="Boolean(draftId)">
           <el-date-picker v-model="form.startTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" />
         </el-form-item>
-        <el-form-item label="结束时间">
+        <el-form-item label="结束时间" :required="Boolean(draftId)">
           <el-date-picker v-model="form.endTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" />
         </el-form-item>
         <el-form-item label="报名截止">
@@ -67,7 +67,7 @@ const draftError = ref('')
 const draftReady = computed(() => !draftError.value && draftState.value !== 'LOADING' && (!draftId.value || draftState.value === 'DRAFT'))
 const draftNotice = computed(() => draftError.value || ({
   LOADING: draftId.value ? '正在加载活动草稿…' : '正在加载活动信息…',
-  DRAFT: '请核对活动草稿，可以修改内容或补充图片，确认后提交审核。',
+  DRAFT: '请核对草稿并补齐活动地点、开始和结束时间，然后提交审核。',
   SUBMITTED: '这份活动草稿已提交，可在我的发布查看审核进度。'
 })[draftState.value] || '审核通过后，活动才会公开展示。')
 const categories = ['学习交流', '体育运动', '文艺娱乐', '志愿服务', '竞赛组队', '其他']
@@ -128,6 +128,10 @@ async function submit() {
   if (submitting.value || !draftReady.value) return
   if (!form.title.trim()) {
     ElMessage.warning('请填写活动标题')
+    return
+  }
+  if (draftId.value && (!form.location.trim() || !form.startTime || !form.endTime)) {
+    ElMessage.warning('请补充活动地点、开始时间和结束时间')
     return
   }
   submitting.value = true

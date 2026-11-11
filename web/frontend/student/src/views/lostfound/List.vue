@@ -16,14 +16,11 @@
       </el-input>
     </div>
 
-    <div class="grid" v-loading="loading">
-      <RouterLink v-for="lf in list" :key="lf.id" class="lost-card" :to="`/lostfound/detail/${lf.id}`">
-        <ItemCard :cover="firstContentImage(lf, 'lost')" :title="lf.title" module="lost">
+    <div class="grid photo-feed" v-loading="loading">
+      <RouterLink v-for="lf in list" :key="lf.id" class="lost-card photo-feed__link" :to="`/lostfound/detail/${lf.id}`">
+        <ItemCard feed :cover="firstContentImage(lf, 'lost')" :title="lf.title" module="lost">
           <template #badge>
-            <span class="badge-tag" :class="lf.type === 0 ? 'tag-seeking' : 'tag-found'">{{ lf.type === 0 ? '寻物' : '拾到' }}</span>
-          </template>
-          <template #labels>
-            <span class="badge-tag status-tag">{{ lf.type === 0 ? '寻物中' : '待认领' }}</span>
+            <span class="badge-tag" :class="lf.type === 0 ? 'tag-seeking' : 'tag-found'">{{ lf.type === 0 ? '寻物中' : '待认领' }}</span>
           </template>
           <template #footer>
             <div class="card-footer">
@@ -121,12 +118,6 @@ watch(
   flex-wrap: wrap;
   align-items: center;
 }
-.grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-  margin-bottom: 16px;
-}
 .chips {
   display: flex;
   gap: 8px;
@@ -163,7 +154,6 @@ watch(
 }
 .tag-seeking { background: var(--brand-soft); color: var(--brand-strong); }
 .tag-found { background: var(--success-soft); color: var(--success); }
-.status-tag { margin-bottom: 6px; background: var(--surface-2); color: var(--ink-2); }
 .card-footer {
   display: flex;
   gap: 4px 10px;
@@ -171,18 +161,5 @@ watch(
   align-items: center;
   font-size: 12px;
   color: var(--ink-3);
-}
-.lost-card { min-width: 0; color: inherit; text-decoration: none; border-radius: var(--r-md); }
-.lost-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
-.lost-card :deep(.item-card) { height: 100%; border-radius: var(--r-md); border-color: var(--line); }
-.lost-card :deep(.cover) { height: 140px; }
-.lost-card :deep(.body) { padding: 16px; }
-.lost-card :deep(.desc:empty) { display: none; }
-.lost-card :deep(.title) { min-height: 0; overflow-wrap: anywhere; }
-@media (max-width: 1000px) {
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 640px) {
-  .grid { grid-template-columns: minmax(0, 1fr); }
 }
 </style>

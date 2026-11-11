@@ -7,7 +7,9 @@
         <p class="desc">{{ cfg.desc }}</p>
       </div>
       <div class="page-head-actions">
-        <RouterLink v-if="focusedId" class="btn btn-ghost btn-sm" :to="{ path: `/audit/${props.type}`, query: { view: 'pending' } }">返回待审列表</RouterLink>
+        <RouterLink v-if="focusedId" class="btn btn-ghost btn-sm" :to="{ path: `/audit/${props.type}`, query: returnQuery }">
+          {{ returnQuery.view ? '返回待审列表' : '返回审核列表' }}
+        </RouterLink>
         <el-radio-group v-else v-model="viewMode" @change="handleViewChange">
           <el-radio-button value="all">全部内容</el-radio-button>
           <el-radio-button value="pending">待人工审核</el-radio-button>
@@ -74,7 +76,7 @@
         </div>
 
         <div v-if="firstValidImage(row) && !imageErrors[row.id]" class="review-cover">
-          <el-image :src="firstValidImage(row)" fit="cover"
+          <el-image :src="firstValidImage(row)" fit="contain"
                     :preview-src-list="normalizeImages(row)" @error="imageErrors[row.id] = true" />
         </div>
 
@@ -99,7 +101,7 @@
     </div>
 
     <el-pagination v-if="total > pageSize" v-model:current-page="pageNum" :total="total" :page-size="pageSize"
-                   layout="total, prev, pager, next" style="margin-top: 16px" @current-change="load" />
+                   class="review-pager" layout="total, prev, pager, next" :pager-count="5" small @current-change="load" />
 
     <!-- 驳回理由弹窗 -->
     <el-dialog v-model="rejectVisible" title="驳回原因" width="420px">
@@ -120,13 +122,14 @@ import { ElMessage } from 'element-plus'
 import { auditAll, auditList, auditPass, auditReject, auditRecordDetail } from '../../api/audit'
 import { formatTime } from '../../utils/date'
 import { normalizeImages, firstValidImage } from '../../utils/image'
+import { searchRecordId } from '../../utils/searchQuery.mjs'
 
 const props = defineProps({
   type: { type: String, required: true }
 })
 const route = useRoute()
-const focusedId = computed(() => ['idle', 'activity'].includes(props.type) && typeof route.query.record === 'string'
-  && /^[1-9]\d*$/.test(route.query.record) ? route.query.record : null)
+const focusedId = computed(() => searchRecordId(route.query.record))
+const returnQuery = computed(() => route.query.view === 'all' ? {} : { view: 'pending' })
 let requestVersion = 0
 
 const CFG = {
@@ -195,8 +198,9 @@ async function load() {
   if (recordId) list.value = []
   try {
     const requestFn = viewMode.value === 'all' ? auditAll : auditList
-    const res = recordId ? { list: [{ ...await auditRecordDetail(props.type, recordId), id: recordId }], total: 1 }
-      : await requestFn({ type: props.type, pageNum: pageNum.value, pageSize })
+    const hasDetailApi = props.type === 'idle' || props.type === 'activity'
+    const res = recordId && hasDetailApi ? { list: [{ ...await auditRecordDetail(props.type, recordId), id: recordId }], total: 1 }
+      : await (recordId ? auditAll : requestFn)({ type: props.type, record: recordId, pageNum: pageNum.value, pageSize })
     if (version !== requestVersion) return
     list.value = res.list
     total.value = res.total
@@ -322,6 +326,7 @@ watch([() => props.type, () => route.query.view, focusedId], ([, view], [, previ
 }
 .review-list--focused .review-desc { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
 .review-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.review-pager { display: flex; flex-wrap: wrap; margin-top: 16px; }
 
 .ai-pre {
   display: flex;

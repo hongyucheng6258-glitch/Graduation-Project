@@ -22,12 +22,15 @@ import java.util.stream.Collectors;
 class CampusResourceTools implements AgentToolSource {
     static final String SEARCH = "search_campus_resources";
     private static final Pattern LOOKUP = Pattern.compile("^(?:请\\s*)?(?:帮我\\s*|我想\\s*)?(?:查|搜|找|看看|有没有|有人捡到|有人拾到)");
+    private static final Pattern MATERIAL_LOOKUP = Pattern.compile(
+            "^(?:请\\s*)?(?:帮我\\s*|我想\\s*)?(?:查阅|查询|查找|查|搜索|检索|搜|找)\\s*(?:一下\\s*)?"
+                    + "(?:校园)?(?:公共)?(?:知识库|资料)");
 
     private final NamedParameterJdbcTemplate jdbc;
     private final ObjectMapper json;
 
     static String explicitLookupKind(String question) {
-        if (!LOOKUP.matcher(question).find()) return null;
+        if (!LOOKUP.matcher(question).find() || MATERIAL_LOOKUP.matcher(question).find()) return null;
         boolean lost = question.contains("失物招领") || question.contains("寻物启事");
         boolean partner = question.contains("学习搭子");
         boolean qa = question.contains("互助问答") || question.contains("校园问答");

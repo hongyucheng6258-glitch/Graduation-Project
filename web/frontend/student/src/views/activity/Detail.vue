@@ -3,17 +3,19 @@
     <template v-if="act">
       <!-- 面包屑 -->
       <div class="detail-breadcrumb">
-        <a class="text-btn" @click="$router.push('/activity')">返回校园活动</a>
+        <RouterLink class="text-btn" to="/activity">返回校园活动</RouterLink>
         <span>/</span>
         <span>活动详情</span>
       </div>
 
       <div class="event-detail-layout">
-        <!-- 左：封面 + 介绍 -->
-        <article>
+        <article class="event-overview">
           <div class="event-detail-hero">
-            <el-image v-if="detailImages.length" :src="detailImages[0]" fit="cover" class="detail-cover-img" :preview-src-list="detailImages" />
-            <WtEventArt v-else :item="act" large />
+            <div class="detail-cover">
+              <el-image v-if="detailImages.length" :src="detailImages[0]" fit="contain" class="detail-cover-img"
+                :alt="act.title" :preview-src-list="detailImages" preview-teleported />
+              <WtEventArt v-else :item="act" large />
+            </div>
             <div class="event-detail-heading">
               <div class="head-tags">
                 <span v-if="act.category" class="tag">{{ act.category }}</span>
@@ -32,27 +34,10 @@
             </div>
           </div>
 
-          <section class="event-description">
-            <h2>关于这次相遇</h2>
-            <p>{{ act.description }}</p>
-            <h3>参加前的小提醒</h3>
-            <ul>
-              <li>报名后请关注审核结果，活动前再次确认地点与时间。</li>
-              <li>请携带学生证，提前到达活动现场。</li>
-              <li>若有疑问，可以先联系发起方。</li>
-            </ul>
-            <div class="detail-actions">
-              <button type="button" class="btn" :class="{ favorited }" @click="toggleFavorite">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 17.3 5.8 21l1.6-6.8L2 9.2l7-.6L12 2l3 6.6 7 .6-5.4 5 1.6 6.8z"/></svg>
-                {{ favorited ? '已收藏' : '收藏' }}
-              </button>
-              <button type="button" class="text-btn" @click="reportVisible = true">举报此内容</button>
-            </div>
-          </section>
         </article>
 
         <!-- 右：活动通行证 -->
-        <aside>
+        <aside class="event-registration">
           <div class="event-ticket">
             <div class="ticket-top">
               <h2>报名参与</h2>
@@ -116,11 +101,28 @@
             <small class="ticket-note">报名通过后，可在「我的报名」完成签到</small>
           </div>
         </aside>
+        <section class="event-description">
+          <h2>活动介绍</h2>
+          <p>{{ act.description }}</p>
+          <h3>参加前的小提醒</h3>
+          <ul>
+            <li>报名后请关注审核结果，活动前再次确认地点与时间。</li>
+            <li>请携带学生证，提前到达活动现场。</li>
+            <li>若有疑问，可以先联系发起方。</li>
+          </ul>
+          <div class="detail-actions">
+            <button type="button" class="btn" :class="{ favorited }" @click="toggleFavorite">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 17.3 5.8 21l1.6-6.8L2 9.2l7-.6L12 2l3 6.6 7 .6-5.4 5 1.6 6.8z"/></svg>
+              {{ favorited ? '已收藏' : '收藏' }}
+            </button>
+            <button type="button" class="text-btn" @click="reportVisible = true">举报此内容</button>
+          </div>
+        </section>
       </div>
 
       <!-- ===== 保留全部弹窗 ===== -->
       <!-- 报名弹窗 -->
-      <el-dialog v-model="signupVisible" title="报名活动" width="440px">
+      <el-dialog v-model="signupVisible" title="报名活动" width="min(440px, calc(100vw - 24px))">
         <el-input v-model="remark" type="textarea" :rows="3"
                   placeholder="报名说明/组队信息（如：计科2201张三，求组队）" maxlength="255" />
         <template #footer>
@@ -130,7 +132,7 @@
       </el-dialog>
 
       <!-- 名单管理弹窗（发布者） -->
-      <el-dialog v-model="membersVisible" title="报名名单" width="640px">
+      <el-dialog v-model="membersVisible" title="报名名单" width="min(640px, calc(100vw - 24px))">
         <el-table :data="members" size="small">
           <el-table-column prop="nickname" label="昵称" width="100" />
           <el-table-column prop="studentNo" label="学号" width="110" />
@@ -171,7 +173,7 @@
         </div>
 
       <!-- 签到二维码弹窗 -->
-      <el-dialog v-model="qrVisible" title="活动签到" width="420px">
+      <el-dialog v-model="qrVisible" title="活动签到" width="min(420px, calc(100vw - 24px))">
         <el-alert type="success" :closable="false" title="参与者打开小程序「扫一扫」扫描下方二维码即可签到" />
         <div class="qr-code-wrap">
           <img v-if="qrImage" :src="qrImage" class="qr-code" alt="活动签到二维码" />
@@ -181,7 +183,7 @@
       </el-dialog>
 
       <!-- 举报弹窗 -->
-      <el-dialog v-model="reportVisible" title="举报该活动" width="440px">
+      <el-dialog v-model="reportVisible" title="举报该活动" width="min(440px, calc(100vw - 24px))">
         <el-select v-model="reportReasonType" style="width: 100%; margin-bottom: 10px">
           <el-option label="虚假/欺诈信息" value="欺诈" />
           <el-option label="违规内容" value="违规" />
@@ -209,7 +211,6 @@ import { submitReport } from '../../api/report'
 import { favoriteStatus, favorite, unfavorite } from '../../api/favorite'
 import { formatTime } from '../../utils/date'
 import { normalizeImages } from '../../utils/image'
-import { firstContentImage } from '../../utils/content-assets.mjs'
 import { normalizeSigninQrContent } from '../../utils/signinQr.mjs'
 import { useUserStore } from '../../store/user'
 import { startChat } from '../../utils/startChat'
@@ -219,11 +220,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const id = Number(route.params.id)
 const act = ref(null)
-const detailImages = computed(() => {
-  if (!act.value) return []
-  const images = normalizeImages(act.value)
-  return images.length ? images : [firstContentImage(act.value, 'activity')].filter(Boolean)
-})
+const detailImages = computed(() => normalizeImages(act.value))
 const loading = ref(false)
 const signupVisible = ref(false)
 const remark = ref('')
@@ -402,7 +399,8 @@ onMounted(load)
   gap: 13px;
   color: var(--ink-3);
   font-size: 12px;
-  margin: 2px 0 22px;
+  max-width: 1152px;
+  margin: 2px auto 18px;
 }
 .detail-breadcrumb .text-btn { font-size: 12px; color: var(--ink-3); }
 .detail-breadcrumb .text-btn:hover { color: var(--brand); }
@@ -410,20 +408,28 @@ onMounted(load)
 .event-detail-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 28px;
+  grid-template-areas: 'overview registration' 'description registration';
+  gap: 22px 28px;
   align-items: start;
+  max-width: 1152px;
+  margin-inline: auto;
 }
-.event-detail-layout article { min-width: 0; overflow-wrap: anywhere; }
+.event-overview { grid-area: overview; min-width: 0; overflow-wrap: anywhere; }
+.event-registration { grid-area: registration; align-self: stretch; min-width: 0; }
 .event-detail-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 36%) minmax(0, 1fr);
+  align-items: center;
+  gap: 19px;
+  padding: 17px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 20px;
-  overflow: hidden;
+  border-radius: 14px;
 }
-.detail-cover-img,
-.event-detail-hero :deep(.event-art) { width: 100%; height: clamp(220px, 38vw, 340px); display: block; }
-.event-detail-heading { padding: 28px 33px 24px; }
-.head-tags { display: flex; gap: 8px; align-items: center; }
+.detail-cover { width: 100%; aspect-ratio: 1; position: relative; overflow: hidden; border-radius: 10px; background: var(--surface-2); }
+.detail-cover-img, .detail-cover :deep(.event-art) { position: absolute; inset: 0; width: 100%; height: 100%; display: block; aspect-ratio: auto; }
+.event-detail-heading { min-width: 0; }
+.head-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .tag {
   display: inline-flex;
   align-items: center;
@@ -440,12 +446,12 @@ onMounted(load)
 .tag-warning { background: var(--warning-soft); color: var(--gold-strong); }
 .tag-muted { background: var(--surface-3); color: var(--ink-2); }
 .tag-error { background: var(--error-soft); color: var(--error); }
-.event-detail-heading > h1 { font-size: 29px; margin: 15px 0 10px; color: var(--ink); font-weight: 700; letter-spacing: -.5px; line-height: 1.4; }
+.event-detail-heading > h1 { font-size: clamp(21px, 2.2vw, 29px); margin: 9px 0 5px; color: var(--ink); font-weight: 700; line-height: 1.4; }
 .event-detail-heading > p { font-size: 14px; color: var(--ink-3); }
 .event-host {
   border-top: 1px solid var(--line);
-  padding-top: 20px;
-  margin-top: 23px;
+  padding-top: 11px;
+  margin-top: 14px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -454,7 +460,7 @@ onMounted(load)
 .event-host small { display: block; font-size: 11px; color: var(--ink-3); }
 .event-host > .text-btn { margin-left: auto; font-size: 12px; }
 
-.event-description { padding: 34px 5px 0; }
+.event-description { grid-area: description; min-width: 0; padding: 5px; overflow-wrap: anywhere; }
 .event-description h2 { font-size: 23px; font-weight: 650; color: var(--ink); }
 .event-description > p { line-height: 2; font-size: 15px; margin: 18px 0 25px; max-width: 75ch; color: var(--ink-2); white-space: pre-wrap; }
 .event-description h3 { font-size: 17px; color: var(--ink); font-weight: 600; }
@@ -568,16 +574,13 @@ onMounted(load)
   .event-detail-layout { grid-template-columns: minmax(0, 1fr) 290px; gap: 25px; }
   .event-ticket { padding: 21px; }
   .ticket-perforation { margin-left: -21px; margin-right: -21px; }
-  .event-detail-heading { padding: 23px; }
-  .event-detail-heading > h1 { font-size: 25px; }
   .ticket-date > strong { font-size: 40px; }
 }
-@media (max-width: 760px) {
-  .event-detail-layout { grid-template-columns: minmax(0, 1fr); gap: 25px; }
-  .event-detail-heading { padding: 22px; }
-  .event-detail-heading > h1 { font-size: 25px; line-height: 1.55; }
+@media (max-width: 820px) {
+  .event-detail-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'overview' 'registration' 'description'; gap: 16px; }
+  .event-detail-hero { grid-template-columns: minmax(0, 34%) minmax(0, 1fr); gap: 11px; padding: 11px; }
+  .event-detail-heading > h1 { font-size: 19px; }
   .event-detail-heading > p { font-size: 12px; }
-  .event-description { padding-top: 25px; }
   .event-description > p { font-size: 14px; }
   .event-description ul { font-size: 13px; }
   .event-ticket { padding: 24px; position: relative; top: 0; }
@@ -586,6 +589,11 @@ onMounted(load)
   .ticket-note { font-size: 11px; }
   .ticket-date > strong { font-size: 40px; }
   .detail-breadcrumb { font-size: 11px; margin: 2px 0 20px; }
+}
+@media (max-width: 420px) {
+  .event-host { gap: 6px; flex-wrap: wrap; }
+  .event-host > .text-btn { margin-inline-start: 0; }
+  .event-detail-heading > h1 { font-size: 17px; }
 }
 </style>
 

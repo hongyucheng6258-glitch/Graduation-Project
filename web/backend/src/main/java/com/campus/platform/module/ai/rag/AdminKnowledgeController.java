@@ -6,9 +6,14 @@ import com.campus.platform.module.ai.mapper.PdfDocumentMapper;
 import com.campus.platform.module.ai.service.PdfService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -23,6 +28,16 @@ public class AdminKnowledgeController {
     @GetMapping
     public R<List<KnowledgeService.PublicDocument>> list() {
         return R.ok(knowledge.publicDocuments());
+    }
+
+    @GetMapping("/{id}/file")
+    public ResponseEntity<byte[]> file(@PathVariable long id) {
+        var pdf = knowledge.publicFile(id);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).contentType(MediaType.APPLICATION_PDF)
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Disposition", ContentDisposition.inline()
+                        .filename(pdf.fileName(), StandardCharsets.UTF_8).build().toString())
+                .body(pdf.bytes());
     }
 
     @PostMapping

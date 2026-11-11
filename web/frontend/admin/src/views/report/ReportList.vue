@@ -2,14 +2,28 @@
   <WtPageHeader title="举报处理" subtitle="查看举报详情，处理内容及用户相关举报。" />
 
   <div class="admin-list-toolbar">
-    <RouterLink v-if="focusedId" to="/report?view=pending">返回待处理举报</RouterLink>
+    <RouterLink v-if="focusedId" :to="route.query.searchQ ? '/report' : '/report?view=pending'">
+      {{ route.query.searchQ ? '查看全部举报' : '返回待处理举报' }}
+    </RouterLink>
     <el-select v-else v-model="status" aria-label="举报状态" placeholder="全部状态" style="width: 140px" @change="search">
       <el-option label="全部状态" value="" />
       <el-option label="待处理" :value="0" />
       <el-option label="已处理" :value="1" />
     </el-select>
   </div>
-  <el-table class="admin-list-table" :data="list" :scrollbar-tabindex="0" v-loading="loading" empty-text="暂无举报">
+  <div v-if="focusedId" v-loading="loading">
+    <AdminRecordCard v-if="list[0]" :id="focusedId" :title="list[0].reasonType || '举报工单'"
+      :status="list[0].status === 0 ? '待处理' : '已处理'" :tone="list[0].status === 0 ? 'warning' : 'success'"
+      :fields="[['举报对象', `${typeName(list[0].targetType)} #${list[0].targetId}`], ['举报人 ID', list[0].reporterId],
+        ['举报时间', formatTime(list[0].createTime) || '—'], ...(list[0].handleResult ? [['处置结果', list[0].handleResult]] : [])]"
+      :description="list[0].reason || ''">
+      <template v-if="list[0].status === 0" #actions>
+        <el-button type="primary" @click="openHandle(list[0])">处置</el-button>
+      </template>
+    </AdminRecordCard>
+    <p v-else-if="!loading" role="status">{{ loadError || '没有找到该举报。' }}</p>
+  </div>
+  <el-table v-else class="admin-list-table" :data="list" :scrollbar-tabindex="0" v-loading="loading" empty-text="暂无举报">
     <el-table-column prop="id" label="ID" width="60" />
     <el-table-column prop="reporterId" label="举报人ID" width="90" />
     <el-table-column label="被举报对象" width="110">
@@ -39,7 +53,7 @@
       </template>
     </el-table-column>
   </el-table>
-  <el-pagination class="admin-list-pagination" v-model:current-page="pageNum" :total="total" :page-size="10"
+  <el-pagination v-if="!focusedId" class="admin-list-pagination" v-model:current-page="pageNum" :total="total" :page-size="10"
                  :pager-count="5" layout="total, prev, pager, next" @current-change="load" />
 
   <!-- 处置弹窗 -->
@@ -76,6 +90,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
+import AdminRecordCard from '../../components/AdminRecordCard.vue'
 import { ElMessage } from 'element-plus'
 import { reportDetail, reportList, handleReport } from '../../api/report'
 import { formatTime } from '../../utils/date'
@@ -89,6 +104,7 @@ const list = ref([])
 const pageNum = ref(1)
 const total = ref(0)
 const loading = ref(false)
+const loadError = ref('')
 const acting = ref(false)
 const handleVisible = ref(false)
 const currentRow = ref(null)
@@ -105,6 +121,7 @@ async function load() {
   const version = ++requestVersion
   const recordId = focusedId.value
   loading.value = true
+  loadError.value = ''
   if (recordId) list.value = []
   try {
     const res = recordId ? { list: [{ ...await reportDetail(recordId), id: recordId }], total: 1 }
@@ -112,6 +129,12 @@ async function load() {
     if (version !== requestVersion) return
     list.value = res.list
     total.value = res.total
+  } catch (error) {
+    if (version === requestVersion) {
+      list.value = []
+      total.value = 0
+      loadError.value = error.message || '无法读取举报记录。'
+    }
   } finally {
     if (version === requestVersion) loading.value = false
   }

@@ -53,16 +53,17 @@
       <div class="chart-panel">
         <div class="panel-head">
           <h3>待审核内容</h3>
-          <span>内容合规，随时在线。</span>
+          <span>闲置审核队列</span>
         </div>
         <div class="audit-table">
-          <div v-for="a in pendingList" :key="a.key" class="audit-row">
-            <span class="audit-type" :class="typeCls(a.type)">{{ typeText(a.type) }}</span>
+          <div v-for="a in pendingList" :key="a.id" class="audit-row">
+            <span class="audit-type">闲置</span>
             <div>
               <b>{{ a.title }}</b>
-              <small>{{ a.submitter }} · {{ formatTime(a.createTime) }}</small>
+              <small>{{ formatTime(a.createTime) }}</small>
             </div>
-            <button type="button" class="text-btn" @click="goAudit(a.type)">处理 →</button>
+            <RouterLink class="text-btn" :to="{ name: 'IdleAudit', query: { record: String(a.id), view: 'pending' } }"
+              :aria-label="`处理 ${a.title}`">处理 →</RouterLink>
           </div>
           <div v-if="loading" class="audit-empty" role="status">正在读取待审核内容…</div>
           <div v-else-if="errors.includes('待审核内容')" class="audit-empty">读取失败，请重试。</div>
@@ -82,7 +83,6 @@
 
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import * as echarts from 'echarts/core'
 import { LineChart, BarChart, PieChart } from 'echarts/charts'
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
@@ -100,8 +100,8 @@ echarts.use([
 import { statsOverview, statsTrend, statsModule, statsPie } from '../../api/stats'
 import { auditList } from '../../api/audit'
 import { chartPalette, seriesColors, chartBase } from '../../utils/chartTheme'
+import { formatTime } from '../../utils/date'
 
-const router = useRouter()
 const overview = ref({})
 const trendRef = ref()
 const moduleRef = ref()
@@ -134,27 +134,6 @@ const cards = computed(() => [
   { label: '待审核内容', value: overview.value.pendingAudits ?? '-', icon: ICONS.clock, color: chartPalette.warning, soft: 'rgba(224,169,63,0.13)' }
 ])
 
-const TYPE_META = {
-  activity: { text: '活动', cls: 'blue' },
-  idle: { text: '闲置', cls: 'peach' },
-  lost: { text: '失物', cls: 'sage' },
-  post: { text: '动态', cls: 'purple' },
-  partner: { text: '搭子', cls: 'blue' },
-  qa: { text: '问答', cls: 'peach' }
-}
-function typeText(t) { return TYPE_META[t]?.text || t }
-function typeCls(t) { return TYPE_META[t]?.cls || 'blue' }
-
-function formatTime(t) {
-  if (!t) return ''
-  return String(t).slice(0, 16)
-}
-
-function goAudit(type) {
-  const module = { lost: 'lostfound', lostfound: 'lostfound', activity: 'activity', idle: 'idle', post: 'post', partner: 'partner' }[type]
-  router.push(module ? `/audit/${module}` : '/content')
-}
-
 async function loadDashboard() {
   loading.value = true
   errors.value = []
@@ -167,9 +146,8 @@ async function loadDashboard() {
   })(), (async () => {
   // 待审核（前5条）
   try {
-    const res = await auditList({ pageNum: 1, pageSize: 5 })
-    const arr = Array.isArray(res) ? res : (res.list || [])
-    pendingList.value = arr.map((x) => ({ key: `${x.type}-${x.id}`, ...x }))
+    const res = await auditList({ type: 'idle', pageNum: 1, pageSize: 5 })
+    pendingList.value = Array.isArray(res) ? res : (res.list || [])
   } catch (e) { errors.value.push('待审核内容') }
   })(), (async () => {
   // 双折线
@@ -334,11 +312,9 @@ function renderChart(el, option) {
   flex-shrink: 0;
   min-width: 42px;
   text-align: center;
+  background: var(--peach);
+  color: var(--accent-strong);
 }
-.audit-type.blue { background: var(--brand-soft); color: var(--brand); }
-.audit-type.peach { background: var(--peach); color: var(--accent-strong); }
-.audit-type.sage { background: var(--sage); color: var(--success); }
-.audit-type.purple { background: var(--purple-soft); color: var(--purple-strong); }
 .audit-row > div { flex: 1; min-width: 0; }
 .audit-row b { display: block; font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .audit-row small { display: block; font-size: 11px; color: var(--ink-3); margin-top: 3px; }

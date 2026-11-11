@@ -40,9 +40,11 @@ public class AdminAuditController {
     @GetMapping("/all")
     public R<PageResult<?>> all(
             @RequestParam String type,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long record,
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "10") int pageSize) {
-        return R.ok(auditService.allList(type, pageNum, pageSize));
+        return R.ok(auditService.allList(type, keyword, record, pageNum, pageSize));
     }
 
     @PutMapping("/{type}/{id}/pass")

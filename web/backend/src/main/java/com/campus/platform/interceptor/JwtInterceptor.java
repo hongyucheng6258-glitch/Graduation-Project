@@ -52,7 +52,8 @@ public class JwtInterceptor implements HandlerInterceptor {
             "/api/qa/{id:[0-9]+}",
             "/api/partner/{id:[0-9]+}",
             "/api/post/{id:[0-9]+}",
-            "/api/post/{id:[0-9]+}/comments"
+            "/api/post/{id:[0-9]+}/comments",
+            "/api/post/{id:[0-9]+}/images/{index:[0-9]+}"
     );
 
     private final JwtUtils jwtUtils;

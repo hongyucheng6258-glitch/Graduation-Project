@@ -1,58 +1,61 @@
 <template>
   <div v-if="loadError" class="load-error" role="alert"><span>{{ loadError }}</span><button type="button" class="text-btn" @click="load">重新加载</button></div>
   <div class="activity-page">
-    <!-- V2 列表头：collection-head -->
     <section class="collection-head activity">
       <div>
         <h1>校园活动</h1>
-        <p>社团、讲座、运动与志愿，挑一场加入。</p>
+        <p>查找讲座、社团活动、运动和志愿服务。</p>
       </div>
-      <button type="button" class="btn primary" @click="goPublish">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        发布活动
-      </button>
+      <div class="header-actions">
+        <RouterLink class="btn" to="/activity/my-signup">我的报名</RouterLink>
+        <button type="button" class="btn primary" @click="goPublish">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          发布活动
+        </button>
+      </div>
     </section>
 
     <!-- 工具栏 -->
     <div class="toolbar">
-      <el-input v-model="keyword" placeholder="搜索活动…" clearable style="width: 260px" @keyup.enter="search" @clear="search">
+      <el-input v-model="keyword" class="activity-search" placeholder="搜索活动…" aria-label="搜索活动" clearable @keyup.enter="search" @clear="search">
         <template #append><el-button @click="search">搜索</el-button></template>
       </el-input>
-      <div class="chips">
+      <div class="chips" aria-label="活动分类">
         <button type="button" class="chip" :class="{ active: !category }" :aria-pressed="!category" @click="selectCategory('')">全部</button>
         <button v-for="c in categories" :key="c" type="button" class="chip" :class="{ active: category === c }"
           :aria-pressed="category === c" @click="selectCategory(c)">{{ c }}</button>
       </div>
-      <div class="spacer" />
-      <el-button @click="$router.push('/activity/my-signup')">我的报名</el-button>
     </div>
 
-    <!-- 活动卡片网格（V2 EventArt 封面） -->
-    <div class="grid" v-loading="loading">
+    <div class="result-heading">
+      <h2>{{ category || '活动列表' }}</h2>
+      <span v-if="!loading && !loadError">{{ total }} 场活动</span>
+    </div>
+    <div class="activity-grid" v-loading="loading">
       <RouterLink
         v-for="a in list"
         :key="a.id"
-        class="item event-card"
+        class="event-card"
         :to="{ name: 'ActivityDetail', params: { id: a.id } }"
       >
-        <div class="event-cover">
-          <img v-if="firstContentImage(a, 'activity')" :src="firstContentImage(a, 'activity')" alt="" class="event-cover-img" />
-          <WtEventArt v-else :item="a" />
-          <span v-if="a.startTime" class="event-date"><b>{{ dayOf(a.startTime) }}</b><small>{{ monthOf(a.startTime) }}</small></span>
-        </div>
         <div class="item-body">
-          <div class="event-tags">
-            <span>{{ a.category || '校园活动' }}</span><span>{{ statusText(a) }}</span>
-          </div>
+          <time v-if="a.startTime" class="event-date" :datetime="a.startTime">{{ formatEventTime(a.startTime) }}</time>
           <h3>{{ a.title }}</h3>
           <div class="item-meta">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            {{ a.location || '地点待定' }}
-            <span class="meta-divider"></span>
-            {{ formatTime(a.startTime).slice(5) }}
+            <span>{{ a.location || '地点待定' }}</span>
           </div>
-          <div class="item-bottom">{{ a.memberCount || 0 }}{{ a.maxMembers ? '/' + a.maxMembers : '' }} 人报名</div>
-          <p v-if="a.signupDeadline" class="deadline">报名截止 {{ formatTime(a.signupDeadline).slice(5) }}</p>
+          <div class="event-tags">
+            <span class="event-status" :class="{ open: statusText(a) === '报名中' }">{{ statusText(a) }}</span>
+            <span class="event-category">{{ a.category || '校园活动' }}</span>
+            <span>{{ a.memberCount || 0 }}{{ a.maxMembers ? ' / ' + a.maxMembers : '' }} 人报名</span>
+          </div>
+          <p v-if="a.signupDeadline" class="deadline">报名截止 <time :datetime="a.signupDeadline">{{ formatEventTime(a.signupDeadline, false) }}</time></p>
+        </div>
+        <div class="event-cover">
+          <img v-if="firstContentImage(a)" :src="firstContentImage(a)" alt="" class="event-cover-img" loading="lazy"
+            @error="onImageError($event, 'activity')" />
+          <WtEventArt v-else :item="a" />
         </div>
       </RouterLink>
     </div>
@@ -78,18 +81,18 @@
         </el-button>
       </div>
       <div v-if="recList.length" class="rec-grid">
-        <div v-for="r in recList" :key="r.id" class="rec-card" @click="$router.push(`/activity/detail/${r.id}`)">
+        <RouterLink v-for="r in recList" :key="r.id" class="rec-card" :to="`/activity/detail/${r.id}`">
           <div class="rec-card__top">
             <b>{{ r.title }}</b>
             <span class="rec-cat">{{ r.category }}</span>
           </div>
-          <p class="rec-reason">💡 {{ r.reason }}</p>
+          <p class="rec-reason">{{ r.reason }}</p>
           <div class="rec-meta">
-            <span>🕐 {{ formatTime(r.startTime) }}</span>
-            <span>📍 {{ r.location || '地点待定' }}</span>
+            <time v-if="r.startTime" :datetime="r.startTime">{{ formatEventTime(r.startTime) }}</time>
+            <span>{{ r.location || '地点待定' }}</span>
             <span>{{ r.memberCount }} 人已报名</span>
           </div>
-        </div>
+        </RouterLink>
       </div>
     </div>
   </div>
@@ -98,11 +101,13 @@
 <script setup>
 import { useListState } from '../../utils/list-state'
 import { ref, watch } from 'vue'
+import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import EmptyBox from '../../components/EmptyBox.vue'
 import WtEventArt from '../../components/wt/WtEventArt.vue'
-import { firstContentImage } from '../../utils/content-assets.mjs'
+import { firstContentImage, onImageError } from '../../utils/content-assets.mjs'
 import { listActivity, recommendActivity } from '../../api/activity'
 import { useUserStore } from '../../store/user'
 
@@ -117,6 +122,7 @@ const pageNum = ref(1)
 const total = ref(0)
 const loading = ref(false)
 const loadError = ref('')
+let loadSequence = 0
 const restoredListState = useListState('activity', { pageNum, keyword, category })
 const recList = ref([])
 const recLoading = ref(false)
@@ -145,17 +151,8 @@ function statusText(a) {
   return a.displayStatusText || STATUS_TEXT[a.status] || '报名中'
 }
 
-function formatTime(t) {
-  if (!t) return ''
-  return String(t).slice(0, 16)
-}
-function dayOf(t) {
-  if (!t) return '新'
-  return String(t).slice(8, 10).replace(/^0/, '') || '新'
-}
-function monthOf(t) {
-  if (!t) return '校园'
-  return `${Number(String(t).slice(5, 7))} 月`
+function formatEventTime(value, withWeekday = true) {
+  return dayjs(value).locale('zh-cn').format(withWeekday ? 'M月D日 ddd · HH:mm' : 'M月D日 HH:mm')
 }
 
 function selectCategory(c) {
@@ -169,16 +166,18 @@ function search() {
 }
 
 async function load() {
+  const sequence = ++loadSequence
   loading.value = true
   loadError.value = ''
   try {
     const res = await listActivity({ keyword: keyword.value || undefined, category: category.value || undefined, pageNum: pageNum.value, pageSize: 12 })
+    if (sequence !== loadSequence) return
     list.value = res.list
     total.value = res.total
   } catch (error) {
-    loadError.value = error.message || '内容加载失败，请重试'
+    if (sequence === loadSequence) loadError.value = error.message || '内容加载失败，请重试'
   } finally {
-    loading.value = false
+    if (sequence === loadSequence) loading.value = false
   }
 }
 
@@ -207,122 +206,110 @@ watch(
 </script>
 
 <style scoped>
-.activity-page { display: flex; flex-direction: column; }
-
-.collection-head {
+.activity-page { max-width: 1152px; margin-inline: auto; }
+.collection-head, .header-actions, .result-heading { display: flex; align-items: center; gap: 12px; }
+.collection-head { justify-content: space-between; flex-wrap: wrap; margin-bottom: 20px; }
+.collection-head h1 { margin: 0 0 4px; color: var(--ink); font-size: clamp(25px, 3vw, 33px); }
+.collection-head p { margin: 0; color: var(--ink-3); font-size: var(--fs-sm); }
+.header-actions { flex-wrap: wrap; gap: 8px; }
+.header-actions .btn { min-height: 36px; padding: 0 12px; }
+.header-actions svg { width: 15px; height: 15px; }
+.toolbar {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.collection-head h1 { font-size: var(--fs-h1); margin: 0 0 8px; color: var(--ink); }
-.collection-head p { font-size: var(--fs-sm); color: var(--ink-3); margin: 0; }
-
-/* —— 工具栏 —— */
-.toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
-.spacer { flex: 1; }
-.chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.chip {
-  padding: 6px 14px;
-  border-radius: var(--r-pill);
+  gap: 12px 16px;
+  padding: 12px;
   border: 1px solid var(--line);
+  border-radius: 12px;
   background: var(--surface);
-  font-size: var(--fs-xs);
-  font-weight: 600;
+}
+.activity-search { width: min(100%, 270px); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
   color: var(--ink-2);
+  font: inherit;
+  font-size: var(--fs-xs);
   cursor: pointer;
-  transition: all .18s var(--ease-out);
 }
 .chip:hover { border-color: var(--brand-line); }
-.chip.active { background: var(--brand-soft); color: var(--brand-strong); border-color: var(--brand-line); }
-
-/* —— AI 推荐（保留） —— */
-.rec-block {
-  margin: 24px 0;
-  padding: 14px 16px;
-  border: 1px dashed var(--brand-line);
-  border-radius: var(--r-md);
-  background: linear-gradient(120deg, var(--brand-soft), var(--peach));
-}
-.rec-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
-.rec-head b { font-size: var(--fs-sm); color: var(--brand-strong); display: inline-flex; align-items: center; gap: 6px; }
-.rec-head b svg { width: 16px; height: 16px; }
-.rec-head span { font-size: var(--fs-cap); color: var(--ink-3); }
-.rec-head .el-button { margin-left: auto; }
-.rec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.rec-card {
-  padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-md);
-  background: var(--surface); cursor: pointer; transition: all .18s var(--ease-out);
-}
-.rec-card:hover { border-color: var(--brand-line); transform: translateY(-2px); }
-.rec-card__top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.rec-card__top b { flex: 1; font-size: var(--fs-cap); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
-.rec-cat { padding: 2px 8px; border-radius: var(--r-pill); background: var(--brand-soft); color: var(--brand-strong); font-size: var(--fs-cap); font-weight: 600; flex-shrink: 0; }
-.rec-reason { margin: 0 0 8px; font-size: var(--fs-cap); color: var(--success); line-height: 1.6; }
-.rec-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: var(--fs-cap); color: var(--ink-3); }
-
-/* —— 活动卡片（V2 EventArt） —— */
-.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-bottom: 16px; }
-.item {
-  display: block;
-  min-width: 0;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  overflow: hidden;
-  cursor: pointer;
-  text-decoration: none;
-  transition: border-color .2s, box-shadow .2s;
-}
-.item:hover { border-color: var(--brand-line); box-shadow: 0 8px 26px oklch(25% 0.04 265 / .05); }
-.event-cover { position: relative; height: 150px; background: var(--surface-2); }
-.event-cover-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.event-cover :deep(.event-art) { height: 100%; aspect-ratio: auto; }
-.event-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.event-tags span { padding: 3px 8px; border-radius: var(--r-pill); color: var(--brand-strong); background: var(--brand-soft); font-size: 11px; }
-.deadline { margin: 5px 0 0; font-size: 11px; color: var(--ink-3); }
-.item-body { padding: 18px; }
-.item-body h3 {
-  font-size: 14px;
-  line-height: 1.6;
-  font-weight: 650;
-  color: var(--ink);
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.item-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); margin-top: 12px; flex-wrap: wrap; }
-.item-meta svg { width: 14px; height: 14px; flex: none; }
-.meta-divider { width: 1px; height: 10px; background: var(--line); margin: 0 4px; }
-.item-bottom { display: flex; justify-content: space-between; align-items: center; gap: 9px; border-top: 1px solid var(--line); padding-top: 14px; margin-top: 17px; font-size: 11px; color: var(--ink-3); }
-.event-date {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  min-width: 42px;
-  padding: 4px 8px;
+.chip.active { background: var(--brand-soft); color: var(--brand-strong); border-color: var(--brand-line); font-weight: 650; }
+.result-heading { justify-content: space-between; margin: 19px 0 9px; }
+.result-heading h2 { margin: 0; color: var(--ink); font-size: 18px; }
+.result-heading span { color: var(--ink-3); font-size: 12px; }
+.activity-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.event-card {
   display: grid;
-  justify-items: center;
-  border-radius: 8px;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  align-items: center;
+  gap: 13px;
+  padding: 12px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 13px;
   background: var(--surface);
-  color: var(--brand-strong);
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color .18s, box-shadow .18s;
 }
-.event-date b { font-size: 20px; line-height: 1.15; }
-.event-date small { font-size: 10px; color: var(--ink-3); }
-.page-bar { justify-content: center; margin-top: 8px; }
+.event-card:hover, .rec-card:hover { border-color: var(--brand-line); box-shadow: var(--shadow-sm); }
+.event-card:focus-visible, .rec-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.item-body { min-width: 0; overflow-wrap: anywhere; }
+.event-date { display: block; color: var(--brand-strong); font-size: 12px; font-weight: 650; }
+.item-body h3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 3px 0 5px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.item-meta { display: flex; align-items: center; gap: 5px; color: var(--ink-2); font-size: 12px; }
+.item-meta svg { width: 13px; height: 13px; flex: none; color: var(--ink-3); }
+.item-meta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.event-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 7px; margin-top: 8px; color: var(--ink-3); font-size: 11px; }
+.event-status { padding: 2px 6px; border-radius: 5px; color: var(--ink-2); background: var(--surface-2); font-weight: 650; }
+.event-status.open { background: var(--success-soft); color: var(--success); }
+.deadline { margin: 4px 0 0; color: var(--ink-3); font-size: 11px; }
+.event-cover { position: relative; width: 100%; aspect-ratio: 1; border-radius: 9px; overflow: hidden; background: var(--surface-2); }
+.event-cover-img, .event-cover :deep(.event-art) { position: absolute; inset: 0; width: 100%; height: 100%; }
+.event-cover-img { display: block; object-fit: contain; }
+.event-cover :deep(.event-art) { aspect-ratio: auto; }
+.event-cover :deep(.event-art-copy) { padding: 8px; }
+.event-cover :deep(.event-art-copy strong) { font-size: 14px; }
+.page-bar { justify-content: center; margin-top: 13px; }
 
-@media (max-width: 1080px) {
-  .collection-head h1 { font-size: 27px; }
-  .rec-grid { grid-template-columns: repeat(2, 1fr); }
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rec-block { margin: 22px 0; padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.rec-head { display: flex; align-items: center; gap: 8px 11px; flex-wrap: wrap; }
+.rec-head b { display: inline-flex; align-items: center; gap: 5px; color: var(--brand-strong); font-size: var(--fs-sm); }
+.rec-head b svg { width: 15px; height: 15px; }
+.rec-head span { font-size: var(--fs-cap); color: var(--ink-3); }
+.rec-head .el-button { margin-inline-start: auto; }
+.rec-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.rec-card { display: block; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.rec-card__top, .rec-meta { display: flex; flex-wrap: wrap; gap: 5px 8px; align-items: center; }
+.rec-card__top b { font-size: var(--fs-sm); }
+.rec-cat, .rec-meta { color: var(--ink-3); font-size: var(--fs-cap); }
+.rec-reason { margin: 5px 0; font-size: var(--fs-cap); color: var(--ink-2); }
+
+@media (max-width: 899px) {
+  .activity-grid { grid-template-columns: minmax(0, 1fr); }
+  .rec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 760px) {
-  .toolbar { gap: 12px; margin-bottom: 18px; }
-  .grid { grid-template-columns: 1fr; gap: 16px; }
-  .rec-grid { grid-template-columns: 1fr; }
+@media (max-width: 540px) {
+  .collection-head { margin-bottom: 13px; }
+  .toolbar { padding: 9px; gap: 8px; }
+  .activity-search { width: 100%; }
+  .chip { padding: 4px 9px; }
+  .event-card { grid-template-columns: minmax(0, 1fr) clamp(84px, 25vw, 108px); gap: 8px; padding: 9px; }
+  .item-body h3 { font-size: 14px; }
+  .event-tags { margin-top: 5px; }
+  .rec-grid { grid-template-columns: minmax(0, 1fr); }
 }
 </style>

@@ -23,8 +23,17 @@ export const withdrawRule = (id) => request.delete(`/assistant/rules/${id}`)
 export const reindexRule = (id) => request.post(`/assistant/rules/${id}/reindex`)
 
 export async function ruleFile({ documentId, version }) {
-  const response = await fetch(`/api/admin/assistant/rules/${documentId}/file?version=${encodeURIComponent(version)}`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('admin_token') || ''}` }
+  return readAdminPdf(`/api/admin/assistant/rules/${documentId}/file?version=${encodeURIComponent(version)}`)
+}
+
+export function publicKnowledgeFile(documentId, signal) {
+  return readAdminPdf(`/api/admin/ai/agent/knowledge/${encodeURIComponent(documentId)}/file`, signal)
+}
+
+async function readAdminPdf(path, signal) {
+  const response = await fetch(path, {
+    headers: { Authorization: `Bearer ${localStorage.getItem('admin_token') || ''}` },
+    signal
   })
   if (!response.ok || !response.headers.get('content-type')?.startsWith('application/pdf')) {
     throw new Error('资料已更新、撤回或不可访问，请重新查询')

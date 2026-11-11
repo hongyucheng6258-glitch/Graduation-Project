@@ -19,9 +19,10 @@ public class AdminReportController {
     @GetMapping("/list")
     public R<PageResult<Report>> list(
             @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Long record,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
-        return R.ok(reportAdminService.list(status, pageNum, pageSize));
+        return R.ok(reportAdminService.list(status, record, pageNum, pageSize));
     }
 
     @GetMapping("/{id}")

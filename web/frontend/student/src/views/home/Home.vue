@@ -5,11 +5,22 @@
       title="课表之外，<br>还有整个校园。"
       description="找一场喜欢的活动，遇见同频的朋友。<br>学习和生活，在这里都有回应。"
       photo="/images/home-campus.webp"
-      photo-note="秋日校园"
+      photo-note="探索 3D 校园"
+      photo-to="/campus-3d"
       :primary="{ label: '发现校园活动', to: '/activity' }"
       :secondary="{ label: '找 AI 帮忙', to: '/ai/chat' }"
       :event="heroEvent"
     />
+
+    <RouterLink class="message-entry game-entry" to="/draw-guess">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="m14 6 4 4M4 20l4.5-1L20 7.5a2.8 2.8 0 0 0-4-4L4.5 15 4 20Z"/>
+      </svg>
+      <span><b>你画我猜</b><small>和同学一起画画、猜词</small></span>
+      <svg class="msg-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M5 12h14M13 6l6 6-6 6"/>
+      </svg>
+    </RouterLink>
 
     <nav class="quick-strip" aria-label="校园服务快捷入口">
       <RouterLink v-for="e in entries" :key="e.to" :to="e.to" class="quick-service">
@@ -20,15 +31,6 @@
         <small>{{ e.desc }}</small>
       </RouterLink>
     </nav>
-
-    <RouterLink class="campus3d-entry" to="/campus-3d">
-      <span class="campus3d-entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 9 5v8l-9 5-9-5V8l9-5Zm0 9 9-4m-9 4L3 8m9 4v9"/></svg></span>
-      <span class="campus3d-entry-copy">
-        <b>进入3D校园</b>
-        <small>走进一扇门，探索对应的校园服务空间</small>
-      </span>
-      <span class="campus3d-entry-arrow" aria-hidden="true">→</span>
-    </RouterLink>
 
     <!-- ===== 双栏 ===== -->
     <div class="home-columns">
@@ -65,14 +67,19 @@
             class="item event-card"
             :to="a.to"
           >
-            <img v-if="firstContentImage(a, a.moduleId)" :src="firstContentImage(a, a.moduleId)" :alt="a.title" class="event-cover-img" />
-            <WtEventArt v-else :item="a" />
+            <div class="event-cover">
+              <template v-if="firstContentImage(a, a.moduleId)">
+                <img :src="firstContentImage(a, a.moduleId)" alt="" aria-hidden="true" class="event-cover-backdrop" loading="lazy" />
+                <img :src="firstContentImage(a, a.moduleId)" alt="" class="event-cover-img" loading="lazy" />
+              </template>
+              <WtEventArt v-else :item="a" />
+            </div>
             <div class="item-body">
+              <h3>{{ a.title }}</h3>
               <div class="card-meta-row">
                 <span class="card-category">{{ a.category }}</span>
                 <span class="card-status" :class="{ open: a.statusText === '报名中' }">{{ a.statusText }}</span>
               </div>
-              <h3>{{ a.title }}</h3>
               <div class="item-meta">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
                 {{ a.location || '地点待定' }}
@@ -108,17 +115,17 @@
             :to="`/idle/detail/${i.id}`"
           >
             <div class="cover">
-              <img v-if="firstContentImage(i, 'idle', i.category)" :src="firstContentImage(i, 'idle', i.category)" :alt="i.title" />
+              <img v-if="firstContentImage(i, 'idle', i.category)" :src="firstContentImage(i, 'idle', i.category)" alt="" loading="lazy" />
               <div v-else class="cover-fallback">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18l-2 13H5z"/><path d="M8 11v6M12 11v6M16 11v6"/></svg>
               </div>
             </div>
             <div class="item-body">
+              <h3>{{ i.title }}</h3>
               <div class="card-meta-row">
                 <span class="card-category">{{ i.category || '二手' }}</span>
                 <span v-if="i.location" class="card-location">{{ i.location }}</span>
               </div>
-              <h3>{{ i.title }}</h3>
               <p class="exchange-line">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 17l4-4M4 7v10M20 7l-4 4M20 17V7"/></svg>
                 {{ i.expectItem ? '期望换：' + i.expectItem : '面议' }}
@@ -399,7 +406,7 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 14px;
-  margin: 24px 0 14px;
+  margin: 12px 0 26px;
 }
 .quick-service {
   display: block;
@@ -422,27 +429,6 @@ onMounted(async () => {
 .quick-icon.peach { background: var(--accent-soft); color: var(--accent-ink); }
 .quick-icon.sage { background: var(--sage); color: var(--success); }
 .quick-icon.lavender { background: var(--purple-soft); color: var(--purple); }
-
-.campus3d-entry {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  margin-bottom: 24px;
-  padding: 10px 16px;
-  border: 1px solid var(--brand-line);
-  border-radius: var(--r-md);
-  background: linear-gradient(100deg, var(--brand-soft), var(--surface));
-  color: var(--ink);
-  text-decoration: none;
-  transition: border-color .18s, box-shadow .18s;
-}
-.campus3d-entry:hover { border-color: var(--brand); box-shadow: var(--shadow-sm); }
-.campus3d-entry-icon { width: 36px; height: 36px; display: grid; place-items: center; flex: none; border-radius: 10px; background: var(--brand); color: var(--brand-ink); }
-.campus3d-entry-icon svg { width: 20px; height: 20px; }
-.campus3d-entry-copy b, .campus3d-entry-copy small { display: block; }
-.campus3d-entry-copy b { color: var(--brand-strong); font-size: var(--fs-body); }
-.campus3d-entry-copy small { color: var(--ink-2); font-size: var(--fs-xs); }
-.campus3d-entry-arrow { margin-left: auto; color: var(--brand); font-size: 20px; }
 
 .home-columns { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; }
 .home-aside { display: flex; flex-direction: column; gap: 18px; }
@@ -484,48 +470,50 @@ onMounted(async () => {
 .item {
   display: block;
   min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  overflow: hidden;
-  background: var(--surface);
   text-decoration: none;
-  transition: border-color .18s, box-shadow .18s;
+  border-radius: 8px;
 }
-.item:hover { border-color: var(--brand-line); box-shadow: var(--shadow-md); }
-.item-body { padding: 14px 16px; overflow-wrap: anywhere; }
+.item:hover h3 { color: var(--brand-strong); }
+.item:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
+.item-body { padding: 8px 0 0; overflow-wrap: anywhere; }
 .item-body h3 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  margin: 0;
   color: var(--ink);
   font-size: var(--fs-body);
   font-weight: 650;
   line-height: 1.45;
 }
-.card-meta-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.card-meta-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 5px; }
 .card-category, .card-status { padding: 2px 8px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 600; }
 .card-category { background: var(--brand-soft); color: var(--brand-strong); }
 .card-status { background: var(--surface-2); color: var(--ink-2); }
 .card-status.open { background: var(--success-soft); color: var(--success); }
 .object-card .card-category { background: var(--peach); color: var(--accent-ink); }
 .card-location { color: var(--ink-3); font-size: var(--fs-xs); }
-.item-meta, .exchange-line { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 10px; color: var(--ink-3); font-size: var(--fs-xs); }
+.item-meta, .exchange-line { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; color: var(--ink-3); font-size: var(--fs-xs); }
 .item-meta svg, .exchange-line svg { width: 14px; height: 14px; flex: none; }
 .meta-divider { width: 1px; height: 10px; background: var(--line-strong); margin: 0 2px; }
-.item-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 12px; color: var(--ink-3); font-size: var(--fs-xs); }
+.item-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 5px; color: var(--ink-3); font-size: var(--fs-xs); }
 .item-bottom > span { display: inline-flex; align-items: center; gap: 6px; }
 .card-arrow { margin-left: auto; color: var(--brand); }
 .card-arrow svg { width: 14px; height: 14px; }
-.event-cover-img, .event-card :deep(.event-art) { display: block; width: 100%; height: 150px; aspect-ratio: auto; object-fit: cover; }
-.cover { height: 130px; overflow: hidden; background: var(--surface-2); }
-.cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.event-cover, .cover { position: relative; overflow: hidden; border-radius: 8px; background: var(--surface-2); }
+.event-cover { aspect-ratio: 16 / 9; }
+.event-cover-img, .event-cover-backdrop, .event-cover :deep(.event-art) { position: absolute; inset: 0; width: 100%; height: 100%; }
+.event-cover-img { object-fit: contain; }
+.event-cover-backdrop { object-fit: cover; filter: blur(16px) brightness(.75); transform: scale(1.14); }
+.cover { aspect-ratio: 1; }
+.cover img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .cover-fallback { height: 100%; display: grid; place-items: center; color: var(--ink-3); }
 .cover-fallback svg { width: 40px; height: 40px; }
 .mini-avatar { width: 24px; height: 24px; display: inline-grid; place-items: center; border-radius: 50%; background: var(--peach); color: var(--accent-ink); font-size: var(--fs-cap); font-weight: 600; flex: none; }
 .empty { padding: 32px 16px; border: 1px dashed var(--line-strong); border-radius: var(--r-md); color: var(--ink-3); text-align: center; font-size: var(--fs-sm); }
 .skeleton-block { border-radius: 6px; background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2)); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
-.skeleton-cover { min-height: 150px; }
+.skeleton-cover { aspect-ratio: 16 / 9; }
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
 .community-banner {
@@ -584,11 +572,11 @@ onMounted(async () => {
 .message-entry b { display: block; color: var(--ink); font-size: var(--fs-sm); }
 .message-entry small { display: block; margin-top: 2px; color: var(--ink-3); font-size: var(--fs-xs); }
 .msg-arrow { width: 16px; height: 16px; color: var(--ink-3); flex: none; }
+.game-entry { margin-top: 20px; }
 
 @media (max-width: 1120px) {
   .home-columns { grid-template-columns: minmax(0, 1fr) 270px; gap: 20px; }
   .cards { gap: 12px; }
-  .item-body { padding: 12px; }
 }
 @media (max-width: 950px) {
   .quick-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -596,7 +584,7 @@ onMounted(async () => {
   .home-aside { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 }
 @media (max-width: 700px) {
-  .quick-strip { gap: 8px; margin-top: 16px; }
+  .quick-strip { gap: 8px; }
   .quick-service { padding: 11px 8px; }
   .quick-service b { font-size: var(--fs-sm); }
   .quick-service small { font-size: var(--fs-cap); }
@@ -604,10 +592,8 @@ onMounted(async () => {
   .quick-icon svg { width: 18px; height: 18px; }
   .section-title h2 { font-size: var(--fs-h3); }
   .section-title p { font-size: var(--fs-xs); }
-  .cards, .home-aside { grid-template-columns: minmax(0, 1fr); }
-  .event-card, .object-card { display: grid; grid-template-columns: minmax(0, 34%) minmax(0, 1fr); }
-  .event-cover-img, .event-card :deep(.event-art), .object-card .cover { height: 100%; min-height: 132px; }
-  .skeleton-cover { min-height: 132px; }
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 17px; }
+  .home-aside { grid-template-columns: minmax(0, 1fr); }
   .community-banner { gap: 12px; padding: 16px; }
   .community-banner > img { max-width: 32%; }
   .round-arrow { width: 27px; height: 27px; }

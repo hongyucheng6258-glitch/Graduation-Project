@@ -48,6 +48,7 @@ javap_output/
 # Local backups and generated reverse-engineering artifacts
 _backup_*/
 database-backups/
+/数据库备份/
 javap_output/
 
 # Local documents containing environment-specific credentials or runtime evidence

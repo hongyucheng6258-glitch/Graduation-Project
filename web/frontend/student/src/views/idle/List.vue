@@ -19,28 +19,21 @@
     </div>
 
     <!-- 卡片网格 -->
-    <div class="grid" v-loading="loading">
-      <ItemCard
-        v-for="item in list"
-        :key="item.id"
-        :cover="firstContentImage(item, 'idle', item.category)"
-        :title="item.title"
-        :desc="item.description"
-        :time="item.createTime"
-        module="idle"
-        :category="item.category"
-        @click="$router.push(`/idle/detail/${item.id}`)"
-      >
-        <template #badge>
-          <span class="badge-tag" :class="badgeCls(item.status)">{{ badgeText(item.status) }}</span>
-        </template>
-        <template #footer>
-          <div class="card-footer">
-            <el-tag v-if="item.category" size="small">{{ item.category }}</el-tag>
-            <span class="expect">期望换：{{ item.expectItem || '待商量' }}</span>
-          </div>
-        </template>
-      </ItemCard>
+    <div class="grid photo-feed" v-loading="loading">
+      <RouterLink v-for="item in list" :key="item.id" class="photo-feed__link" :to="`/idle/detail/${item.id}`">
+        <ItemCard feed :cover="firstContentImage(item, 'idle', item.category)" :title="item.title"
+                  module="idle" :category="item.category">
+          <template #badge>
+            <span class="badge-tag" :class="badgeCls(item.status)">{{ badgeText(item.status) }}</span>
+          </template>
+          <template #footer>
+            <div class="card-footer">
+              <span v-if="item.category">{{ item.category }}</span>
+              <span class="expect">期望换：{{ item.expectItem || '待商量' }}</span>
+            </div>
+          </template>
+        </ItemCard>
+      </RouterLink>
     </div>
     <EmptyBox v-if="!loadError && !loading && !list.length" description="暂无闲置物品" />
     <el-pagination
@@ -149,13 +142,6 @@ watch(
 .spacer {
   flex: 1;
 }
-.grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  min-width: 0;
-  margin-bottom: 16px;
-}
 .chips {
   display: flex;
   gap: 8px;
@@ -196,18 +182,14 @@ watch(
 .tag-error { background: var(--error-soft); color: var(--error); }
 .card-footer {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2px 8px;
   align-items: center;
+  font-size: 12px;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
 }
 .expect {
-  font-size: 12px;
-  color: var(--warning);
-}
-.grid :deep(.cover) { height: 150px; }
-@media (max-width: 1000px) {
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 640px) {
-  .grid { grid-template-columns: minmax(0, 1fr); }
+  color: var(--ink-2);
 }
 </style>

@@ -1,36 +1,35 @@
 <template>
   <div v-if="loadError" class="load-error" role="alert"><span>{{ loadError }}</span><button type="button" class="text-btn" @click="load">重新加载</button></div>
-  <WtPageHeader title="学习搭子" subtitle="按学科与目标找到一起自习的人。">
-    <el-button type="primary" @click="goPublish">＋ 发布需求</el-button>
-  </WtPageHeader>
-
   <div class="partner-list">
+    <WtPageHeader title="学习搭子" subtitle="按学科与目标找到一起自习的人。">
+      <el-button type="primary" @click="goPublish">＋ 发布需求</el-button>
+    </WtPageHeader>
     <div class="toolbar">
       <div class="subject-filters" aria-label="学科快捷搜索">
         <button v-for="subject in subjects" :key="subject" type="button" class="subject-filter"
           :aria-pressed="activeKeyword === subject" @click="selectSubject(subject)">{{ subject || '全部' }}</button>
       </div>
-      <el-input v-model="keyword" placeholder="搜索科目/目标/介绍…" clearable style="width: 260px" @keyup.enter="search" @clear="search">
+      <el-input v-model="keyword" class="collection-search" aria-label="搜索学习搭子" placeholder="搜索科目/目标/介绍…" clearable @keyup.enter="search" @clear="search">
         <template #append><el-button @click="search">搜索</el-button></template>
       </el-input>
     </div>
 
+    <div class="collection-count" v-if="!loading && !loadError">{{ total }} 条学习需求</div>
     <div class="grid" v-loading="loading">
       <article v-for="p in list" :key="p.id" class="p-card">
-        <div class="p-card__head">
-          <el-avatar :size="44" :src="p.publisherAvatar">{{ p.publisherNickname?.charAt(0) || '同' }}</el-avatar>
-          <b>{{ p.publisherNickname || '校园同学' }}</b>
-          <span class="subject">{{ p.subject }}</span>
-        </div>
+        <div><span class="subject">{{ p.subject }}</span></div>
         <h2 v-if="p.goal" class="goal">{{ p.goal }}</h2>
         <p v-if="p.intro" class="intro">{{ p.intro }}</p>
         <div v-if="p.schedule || p.contact" class="meta">
-          <span v-if="p.schedule">🕐 {{ p.schedule }}</span>
-          <span v-if="p.contact">📞 {{ p.contact }}</span>
+          <span v-if="p.schedule">时间 {{ p.schedule }}</span>
+          <span v-if="p.contact">联系 {{ p.contact }}</span>
         </div>
         <div v-if="p.userId" class="card-actions">
+          <RouterLink class="p-card__author" :to="isOwn(p) ? '/profile' : `/user/${p.userId}`">
+            <el-avatar :size="28" :src="p.publisherAvatar">{{ p.publisherNickname?.charAt(0) || '同' }}</el-avatar>
+            <span>{{ p.publisherNickname || '校园同学' }}</span>
+          </RouterLink>
           <el-button v-if="!isOwn(p)" plain type="primary" size="small" @click="invite(p)">私信邀约</el-button>
-          <RouterLink class="text-btn" :to="isOwn(p) ? '/profile' : `/user/${p.userId}`">查看主页</RouterLink>
         </div>
       </article>
     </div>
@@ -118,12 +117,19 @@ load()
 </script>
 
 <style scoped>
+.partner-list { max-width: 1100px; margin-inline: auto; }
+.collection-search { width: min(100%, 290px); }
+.collection-count { margin: 0 0 7px; color: var(--ink-3); font-size: 12px; }
 .toolbar {
   display: flex;
   gap: 12px;
   margin-bottom: 16px;
   flex-wrap: wrap;
   align-items: center;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
 }
 .subject-filters { display: flex; flex-wrap: wrap; gap: 8px; }
 .subject-filter {
@@ -141,6 +147,8 @@ load()
 .subject-filter[aria-pressed='true'] { background: var(--brand-soft); color: var(--brand-strong); }
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-bottom: 16px; }
 .p-card {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   padding: 20px;
   border: 1px solid var(--line);
@@ -148,19 +156,16 @@ load()
   background: var(--surface);
   overflow-wrap: anywhere;
 }
-.p-card__head { display: flex; align-items: center; gap: 12px; }
-.p-card__head :deep(.el-avatar) { flex: none; background: var(--brand-soft); color: var(--brand-strong); }
-.p-card__head b { min-width: 0; font-size: var(--fs-body); }
 .subject {
-  margin-left: auto;
-  padding: 4px 10px;
-  border-radius: var(--r-pill);
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 6px;
   background: var(--purple-soft);
   color: var(--purple-strong);
   font-size: var(--fs-xs);
   font-weight: 600;
 }
-.goal { margin: 14px 0 6px; color: var(--ink); font-size: var(--fs-body); }
+.goal { margin: 6px 0 0; color: var(--ink); font-size: 17px; }
 .intro {
   margin: 8px 0 0;
   font-size: var(--fs-sm);
@@ -171,8 +176,13 @@ load()
   overflow: hidden;
 }
 .meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font-size: var(--fs-xs); color: var(--ink-3); }
-.card-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.card-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 12px; }
+.p-card__author { display: inline-flex; align-items: center; min-width: 0; gap: 6px; color: var(--ink-2); font-size: 12px; text-decoration: none; }
+.p-card__author:hover { color: var(--brand-strong); }
+.p-card__author :deep(.el-avatar) { flex: none; background: var(--brand-soft); color: var(--brand-strong); }
 @media (max-width: 640px) {
   .grid { grid-template-columns: minmax(0, 1fr); }
+  .p-card { padding: 13px; }
+  .collection-search { width: 100%; }
 }
 </style>

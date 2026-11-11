@@ -19,10 +19,11 @@ public class AdminUserController {
     @GetMapping("/list")
     public R<PageResult<User>> list(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long record,
             @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
-        return R.ok(adminUserService.listUsers(keyword, status, pageNum, pageSize));
+        return R.ok(adminUserService.listUsers(keyword, status, record, pageNum, pageSize));
     }
 
     @PutMapping("/{id}/status")

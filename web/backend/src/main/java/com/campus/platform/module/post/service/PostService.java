@@ -33,8 +33,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Base64;
+import java.util.Locale;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * 动态广场服务（C6）：发布（待审）→ 点赞（防重）→ 评论（DFA机审）。
@@ -42,6 +46,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PostService {
+    private static final Pattern INLINE_IMAGE = Pattern.compile("^data:(image/(?:jpeg|jpg|png|gif|webp));base64,", Pattern.CASE_INSENSITIVE);
 
     private final PostMapper postMapper;
     private final PostCommentMapper commentMapper;
@@ -71,6 +76,10 @@ public class PostService {
 
     /** 动态广场（公开，仅审核通过） */
     public PageResult<PostVO> list(Long currentUid, String keyword, int pageNum, int pageSize) {
+        return list(currentUid, keyword, pageNum, pageSize, false);
+    }
+
+    public PageResult<PostVO> list(Long currentUid, String keyword, int pageNum, int pageSize, boolean compactImages) {
         String normalizedKeyword = keyword == null ? null : keyword.trim();
         Page<Post> page = postMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<Post>()
@@ -96,7 +105,12 @@ public class PostService {
         return PageResult.of(page, p -> {
             PostVO vo = new PostVO();
             BeanUtil.copyProperties(p, vo);
-            vo.setImageList(IdleService.parseJson(p.getImages()));
+            List<String> images = IdleService.parseJson(p.getImages());
+            if (compactImages) {
+                images = listedImages(p.getId(), images);
+                vo.setImages(IdleService.toJson(images));
+            }
+            vo.setImageList(images);
             User u = userMap.get(p.getUserId());
             vo.setNickname(u == null ? "" : u.getNickname());
             vo.setAvatar(u == null ? null : u.getAvatar());
@@ -105,6 +119,32 @@ public class PostService {
             return vo;
         });
     }
+
+    private List<String> listedImages(Long postId, List<String> images) {
+        return IntStream.range(0, images.size()).mapToObj(index -> {
+            String image = images.get(index);
+            return image != null && INLINE_IMAGE.matcher(image).lookingAt()
+                    ? "/api/post/" + postId + "/images/" + index : image;
+        }).toList();
+    }
+
+    public InlineImage image(Long postId, int index) {
+        List<String> images = IdleService.parseJson(checkVisible(postId).getImages());
+        if (index < 0 || index >= images.size() || images.get(index) == null) {
+            throw new BizException(ResultCode.NOT_FOUND, "动态图片不存在");
+        }
+        String image = images.get(index);
+        var match = INLINE_IMAGE.matcher(image);
+        if (!match.lookingAt()) throw new BizException(ResultCode.NOT_FOUND, "动态图片不存在");
+        try {
+            return new InlineImage(Base64.getDecoder().decode(image.substring(match.end())),
+                    match.group(1).toLowerCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new BizException(ResultCode.NOT_FOUND, "动态图片无法读取");
+        }
+    }
+
+    public record InlineImage(byte[] bytes, String contentType) {}
 
     /** 动态详情（仅审核通过、可见的动态；第10项修复：供分享直达 ?post=id 使用，找不到/删除/未过审统一 NOT_FOUND） */
     public PostVO detail(Long currentUid, Long postId) {

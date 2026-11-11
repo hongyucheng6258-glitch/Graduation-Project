@@ -12,14 +12,21 @@
           <el-button type="primary" :loading="busy">上传并发布 PDF</el-button>
         </el-upload>
         <el-table :data="documents" empty-text="暂无公共资料">
-          <el-table-column prop="fileName" label="资料名称" min-width="180" />
+          <el-table-column prop="fileName" label="资料名称" min-width="180">
+            <template #default="{ row }">
+              <button type="button" class="knowledge-file" @click="openPreview(row)">{{ row.fileName }}</button>
+            </template>
+          </el-table-column>
           <el-table-column label="状态" min-width="125">
             <template #default="{ row }">{{ states[row.state] || row.state }} {{ row.error || '' }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="178">
+          <el-table-column label="操作" min-width="205">
             <template #default="{ row }">
-              <el-button v-if="['READY', 'FAILED'].includes(row.state)" text @click="reindex(row)">重建索引</el-button>
-              <el-button text type="danger" @click="withdraw(row)">撤回</el-button>
+              <div class="knowledge-actions">
+                <el-button text type="primary" @click="openPreview(row)">预览 PDF</el-button>
+                <el-button v-if="['READY', 'FAILED'].includes(row.state)" text @click="reindex(row)">重建索引</el-button>
+                <el-button text type="danger" @click="withdraw(row)">撤回</el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -57,13 +64,28 @@
         </el-table>
       </el-tab-pane>
     </el-tabs>
+    <el-dialog v-model="previewVisible" :title="previewDocument?.fileName || '预览 PDF'"
+      width="min(1000px, calc(100vw - 24px))" top="5vh" append-to-body destroy-on-close @close="resetPreview">
+      <div class="pdf-preview">
+        <p v-if="previewLoading" class="preview-message" role="status">正在加载 PDF…</p>
+        <div v-else-if="previewError" class="preview-message">
+          <p role="alert">{{ previewError }}</p>
+          <el-button @click="openPreview(previewDocument)">重试</el-button>
+        </div>
+        <iframe v-else-if="previewUrl" class="pdf-frame" :src="previewUrl" :title="previewDocument?.fileName" />
+      </div>
+      <template v-if="previewUrl" #footer>
+        <a :href="previewUrl" :download="previewDocument?.fileName" class="pdf-download">下载原件</a>
+      </template>
+    </el-dialog>
   </el-card>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '../../api/request'
+import { publicKnowledgeFile } from '../../api/assistant'
 
 const root = '/ai/agent'
 const states = { QUEUED: '等待索引', INDEXING: '索引中', READY: '已发布', FAILED: '索引失败' }
@@ -75,7 +97,43 @@ const busy = ref(false)
 const documents = ref([])
 const versions = ref([])
 const runs = ref([])
+const previewVisible = ref(false)
+const previewDocument = ref(null)
+const previewUrl = ref('')
+const previewLoading = ref(false)
+const previewError = ref('')
+let previewRequest
 onMounted(load)
+onBeforeUnmount(resetPreview)
+
+function resetPreview() {
+  previewRequest?.abort()
+  previewRequest = undefined
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
+  previewUrl.value = ''
+  previewError.value = ''
+  previewLoading.value = false
+}
+
+async function openPreview(row) {
+  resetPreview()
+  previewDocument.value = row
+  previewVisible.value = true
+  previewLoading.value = true
+  const controller = new AbortController()
+  previewRequest = controller
+  try {
+    const pdf = await publicKnowledgeFile(row.id, controller.signal)
+    if (previewRequest === controller) previewUrl.value = URL.createObjectURL(pdf)
+  } catch {
+    if (previewRequest === controller) previewError.value = '无法预览此资料，请确认文件仍可访问后重试。'
+  } finally {
+    if (previewRequest === controller) {
+      previewRequest = undefined
+      previewLoading.value = false
+    }
+  }
+}
 
 async function load() {
   busy.value = true
@@ -135,4 +193,13 @@ async function publish(id) {
 .agent-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .agent-header p { margin: 5px 0 0; color: var(--el-text-color-secondary); font-size: 13px; }
 .agent-action { margin-block: 10px; }
+.knowledge-actions { display: flex; flex-wrap: wrap; gap: 2px 4px; }
+.knowledge-actions .el-button { margin: 0; padding-inline: 5px; }
+.knowledge-file { padding: 0; border: 0; background: transparent; color: var(--brand-strong); text-align: start; font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.knowledge-file:hover { text-decoration: underline; }
+.pdf-preview { min-height: 140px; }
+.pdf-frame { display: block; width: 100%; height: 68dvh; border: 1px solid var(--line); border-radius: 8px; }
+.preview-message { padding: 22px 4px; color: var(--ink-2); text-align: center; }
+.preview-message p { margin: 0 0 12px; }
+.pdf-download { color: var(--brand-strong); }
 </style>

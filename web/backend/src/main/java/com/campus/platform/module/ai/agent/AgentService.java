@@ -36,6 +36,7 @@ public class AgentService {
             "^(?:请\\s*)?(?:可以|能不能|能)?\\s*(?:(?:帮我|我要|我想)\\s*)?(?:发布|发起|举办|组织)\\s*"
                     + "(?:一个|一场|一次|一项)?\\s*([^\\r\\n，,。！？!?；;]{1,72}?)[吗嘛吧]?[。！？!?]?$");
     private static final Pattern ACTIVITY_LABEL = Pattern.compile("^(?:校园)?活动\\s*[:：]\\s*");
+    private static final Pattern QUOTED_TITLE = Pattern.compile("^(?:《[^《》]+》|“[^“”]+”|「[^「」]+」|『[^『』]+』|\"[^\"]+\")$");
     private static final Pattern SHORT_ACTIVITY_NAMES = Pattern.compile(
             "读书会|读书分享会|分享会|学习交流会|交流会|研讨会|座谈会|说明会|见面会|宣讲会|运动会|晚会|辩论赛");
     private static final Pattern GENERIC_ACTIVITY = Pattern.compile("(?:校园)?活动|讲座|比赛|竞赛|工作坊|沙龙");
@@ -203,9 +204,10 @@ public class AgentService {
         var label = ACTIVITY_LABEL.matcher(text);
         boolean explicit = label.find();
         String title = (explicit ? text.substring(label.end()) : text).strip();
-        boolean quoted = title.matches("[「『“\\\"《].+[」』”\\\"》]");
+        boolean quoted = QUOTED_TITLE.matcher(title).matches();
         if (quoted) title = title.substring(1, title.length() - 1).strip();
         if (GENERIC_ACTIVITY.matcher(title).matches() || (explicit && title.isEmpty())) return "";
+        if (explicit && quoted && title.length() <= 64) return title;
         return SHORT_ACTIVITY_NAMES.matcher(title).matches() ? title : null;
     }
 

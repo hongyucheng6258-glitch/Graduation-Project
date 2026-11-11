@@ -47,10 +47,11 @@ public class ReportAdminService {
     private final MessageService messageService;
 
     /** 举报列表（状态筛选） */
-    public PageResult<Report> list(Integer status, int pageNum, int pageSize) {
+    public PageResult<Report> list(Integer status, Long record, int pageNum, int pageSize) {
         Page<Report> page = reportMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<Report>()
                         .eq(status != null, Report::getStatus, status)
+                        .eq(record != null, Report::getId, record)
                         .orderByDesc(Report::getId));
         return PageResult.of(page);
     }

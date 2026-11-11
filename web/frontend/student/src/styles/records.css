@@ -1,0 +1,16 @@
+.record-page { max-width: 980px; margin-inline: auto; min-width: 0; }
+.record-page :deep(.el-card) { border-radius: 13px; }
+.record-page :deep(.el-card__body) { padding: 12px clamp(10px, 2vw, 18px); }
+.record-list { display: grid; gap: 8px; }
+.record-row { min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; overflow-wrap: anywhere; }
+.record-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 5px 10px; color: var(--ink); font-size: 15px; }
+.record-head > a { color: var(--brand-strong); font-weight: 650; text-decoration: none; }
+.record-head > a:hover { text-decoration: underline; }
+.record-head > .el-tag { flex: none; }
+.record-note { margin: 5px 0 0; color: var(--ink-2); font-size: 13px; white-space: pre-wrap; }
+.record-meta { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 5px; color: var(--ink-3); font-size: 12px; }
+.record-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.record-actions:empty { display: none; }
+.record-actions:not(:empty) { margin-top: 7px; }
+.record-actions .el-button { margin: 0; }
+.record-pager { justify-content: center; margin-top: 10px; }
