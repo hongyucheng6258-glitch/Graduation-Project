@@ -1,5 +1,6 @@
 package com.campus.platform.module.admin.service;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -18,6 +19,7 @@ import com.campus.platform.module.ai.mapper.PromptTemplateMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -29,14 +31,30 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AiAdminService {
 
+    private static final String API_KEY = "api_key";
+    private static final String API_KEY_MASK = "********";
+
     private final AiConfigMapper aiConfigMapper;
     private final PromptTemplateMapper promptTemplateMapper;
     private final AiCallLogMapper aiCallLogMapper;
     private final AiConfigHolder aiConfigHolder;
 
-    /** 读取全部 AI 配置 */
+    /** 返回管理端配置，密钥仅用于展示配置状态。 */
     public List<AiConfig> listConfigs() {
-        return aiConfigMapper.selectList(null);
+        List<AiConfig> configs = new ArrayList<>(aiConfigMapper.selectList(null));
+        AiConfig keyConfig = new AiConfig();
+        keyConfig.setConfigKey(API_KEY);
+        keyConfig.setConfigValue(AiConfigHolder.isConfiguredApiKey(aiConfigHolder.getApiKey()) ? API_KEY_MASK : "");
+        for (int index = 0; index < configs.size(); index++) {
+            AiConfig config = configs.get(index);
+            if (API_KEY.equals(config.getConfigKey())) {
+                BeanUtil.copyProperties(config, keyConfig, "configValue");
+                configs.set(index, keyConfig);
+                return configs;
+            }
+        }
+        configs.add(keyConfig);
+        return configs;
     }
 
     /** 批量修改配置 → 刷新缓存即时生效 */
@@ -45,14 +63,21 @@ public class AiAdminService {
             throw new BizException(ResultCode.BAD_REQUEST, "配置不能为空");
         }
         for (Map.Entry<String, String> e : configs.entrySet()) {
+            String value = e.getValue();
+            if (API_KEY.equals(e.getKey())) {
+                if (StrUtil.isBlank(value) || value.trim().matches("\\*+")) {
+                    continue;
+                }
+                value = value.trim();
+            }
             int updated = aiConfigMapper.update(null, new LambdaUpdateWrapper<AiConfig>()
                     .eq(AiConfig::getConfigKey, e.getKey())
-                    .set(AiConfig::getConfigValue, e.getValue()));
+                    .set(AiConfig::getConfigValue, value));
             if (updated == 0) {
                 // 新 key 直接插入
                 AiConfig config = new AiConfig();
                 config.setConfigKey(e.getKey());
-                config.setConfigValue(e.getValue());
+                config.setConfigValue(value);
                 aiConfigMapper.insert(config);
             }
         }

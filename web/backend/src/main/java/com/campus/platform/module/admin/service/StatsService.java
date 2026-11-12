@@ -4,6 +4,7 @@ import com.campus.platform.module.admin.vo.StatsOverviewVO;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.platform.common.Constants;
+import com.campus.platform.common.DailyCount;
 import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.ai.entity.AiCallLog;
 import com.campus.platform.module.idle.entity.IdleItem;
@@ -29,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 数据大屏统计服务（D7）。
@@ -135,17 +137,20 @@ public class StatsService {
         List<Long> userGrowth = new ArrayList<>();
         List<Long> aiCalls = new ArrayList<>();
         LocalDate today = LocalDate.now();
-        for (int i = 29; i >= 0; i--) {
-            LocalDate day = today.minusDays(i);
+        LocalDate firstDay = today.minusDays(29);
+        LocalDateTime start = firstDay.atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+        long cumulativeUsers = userMapper.selectCount(new LambdaQueryWrapper<User>()
+                .lt(User::getCreateTime, start));
+        Map<LocalDate, Long> registrationsByDay = userMapper.countByDay(start, end).stream()
+                .collect(Collectors.toMap(DailyCount::day, DailyCount::total));
+        Map<LocalDate, Long> callsByDay = aiCallLogMapper.countByDay(start, end).stream()
+                .collect(Collectors.toMap(DailyCount::day, DailyCount::total));
+        for (LocalDate day = firstDay; !day.isAfter(today); day = day.plusDays(1)) {
             dates.add(day.toString());
-            LocalDateTime dayEnd = day.plusDays(1).atStartOfDay();
-            // 用户累计增长（截至当日总数）
-            userGrowth.add(userMapper.selectCount(new LambdaQueryWrapper<User>()
-                    .lt(User::getCreateTime, dayEnd)));
-            // 当日 AI 调用量
-            aiCalls.add(aiCallLogMapper.selectCount(new LambdaQueryWrapper<AiCallLog>()
-                    .ge(AiCallLog::getCreateTime, day.atStartOfDay())
-                    .lt(AiCallLog::getCreateTime, dayEnd)));
+            cumulativeUsers += registrationsByDay.getOrDefault(day, 0L);
+            userGrowth.add(cumulativeUsers);
+            aiCalls.add(callsByDay.getOrDefault(day, 0L));
         }
         Map<String, Object> result = new HashMap<>();
         result.put("dates", dates);

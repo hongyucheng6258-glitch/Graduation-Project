@@ -7,8 +7,10 @@
         <el-input v-model="configs.base_url" placeholder="https://api.deepseek.com" />
       </el-form-item>
       <el-form-item label="API 密钥">
-        <el-input v-model="configs.api_key" type="password" show-password
-                  placeholder="留空则使用服务端 application.yml 配置" />
+        <el-input v-model="newApiKey" type="password" autocomplete="new-password"
+                  :disabled="loading || saving"
+                  :placeholder="apiKeyConfigured ? '********' : '未配置'" />
+        <small class="api-key-hint">输入新密钥后保存，留空则保留当前配置。</small>
       </el-form-item>
       <el-form-item label="模型名称">
         <el-input v-model="configs.model_name" placeholder="deepseek-chat" />
@@ -110,6 +112,8 @@ onMounted(async () => {
 })
 const saving = ref(false)
 const configs = reactive({})
+const apiKeyConfigured = ref(false)
+const newApiKey = ref('')
 const prompts = ref([])
 const editVisible = ref(false)
 const editForm = reactive({ id: null, scene: 'chat', name: '', content: '', enabled: 1 })
@@ -129,7 +133,10 @@ onMounted(async () => {
   loading.value = true
   try {
     const list = await getAiConfig()
-    list.forEach((c) => { configs[c.configKey] = c.configValue })
+    for (const { configKey, configValue } of list) {
+      if (configKey === 'api_key') apiKeyConfigured.value = Boolean(configValue)
+      else configs[configKey] = configValue
+    }
     configReady.value = true
     prompts.value = await listPrompts()
   } finally {
@@ -141,7 +148,14 @@ async function save() {
   if (loading.value || !configReady.value || saving.value) return
   saving.value = true
   try {
-    await updateAiConfig({ ...configs })
+    const key = newApiKey.value.trim()
+    const updateKey = key && !/^\*+$/.test(key)
+    await updateAiConfig({ ...configs, ...(updateKey ? { api_key: key } : {}) })
+    if (updateKey) {
+      newApiKey.value = ''
+      const list = await getAiConfig()
+      apiKeyConfigured.value = Boolean(list.find(config => config.configKey === 'api_key')?.configValue)
+    }
     ElMessage.success('配置已保存并即时生效')
   } finally {
     saving.value = false
@@ -190,6 +204,9 @@ async function savePrompt() {
 }
 .model-form :deep(.el-input-number .el-input__inner) {
   text-align: start;
+}
+.api-key-hint {
+  color: var(--ink-3);
 }
 .prompt-panel {
   margin-top: var(--s-5);

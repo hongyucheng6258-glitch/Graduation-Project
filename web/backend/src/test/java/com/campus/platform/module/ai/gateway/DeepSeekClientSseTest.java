@@ -85,7 +85,7 @@ class DeepSeekClientSseTest {
         when(configHolder.getRateLimitPerDay()).thenReturn(50);
         when(sensitiveWordService.contains(anyString())).thenReturn(false);
         when(redisUtils.get(anyString())).thenReturn(null);
-        when(chatMemoryService.getBySession(any())).thenReturn(List.of());
+        when(chatMemoryService.getRecentContext(any())).thenReturn(List.of());
 
         responseStatus = 200;
         sseBody = delta("校") + delta("园") + "data: [DONE]\n\n";

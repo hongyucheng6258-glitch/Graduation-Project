@@ -1,6 +1,6 @@
 <template>
   <main class="campus3d-page">
-    <header class="campus3d-header">
+    <header class="campus3d-header" :inert="mapOpen">
       <button class="back-button" type="button" @click="goHome">
         <span aria-hidden="true">←</span>
         <span>返回学生端</span>
@@ -14,7 +14,7 @@
       </div>
       <div class="campus3d-header-actions">
         <span class="status-chip"><i></i>{{ locationName }}</span>
-        <button class="toolbar-button" type="button" @click="mapOpen = true">
+        <button class="toolbar-button" type="button" @click="openGuide">
           <span aria-hidden="true">⌖</span>校园导览
         </button>
         <button class="toolbar-button" type="button" @click="toggleFullscreen">
@@ -23,7 +23,7 @@
       </div>
     </header>
 
-    <section ref="sceneFrame" class="campus3d-frame" :class="{ 'scene-expanded': isFullscreen }" aria-label="3D校园场景">
+    <section ref="sceneFrame" class="campus3d-frame" :inert="mapOpen" :class="{ 'scene-expanded': isFullscreen }" aria-label="3D校园场景">
       <div ref="sceneCanvas" class="scene-canvas" tabindex="0" aria-label="3D校园：拖动环视，WASD移动，点击服务门进入房间"></div>
       <div ref="sceneLabels" class="scene-labels"></div>
 
@@ -37,7 +37,7 @@
         <span class="error-icon" aria-hidden="true">!</span>
         <strong>3D场景暂时无法打开</strong>
         <p>{{ errorMessage }}</p>
-        <button type="button" class="primary-button" @click="mapOpen = true">从导览打开校园服务</button>
+        <button type="button" class="primary-button" @click="openGuide">从导览打开校园服务</button>
         <button class="primary-button" type="button" @click="boot">重新加载场景</button>
       </div>
 
@@ -75,7 +75,7 @@
         <label class="scene-tool">画质 <select v-model="quality" aria-label="场景画质" @change="setQuality"><option value="low">流畅</option><option value="balanced">均衡</option><option value="high">高清</option></select></label>
         <button v-if="isFullscreen" class="scene-tool" @click="toggleFullscreen">退出全屏</button>
         <span class="explore-hint"><span class="mouse-icon"></span>拖动环视 <b>W</b><b>A</b><b>S</b><b>D</b> 移动</span>
-        <button class="scene-tool minimap-reopen-button" type="button" @click="mapOpen = true">⌖ 导览</button>
+        <button class="scene-tool minimap-reopen-button" type="button" @click="openGuide">⌖ 导览</button>
       </div>
 
       <CampusWorkspace v-if="workspaceOpen" :service-id="workspaceServiceId" @close="closeWorkspace" />
@@ -86,15 +86,20 @@
       <span>进入房间后，点击屏幕打开对应学生端功能</span>
     </footer>
 
-    <div v-if="mapOpen" class="map-layer" @click.self="mapOpen = false">
-      <section class="map-dialog" role="dialog" aria-modal="true" aria-labelledby="mapTitle">
+    <div v-if="mapOpen" class="map-layer" @click.self="closeGuide">
+      <section ref="guideDialog" class="map-dialog" role="dialog" aria-modal="true" aria-labelledby="mapTitle" @keydown="onGuideKey">
         <header>
           <div>
-            <small>从这里，找到你的目的地</small>
             <h2 id="mapTitle">校园导览</h2>
+            <p class="map-location">当前位置：{{ locationName }}<span v-if="destination"> · 前往 {{ destination.name }} {{ destination.room }}</span></p>
+            <p v-if="!errorMessage && !loading" class="map-instructions">点房间名开始导览，也可以直接打开服务。</p>
           </div>
-          <button type="button" aria-label="关闭校园导览" @click="mapOpen = false">×</button>
+          <button ref="guideCloseButton" type="button" aria-label="关闭校园导览" @click="closeGuide">×</button>
         </header>
+        <div class="map-overview" role="group" aria-label="校园分区示意">
+          <span v-for="zone in guideZones" :key="zone.id" :class="`map-overview-${zone.id}`"
+                :aria-current="currentZone === zone.id ? 'location' : undefined">{{ zone.name }}</span>
+        </div>
         <button class="map-hub" type="button" @click="goHall">
           <span class="map-hub-icon">◆</span>
           <span><strong>梧桐中庭</strong><small>你与校园生活的连接点</small></span>
@@ -104,11 +109,14 @@
           <section v-for="group in mapGroups" :key="group.id" class="map-zone" :style="{ '--zone-color': group.color }">
             <h3>{{ group.name }}</h3>
             <p>{{ group.description }}</p>
-            <button v-for="item in group.items" :key="item.id" type="button" @click="navigateToService(item.id)">
-              <span class="map-dot" :style="{ background: item.color }"></span>
-              <span>{{ item.name }}</span>
-              <small>{{ item.room }}</small>
-            </button>
+            <div v-for="item in group.items" :key="item.id" class="map-room">
+              <button class="map-room-route" type="button" @click="navigateToService(item.id)">
+                <span class="map-dot" :style="{ background: item.color }"></span>
+                <span>{{ item.name }}<small>{{ item.room }}</small></span>
+              </button>
+              <button v-if="!errorMessage && !loading" class="map-room-open" type="button"
+                      :aria-label="`直接打开服务：${item.name}`" @click="navigateToService(item.id, true)">直接打开</button>
+            </div>
           </section>
         </div>
       </section>
@@ -144,6 +152,11 @@ const traveling = ref(false)
 const travelText = ref('正在前往…')
 const travelProgress = ref(0)
 const mapOpen = ref(false)
+const guideDialog = ref(null)
+const guideCloseButton = ref(null)
+const currentZone = ref('hub')
+const destination = ref(null)
+let guideOpener = null
 const comfort = ref(localStorage.getItem('wutong-campus-comfort') === 'true')
 const isFullscreen = ref(false)
 const quality = ref(localStorage.getItem('campus-quality') || 'balanced')
@@ -161,10 +174,40 @@ function setQuality() {
 watch([mapOpen, workspaceOpen, explorationStarted], ([map, workspace, started]) => scene.value?.setPaused(map || workspace || !started))
 const serviceMap = new Map(SERVICES.map((item) => [item.id, item]))
 const groupMap = new Map(GROUPS.map((group) => [group.id, group]))
+const guideZones = GROUPS.map(group => group.id === 'hub' ? { ...group, name: '梧桐中庭' } : group)
 const mapGroups = computed(() => GROUPS.filter((group) => group.id !== 'hub').map((group) => ({
   ...group,
   items: SERVICES.filter((item) => item.group === group.id)
 })))
+
+function openGuide(event) {
+  guideOpener = event.currentTarget
+  mapOpen.value = true
+  nextTick(() => guideCloseButton.value?.focus({ preventScroll: true }))
+}
+
+function closeGuide() {
+  mapOpen.value = false
+  nextTick(() => guideOpener?.focus({ preventScroll: true }))
+}
+
+function onGuideKey(event) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    closeGuide()
+  } else if (event.key === 'Tab') {
+    const buttons = guideDialog.value.querySelectorAll('button:not(:disabled)')
+    const first = buttons[0]
+    const last = buttons[buttons.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last?.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first?.focus()
+    }
+  }
+}
 
 function showRoomPrompt(id) {
   const item = serviceMap.get(id)
@@ -183,7 +226,7 @@ function startExplore() {
   explorationStarted.value = true
   scene.value?.setPaused(false)
   scene.value?.goHall()
-  sceneCanvas.value?.focus({ preventScroll: true })
+  nextTick(() => sceneCanvas.value?.focus({ preventScroll: true }))
 }
 
 function openService(id) {
@@ -219,9 +262,10 @@ function goHall() {
   hideRoomPrompt()
   scene.value?.goHall()
   locationName.value = '梧桐中庭'
+  nextTick(() => sceneCanvas.value?.focus({ preventScroll: true }))
 }
 
-function navigateToService(id) {
+function navigateToService(id, direct = false) {
   mapOpen.value = false
   if (!scene.value || errorMessage.value) {
     const path = SERVICE_PATHS[id]
@@ -229,7 +273,10 @@ function navigateToService(id) {
     return
   }
   if (!explorationStarted.value) startExplore()
-  scene.value.navigate(id, { instant: comfort.value })
+  if (roomPrompt.value?.item.id !== id) hideRoomPrompt()
+  if (!scene.value.navigate(id, { instant: direct || comfort.value })) return
+  if (direct) openService(id)
+  else nextTick(() => (roomOpenButton.value || sceneCanvas.value)?.focus({ preventScroll: true }))
 }
 
 function cancelTravel() {
@@ -261,15 +308,18 @@ function goHome() {
 function handleNavigation({ phase, id, progress }) {
   const item = id ? serviceMap.get(id) : null
   if (phase === 'walking' || phase === 'opening' || phase === 'entering') {
+    destination.value = item
     traveling.value = true
     travelText.value = `${phase === 'opening' || phase === 'entering' ? '正在打开' : '正在前往'}${item ? `「${item.name}」` : ''}`
     travelProgress.value = Math.round((progress || 0) * 100)
   } else {
+    destination.value = null
     traveling.value = false
   }
 }
 
 function handlePosition({ zone }) {
+  currentZone.value = zone
   const group = groupMap.get(zone)
   if (!roomPrompt.value) locationName.value = zone === 'hub' ? '梧桐中庭' : `${group?.name || '校园空间'} · 3D实景`
 }
@@ -281,6 +331,10 @@ async function boot() {
   scene.value = null
   if (import.meta.env.DEV) window.__campusScene = null
   explorationStarted.value = false
+  activeRoomId.value = null
+  currentZone.value = 'hub'
+  destination.value = null
+  traveling.value = false
   hideRoomPrompt()
   try {
     scene.value = await createCampusScene({
@@ -291,7 +345,10 @@ async function boot() {
       onRoomInteract: openService,
       onNavigate: handleNavigation,
       onPosition: handlePosition,
-      onError: (error) => { errorMessage.value = error?.message || '无法初始化三维场景。' }
+      onError: (error) => {
+        errorMessage.value = error?.message || '无法初始化三维场景。'
+        handleNavigation({ phase: 'idle' })
+      }
     })
     scene.value.setQuality(quality.value)
     scene.value.setComfort(comfort.value)
@@ -393,8 +450,16 @@ onBeforeUnmount(() => {
 .map-layer { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 24px; background: rgba(19,46,80,.35); backdrop-filter: blur(6px); }
 .map-dialog { width: min(760px, 100%); max-height: min(82vh, 760px); overflow: auto; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 24px 80px rgba(19,54,100,.25); }
 .map-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; padding: 22px 24px 17px; border-bottom: 1px solid var(--line); }
-.map-dialog header small { color: var(--ink-3); font-size: 11px; }
-.map-dialog h2 { margin: 4px 0 0; color: var(--ink); font-size: 22px; }
+.map-instructions { margin: 6px 0 0; color: var(--ink-3); font-size: 11px; }
+.map-dialog h2 { margin: 0; color: var(--ink); font-size: 22px; }
+.map-location { margin: 6px 0 0; color: var(--ink-2); font-size: 12px; }
+.map-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; max-width: 370px; margin: 14px auto 0; padding: 0 14px; }
+.map-overview span { padding: 6px 3px; border: 1px solid var(--line); border-radius: 7px; text-align: center; color: var(--ink-2); font-size: 12px; }
+.map-overview-service { grid-area: 1 / 2; }
+.map-overview-social { grid-area: 2 / 1; }
+.map-overview-hub { grid-area: 2 / 2; }
+.map-overview-ai { grid-area: 2 / 3; }
+.map-overview [aria-current="location"] { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); font-weight: 700; }
 .map-dialog header button { border: 0; background: transparent; color: var(--ink-3); font-size: 24px; cursor: pointer; }
 .map-hub { width: calc(100% - 48px); margin: 18px 24px; display: flex; align-items: center; gap: 11px; padding: 16px; border: 0; border-radius: 13px; background: var(--brand-soft); text-align: left; color: var(--brand); cursor: pointer; }
 .map-hub-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; background: #fff; font-size: 11px; }
@@ -406,9 +471,12 @@ onBeforeUnmount(() => {
 .map-zone { border: 1px solid var(--line); border-top: 3px solid var(--zone-color); border-radius: 12px; padding: 13px; }
 .map-zone h3 { margin: 0; color: var(--ink); font-size: 14px; }
 .map-zone p { margin: 4px 0 10px; color: var(--ink-3); font-size: 11px; }
-.map-zone > button { width: 100%; display: grid; grid-template-columns: 9px 1fr auto; align-items: center; gap: 7px; padding: 8px 2px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--brand); text-align: left; cursor: pointer; font: inherit; font-size: 11px; }
-.map-zone > button:hover { background: var(--brand-soft); }
-.map-zone > button small { color: var(--ink-3); font-size: 10px; }
+.map-room { display: flex; align-items: center; gap: 5px; border-top: 1px solid var(--line); }
+.map-room button { min-height: 40px; border: 0; border-radius: 6px; color: var(--brand); cursor: pointer; font: inherit; font-size: 12px; }
+.map-room-route { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 4px 2px; background: transparent; text-align: left; }
+.map-room-route small { display: block; color: var(--ink-3); font-size: 10px; }
+.map-room-open { flex: none; padding: 0 6px; background: var(--brand-soft); }
+.map-room button:hover { color: var(--brand-strong); background: var(--brand-soft); }
 .map-dot { width: 8px; height: 8px; border-radius: 50%; }
 @media (max-width: 820px) {
   .campus3d-header { padding: 0 18px; gap: 12px; }

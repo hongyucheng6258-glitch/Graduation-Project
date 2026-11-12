@@ -6,6 +6,8 @@ import com.campus.platform.module.ai.mapper.AiMessageMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -28,11 +30,16 @@ public class ChatMemoryService {
         return msg.getId();
     }
 
-    /** 加载会话历史消息（按时间正序，供上下文拼接） */
-    public List<AiMessage> getBySession(Long sessionId) {
-        return aiMessageMapper.selectList(new LambdaQueryWrapper<AiMessage>()
+    /** 查询模型上下文所需的最近 20 条消息，并按原有顺序返回。 */
+    public List<AiMessage> getRecentContext(Long sessionId) {
+        List<AiMessage> newestFirst = aiMessageMapper.selectList(new LambdaQueryWrapper<AiMessage>()
+                .select(AiMessage::getRole, AiMessage::getContent)
                 .eq(AiMessage::getSessionId, sessionId)
-                .orderByAsc(AiMessage::getId));
+                .orderByDesc(AiMessage::getId)
+                .last("LIMIT 20"));
+        List<AiMessage> context = new ArrayList<>(newestFirst);
+        Collections.reverse(context);
+        return context;
     }
 
     /** 删除会话所有消息 */

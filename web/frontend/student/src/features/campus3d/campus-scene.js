@@ -199,11 +199,31 @@ export async function createCampusScene({ container, labels, services = SERVICES
     box(parent, 0.08, 0.78, 0.35, M.trim, 0.42, 0.47, z + 0.24, true);
     return screen;
   }
+  const unitBox = new THREE.BoxGeometry(1, 1, 1);
+  disposables.add(unitBox);
+  function staticBoxes(parent, mat, boxes, castShadow = false) {
+    if (!boxes.length) return;
+    const instances = new THREE.InstancedMesh(unitBox, mat, boxes.length);
+    const transform = new THREE.Object3D();
+    boxes.forEach(([w, h, d, x, y, z], index) => {
+      transform.position.set(x, y, z);
+      transform.scale.set(w, h, d);
+      transform.updateMatrix();
+      instances.setMatrixAt(index, transform.matrix);
+    });
+    instances.castShadow = castShadow;
+    instances.receiveShadow = true;
+    instances.computeBoundingSphere();
+    disposables.add(instances);
+    parent.add(instances);
+  }
   function floor(parent, width, depth, x, z, color = M.floor) {
     box(parent, width, 0.18, depth, color, x, -0.1, z);
     const tile = 2.4;
-    for (let tx = -width / 2 + tile; tx < width / 2; tx += tile) box(parent, 0.016, 0.006, depth, M.seam, x + tx, 0.003, z);
-    for (let tz = -depth / 2 + tile; tz < depth / 2; tz += tile) box(parent, width, 0.006, 0.016, M.seam, x, 0.003, z + tz);
+    const seams = [];
+    for (let tx = -width / 2 + tile; tx < width / 2; tx += tile) seams.push([0.016, 0.006, depth, x + tx, 0.003, z]);
+    for (let tz = -depth / 2 + tile; tz < depth / 2; tz += tile) seams.push([width, 0.006, 0.016, x, 0.003, z + tz]);
+    staticBoxes(parent, M.seam, seams);
   }
   function planter(parent, x, z, scale = 1) {
     cylinder(parent, 0.52 * scale, 0.38 * scale, 0.8 * scale, M.white, x, 0.4 * scale, z, true);
@@ -442,13 +462,15 @@ export async function createCampusScene({ container, labels, services = SERVICES
     box(group, 7.75, 0.085, 0.07, tone, 0, 5.65, -10.4);
     textBoard(group, corridor.name, corridor.caption, corridor.color, 5.0, 1.16, 0, 5.07, -10.39);
     glowBox(group, 4.8, 0.045, 0.08, corridor.color, 0, 0.23, -14.25, false, 0.34);
-    for (const z of [-14, -22, -30, -35]) {
-      box(group, 8.3, 0.18, 0.24, M.white, 0, 5.2, z, true);
-      box(group, 6.8, 0.035, 0.08, M.light, 0, 5.08, z);
-    }
+    const beamPositions = [-14, -22, -30, -35];
+    staticBoxes(group, M.white, beamPositions.map(z => [8.3, 0.18, 0.24, 0, 5.2, z]), true);
+    staticBoxes(group, M.light, beamPositions.map(z => [6.8, 0.035, 0.08, 0, 5.08, z]));
     box(group, 8.3, 0.035, 23.4, M.glass, 0, 5.28, -23.0);
     const members = services.filter(item => item.group === corridor.id);
-    const placements = members.map((service, index) => ({ service, side: corridor.id === 'ai' && index === 2 ? 'end' : index % 2 ? 'R' : 'L', z: corridor.id === 'ai' && index === 2 ? END : index < 2 ? -17 : -27 }));
+    const placements = members.map((service, index) => {
+      const atEnd = (corridor.id === 'ai' && index === 2) || index === 4;
+      return { service, side: atEnd ? 'end' : index % 2 ? 'R' : 'L', z: atEnd ? END : index < 2 ? -17 : -27 };
+    });
     for (const side of ['L', 'R']) {
       const sx = side === 'L' ? -COR_HALF : COR_HALF;
       const cuts = placements.filter(item => item.side === side).map(item => item.z).sort((a, b) => b - a);
@@ -462,7 +484,7 @@ export async function createCampusScene({ container, labels, services = SERVICES
       if (front > END) box(group, 0.22, 4.8, front - END, M.wall, sx, 2.4, (front + END) / 2, true, true);
       box(group, 0.07, 0.11, 23.5, tone, sx + (side === 'L' ? 0.14 : -0.14), 0.19, -23.2);
     }
-    if (corridor.id !== 'ai') {
+    if (!placements.some(item => item.side === 'end')) {
       box(group, 8.3, 4.8, 0.2, M.wall, 0, 2.4, END, true, true);
       glowBox(group, 5.3, 0.08, 0.06, corridor.color, 0, 2.05, END + 0.18, false, 0.36);
       planter(group, -2.8, -33.5, 0.9);
@@ -595,6 +617,7 @@ export async function createCampusScene({ container, labels, services = SERVICES
       applyCamera(); reportPosition(true); updateLabels(true); renderOnce();
       return;
     }
+    lastTime = performance.now();
     progressEvent(id, stages[0]?.kind === 'opening' ? 'opening' : 'walking', 0);
   }
   function finishPlan(token) {
@@ -669,39 +692,46 @@ export async function createCampusScene({ container, labels, services = SERVICES
   }
   function lerpAngle(from, to, t) { return from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * t; }
   function updatePlan(dt) {
-    if (!plan) return;
     const active = plan;
-    if (active.token !== serial) { plan = null; return; }
-    const stage = active.stages[active.index];
-    if (!stage) { finishPlan(active.token); return; }
-    active.time += dt;
-    active.elapsed += dt;
-    const progress = Math.min(1, active.time / stage.duration);
-    const nextPhase = stage.kind === 'opening' || stage.kind === 'entering' ? 'opening' : 'walking';
-    if (phase !== nextPhase) progressEvent(active.id, nextPhase, Math.min(1, active.elapsed / active.total));
-    if (stage.kind === 'opening') {
-      const door = doors.get(active.id);
-      if (door) door.target = 1;
-    } else {
-      const smooth = progress * progress * (3 - 2 * progress);
-      const point = pointOnMove(stage, smooth);
-      const ahead = pointOnMove(stage, Math.min(1, smooth + 0.025));
-      let targetYaw = Math.atan2(-(ahead.x - point.x), -(ahead.z - point.z));
-      if (progress > 0.68 || stage.kind === 'entering' || stage.kind === 'exiting') targetYaw = stage.endYaw;
-      yaw = lerpAngle(yaw, targetYaw, Math.min(1, dt * 7));
-      pitch *= Math.max(0, 1 - dt * 5);
-      position.copy(point);
-    }
-    if (active.elapsed - lastProgress > 0.12) {
-      lastProgress = active.elapsed;
-      onNavigate?.({ phase: nextPhase, id: active.id, progress: Math.min(1, active.elapsed / active.total) });
-    }
-    if (progress >= 1 && plan === active) {
-      if (stage.points) { position.copy(stage.points.at(-1)); if (Number.isFinite(stage.endYaw)) yaw = stage.endYaw; }
+    let remaining = dt;
+    while (plan === active) {
+      const stage = active.stages[active.index];
+      if (!stage) { finishPlan(active.token); return; }
+
+      const stageRemaining = stage.duration - active.time;
+      const step = Math.min(remaining, stageRemaining);
+      const complete = step >= stageRemaining;
+      active.time += step;
+      active.elapsed += step;
+      remaining -= step;
+      const progress = complete ? 1 : active.time / stage.duration;
+      const totalProgress = Math.min(1, active.elapsed / active.total);
+      const nextPhase = stage.kind === 'opening' || stage.kind === 'entering' ? 'opening' : 'walking';
+      if (phase !== nextPhase) progressEvent(active.id, nextPhase, totalProgress);
+
+      if (stage.kind === 'opening') {
+        const door = doors.get(active.id);
+        if (door) door.target = 1;
+      } else {
+        const smooth = progress * progress * (3 - 2 * progress);
+        const point = pointOnMove(stage, smooth);
+        const ahead = pointOnMove(stage, Math.min(1, smooth + 0.025));
+        let targetYaw = Math.atan2(-(ahead.x - point.x), -(ahead.z - point.z));
+        if (progress > 0.68 || stage.kind === 'entering' || stage.kind === 'exiting') targetYaw = stage.endYaw;
+        yaw = complete ? stage.endYaw : lerpAngle(yaw, targetYaw, Math.min(1, step * 7));
+        pitch *= Math.max(0, 1 - step * 5);
+        position.copy(point);
+      }
+      if (active.elapsed - lastProgress > 0.12) {
+        lastProgress = active.elapsed;
+        onNavigate?.({ phase: nextPhase, id: active.id, progress: totalProgress });
+      }
+      if (!complete || plan !== active) return;
       if (stage.kind === 'exiting') closeDoors();
       active.index += 1;
       active.time = 0;
-      if (active.index >= active.stages.length) finishPlan(active.token);
+      if (active.index >= active.stages.length) { finishPlan(active.token); return; }
+      if (remaining <= 0) return;
     }
   }
   function walkable(point) {
@@ -844,13 +874,15 @@ export async function createCampusScene({ container, labels, services = SERVICES
   function tick(now) {
     if (disposed) return;
     raf = requestAnimationFrame(tick);
-    const dt = Math.min((now - lastTime) / 1000, 0.05);
+    const frameSeconds = Math.max(0, (now - lastTime) / 1000);
+    const dt = Math.min(frameSeconds, 0.05);
     lastTime = now;
     if (!active()) return;
     elapsedTime += dt;
-    if (plan) updatePlan(dt); else moveManually(dt);
+    const automatic = plan !== null;
+    if (automatic) updatePlan(frameSeconds); else moveManually(dt);
     for (const door of doors.values()) {
-      door.open += (door.target - door.open) * Math.min(1, dt * (comfort ? 100 : 7.5));
+      door.open += (door.target - door.open) * Math.min(1, (automatic ? frameSeconds : dt) * (comfort ? 100 : 7.5));
       door.hinge.rotation.y = -door.open * Math.PI * 0.52;
     }
     if (!comfort) {

@@ -80,15 +80,30 @@ async function run(browser, request, ctx) {
     h.record(C, '全屏 / 退出全屏操作', 'FAIL', e.message);
   }
 
-  // 5. 小地图
-  const minimap = page.locator('.minimap, .map-mini, canvas').last();
-  if (await minimap.count() > 0) {
-    h.record(C, '小地图存在', 'PASS');
-  } else {
-    h.record(C, '小地图存在', 'UNCOVERED', '未找到小地图元素');
-  }
-
+  // 5. 分区导览及手机端快捷入口
+  await page.getByRole('button', { name: '校园导览', exact: true }).click();
+  const guide = page.getByRole('dialog', { name: '校园导览' });
+  const currentZone = guide.locator('[aria-current="location"]');
+  await currentZone.waitFor();
+  h.record(C, '分区导览标记当前位置', await currentZone.count() === 1 ? 'PASS' : 'FAIL');
+  await page.keyboard.press('Escape');
+  await guide.waitFor({ state: 'hidden' });
   await page.close();
+
+  const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await mobile.addInitScript(() => localStorage.setItem('campus-quality', 'low'));
+  await mobile.goto(`${h.STUDENT_WEB}/campus-3d`);
+  await mobile.getByRole('button', { name: /开始探索/ }).waitFor();
+  await mobile.getByRole('button', { name: '校园导览', exact: true }).click();
+  await mobile.getByRole('button', { name: '直接打开服务：校园活动', exact: true }).click();
+  const workspace = mobile.locator('.room-workspace');
+  await workspace.locator('.activity-page').waitFor();
+  const inRoom = new URL(mobile.url()).pathname === '/campus-3d';
+  await workspace.getByRole('button', { name: /返回房间/ }).click();
+  const room = mobile.locator('.room-prompt');
+  await room.getByRole('heading', { name: '校园活动', exact: true }).waitFor();
+  h.record(C, '手机端直接打开服务并返回对应房间', inRoom ? 'PASS' : 'FAIL');
+  await mobile.close();
 
   // 6. 3D 操作后普通学生端数据同步验证（通过 API 验证 3D 中报名的活动在普通端可见）
   const buyerLogin = await h.apiLoginStudent(request, h.TEST_ACCOUNTS.buyer.studentNo, h.TEST_ACCOUNTS.buyer.password);

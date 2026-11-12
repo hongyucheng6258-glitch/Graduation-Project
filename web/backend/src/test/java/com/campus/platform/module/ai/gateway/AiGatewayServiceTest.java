@@ -101,7 +101,7 @@ class AiGatewayServiceTest {
         when(configHolder.getRateLimitPerDay()).thenReturn(50);
         when(sensitiveWordService.contains(anyString())).thenReturn(false);
         when(redisUtils.get(anyString())).thenReturn(null);
-        when(chatMemoryService.getBySession(any())).thenReturn(List.of());
+        when(chatMemoryService.getRecentContext(any())).thenReturn(List.of());
 
         responseStatus = 200;
         responseBody = successResponse("答案", 11, 22);
@@ -155,7 +155,7 @@ class AiGatewayServiceTest {
         AiMessage historyAssistant = new AiMessage();
         historyAssistant.setRole("assistant");
         historyAssistant.setContent("上一答");
-        when(chatMemoryService.getBySession(88L)).thenReturn(List.of(historyUser, historyAssistant));
+        when(chatMemoryService.getRecentContext(88L)).thenReturn(List.of(historyUser, historyAssistant));
 
         String answer = gateway.chat(UID, Constants.SCENE_CHAT, "当前问题", 88L, Map.of("subject", "算法"));
 

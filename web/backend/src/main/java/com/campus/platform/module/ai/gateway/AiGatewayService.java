@@ -228,10 +228,7 @@ public class AiGatewayService {
 
     /** AI 是否已配置可用：apiKey 非空且非占位符 */
     public boolean isAiConfigured() {
-        String key = aiConfigHolder.getApiKey();
-        return StrUtil.isNotBlank(key)
-                && !"sk-xxx".equals(key.trim())
-                && !key.trim().startsWith("${");
+        return AiConfigHolder.isConfiguredApiKey(aiConfigHolder.getApiKey());
     }
 
     /** 每日限流检查 */
@@ -273,11 +270,7 @@ public class AiGatewayService {
 
         // 3. 会话历史（chat/pdf 场景）
         if (sessionId != null) {
-            List<AiMessage> history = chatMemoryService.getBySession(sessionId);
-            // 最近 10 轮上下文
-            int start = Math.max(0, history.size() - 20);
-            for (int i = start; i < history.size(); i++) {
-                AiMessage msg = history.get(i);
+            for (AiMessage msg : chatMemoryService.getRecentContext(sessionId)) {
                 messages.add(objectMapper.createObjectNode()
                         .put("role", msg.getRole())
                         .put("content", msg.getContent()));

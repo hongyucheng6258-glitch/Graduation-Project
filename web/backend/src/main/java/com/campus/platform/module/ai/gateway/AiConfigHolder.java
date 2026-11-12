@@ -91,6 +91,12 @@ public class AiConfigHolder {
         return get("api_key");
     }
 
+    public static boolean isConfiguredApiKey(String key) {
+        return StrUtil.isNotBlank(key)
+                && !"sk-xxx".equals(key.trim())
+                && !key.trim().startsWith("${");
+    }
+
     public String getModel() {
         return get("model_name");
     }
