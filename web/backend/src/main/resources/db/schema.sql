@@ -320,6 +320,12 @@ CREATE TABLE IF NOT EXISTS `activity_member` (
   UNIQUE KEY `uk_activity_user` (`activity_id`, `user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动报名表';
 
+CREATE TABLE IF NOT EXISTS activity_reminder (
+  member_id BIGINT NOT NULL COMMENT '活动报名记录 ID',
+  start_time DATETIME NOT NULL COMMENT '发送提醒时的活动开始时间',
+  PRIMARY KEY (member_id, start_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动开始前提醒去重记录';
+
 -- 活动签到
 CREATE TABLE IF NOT EXISTS `activity_signin` (
   `id`          BIGINT   NOT NULL AUTO_INCREMENT,
@@ -620,3 +626,29 @@ INSERT INTO `draw_game_word` (`word`, `category`, `active`) VALUES
 ('彩虹','自然现象',1),('月亮','自然现象',1),('雪人','自然现象',1),('龙卷风','自然现象',1)
 ON DUPLICATE KEY UPDATE `category` = VALUES(`category`), `active` = VALUES(`active`);
 -- END draw guess schema
+CREATE TABLE IF NOT EXISTS activity_waitlist (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  activity_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  state VARCHAR(16) NOT NULL,
+  queued_at DATETIME NOT NULL,
+  offer_until DATETIME DEFAULT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_waitlist_activity_user (activity_id, user_id),
+  KEY idx_waitlist_queue (activity_id, state, id),
+  KEY idx_waitlist_user (user_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS idle_handoff (
+  appointment_id BIGINT NOT NULL,
+  version INT NOT NULL DEFAULT 0,
+  proposed_by BIGINT DEFAULT NULL,
+  meeting_at DATETIME DEFAULT NULL,
+  location VARCHAR(128) DEFAULT NULL,
+  confirmed TINYINT NOT NULL DEFAULT 0,
+  buyer_done TINYINT NOT NULL DEFAULT 0,
+  seller_done TINYINT NOT NULL DEFAULT 0,
+  reminder_sent TINYINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (appointment_id),
+  KEY idx_idle_handoff_reminder (confirmed, reminder_sent, meeting_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

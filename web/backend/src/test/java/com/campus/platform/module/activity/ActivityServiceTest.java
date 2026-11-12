@@ -73,6 +73,9 @@ class ActivityServiceTest {
     @Mock
     private ContentAiAuditService contentAiAuditService;
 
+    @Mock
+    private com.campus.platform.module.activity.service.ActivityWaitlist waitlist;
+
     @InjectMocks
     private ActivityService service;
 
@@ -226,7 +229,7 @@ class ActivityServiceTest {
     // ---------- signup：报名接口最终校验 ----------
 
     private void mockPassedActivity(Activity a) {
-        when(activityMapper.selectById(ACTIVITY_ID)).thenReturn(a);
+        when(activityMapper.selectForUpdate(ACTIVITY_ID)).thenReturn(a);
     }
 
     private User user() {
@@ -287,7 +290,7 @@ class ActivityServiceTest {
     void signup_rejectNotPassed() {
         Activity a = activity(Constants.ACTIVITY_SIGNING, FUTURE, FUTURE.plusHours(2), FUTURE, 10);
         a.setAuditStatus(Constants.AUDIT_PENDING);
-        when(activityMapper.selectById(ACTIVITY_ID)).thenReturn(a);
+        when(activityMapper.selectForUpdate(ACTIVITY_ID)).thenReturn(a);
         assertThatThrownBy(() -> service.signup(USER_ID, ACTIVITY_ID, new SignupDTO()))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("未通过审核");

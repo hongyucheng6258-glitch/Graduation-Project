@@ -62,7 +62,8 @@ class IdleDetailReviewEntryTest {
                 userMapper,
                 messageService,
                 sensitiveWordService,
-                contentAiAuditService);
+                contentAiAuditService,
+                org.mockito.Mockito.mock(com.campus.platform.module.idle.service.IdleHandoffService.class));
     }
 
     @Test

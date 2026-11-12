@@ -45,7 +45,35 @@ export function mySignups(params) {
   return request.get('/activity/my/signup', { params })
 }
 
+export function myActivitySchedule() {
+  return request.get('/activity/my/schedule', { silent: true, skipMaintenanceRedirect: true })
+}
+
+export function signupConflicts(id, signal) {
+  return request.get(`/activity/${id}/signup-conflicts`, { signal, silent: true, skipMaintenanceRedirect: true, timeout: 5000 })
+}
+
 /** 活动 AI 智能推荐 */
 export function recommendActivity() {
   return request.post('/activity/recommend', {}, { silent: true, timeout: 120000 })
+}
+
+export function activityWaitlist(id) {
+  return request.get(`/activity/${id}/waitlist`, { silent: true, skipMaintenanceRedirect: true })
+}
+
+export function myActivityWaitlist() {
+  return request.get('/activity/my/waitlist', { silent: true, skipMaintenanceRedirect: true })
+}
+
+export function joinActivityWaitlist(id) {
+  return request.post(`/activity/${id}/waitlist`)
+}
+
+export function leaveActivityWaitlist(id, entryId) {
+  return request.delete(`/activity/${id}/waitlist/${entryId}`)
+}
+
+export function acceptActivityWaitlist(id, entryId, data) {
+  return request.post(`/activity/${id}/waitlist/${entryId}/accept`, data)
 }

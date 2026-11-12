@@ -34,6 +34,11 @@ export function messageTarget(message) {
   }
 
   switch (type) {
+    case 'handoff_buyer':
+    case 'handoff_seller': {
+      const role = type === 'handoff_buyer' ? 'buyer' : 'seller'
+      return `/idle/appointments?role=${role}${id ? '&appointmentId=' + id : ''}`
+    }
     case 'conversation':
       return id ? `/chat/${id}` : '/chat'
     case 'idle':

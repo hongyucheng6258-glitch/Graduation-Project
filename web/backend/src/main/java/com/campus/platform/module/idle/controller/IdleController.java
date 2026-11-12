@@ -2,6 +2,8 @@ package com.campus.platform.module.idle.controller;
 
 import com.campus.platform.module.idle.dto.AppointHandleDTO;
 import com.campus.platform.module.idle.dto.IdleEstimateDTO;
+import com.campus.platform.module.idle.dto.IdleHandoffDTO;
+import com.campus.platform.module.idle.service.IdleHandoffService;
 import com.campus.platform.module.idle.entity.IdleAppointment;
 import com.campus.platform.module.idle.dto.IdlePublishDTO;
 import com.campus.platform.module.idle.vo.AppointmentVO;
@@ -31,6 +33,7 @@ public class IdleController {
     private final IdleService idleService;
     private final IdleEstimateService idleEstimateService;
     private final SystemConfigHolder systemConfigHolder;
+    private final IdleHandoffService handoffs;
 
     /** 闲置 AI 智能估价 */
     @PostMapping("/estimate")
@@ -66,9 +69,10 @@ public class IdleController {
     @GetMapping("/appoint/my")
     public R<PageResult<AppointmentVO>> myAppointments(
             @RequestParam(defaultValue = "buyer") String role,
+            @RequestParam(required = false) Long appointmentId,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
-        return R.ok(idleService.myAppointments(UserContext.getUid(), role, pageNum, pageSize));
+        return R.ok(idleService.myAppointments(UserContext.getUid(), role, pageNum, pageSize, appointmentId));
     }
 
     @GetMapping("/{id}")
@@ -103,6 +107,21 @@ public class IdleController {
     public R<Void> handleAppoint(@PathVariable Long id, @Valid @RequestBody AppointHandleDTO dto) {
         idleService.handleAppoint(UserContext.getUid(), id, dto.getAccept());
         return R.ok();
+    }
+
+    @GetMapping("/appoint/{id}/handoff")
+    public R<IdleHandoffService.Plan> handoff(@PathVariable Long id) {
+        return R.ok(handoffs.view(UserContext.getUid(), id));
+    }
+
+    @PutMapping("/appoint/{id}/handoff")
+    public R<IdleHandoffService.Plan> proposeHandoff(@PathVariable Long id, @Valid @RequestBody IdleHandoffDTO dto) {
+        return R.ok(handoffs.propose(UserContext.getUid(), id, dto.version(), dto.meetingAt(), dto.location()));
+    }
+
+    @PutMapping("/appoint/{id}/handoff/confirm")
+    public R<IdleHandoffService.Plan> confirmHandoff(@PathVariable Long id, @Valid @RequestBody IdleHandoffDTO.Confirmation dto) {
+        return R.ok(handoffs.confirm(UserContext.getUid(), id, dto.version()));
     }
 
     @PutMapping("/appoint/{id}/finish")

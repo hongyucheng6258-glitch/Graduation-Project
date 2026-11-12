@@ -63,13 +63,13 @@
             <div class="stack">
               <!-- 发布者视角：名单管理 + 签到二维码 -->
               <template v-if="act.isOwner">
-                <button type="button" class="btn primary" @click="loadMembers">报名名单管理</button>
+                <button type="button" class="btn primary" @click="loadMembers()">报名名单管理</button>
                 <button type="button" class="btn" @click="showQrcode">签到二维码</button>
               </template>
               <!-- 参与者视角 -->
               <template v-else>
                 <button
-                  v-if="act.mySignupStatus === null || act.mySignupStatus === undefined"
+                  v-if="act.mySignupStatus == null && !waitlistPriority"
                   type="button"
                   class="btn primary"
                   :disabled="!act.canSignup"
@@ -81,7 +81,9 @@
                 <span v-else-if="act.mySignupStatus === 1" class="ticket-tag success">
                   已通过报名{{ act.signedIn ? '（已签到）' : '（活动现场请扫码签到）' }}
                 </span>
-                <span v-else class="ticket-tag error">报名未通过</span>
+                <span v-else-if="act.mySignupStatus != null" class="ticket-tag error">报名未通过</span>
+                <ActivityWaitlist v-if="userStore.isLoggedIn" :activity-id="id" :signup-status="act.mySignupStatus"
+                  @changed="load" @priority="waitlistPriority = $event" />
                 <button
                   v-if="act.mySignupStatus === 0 || act.mySignupStatus === 1"
                   type="button"
@@ -123,11 +125,13 @@
       <!-- ===== 保留全部弹窗 ===== -->
       <!-- 报名弹窗 -->
       <el-dialog v-model="signupVisible" title="报名活动" width="min(440px, calc(100vw - 24px))">
+        <SignupConflictNotice v-if="signupVisible && userStore.isLoggedIn" :activity-id="id"
+          @checking="checkingConflicts = $event" />
         <el-input v-model="remark" type="textarea" :rows="3"
                   placeholder="报名说明/组队信息（如：计科2201张三，求组队）" maxlength="255" />
         <template #footer>
           <el-button @click="signupVisible = false">取消</el-button>
-          <el-button type="primary" :loading="signing" @click="doSignup">确认报名</el-button>
+          <el-button type="primary" :loading="signing" :disabled="checkingConflicts" @click="doSignup">确认报名</el-button>
         </template>
       </el-dialog>
 
@@ -204,6 +208,8 @@
 import { computed, onMounted, ref } from 'vue'
 import QRCode from 'qrcode'
 import WtEventArt from '../../components/wt/WtEventArt.vue'
+import SignupConflictNotice from './components/SignupConflictNotice.vue'
+import ActivityWaitlist from './components/ActivityWaitlist.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { activityDetail, signupActivity, cancelActivitySignup, activityMembers, handleMember, signinQrcode } from '../../api/activity'
@@ -225,6 +231,8 @@ const loading = ref(false)
 const signupVisible = ref(false)
 const remark = ref('')
 const signing = ref(false)
+const checkingConflicts = ref(false)
+const waitlistPriority = ref(false)
 const canceling = ref(false)
 const membersVisible = ref(false)
 const members = ref([])
@@ -301,7 +309,7 @@ async function toggleFavorite() {
 }
 
 async function doSignup() {
-  if (signing.value) return
+  if (signing.value || checkingConflicts.value) return
   if (!userStore.isLoggedIn) {
     router.push('/login')
     return

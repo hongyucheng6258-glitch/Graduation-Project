@@ -77,8 +77,20 @@ class IdleServiceTest {
     @Mock
     private MessageService messageService;
 
+    @Mock
+    private com.campus.platform.module.idle.service.IdleHandoffService handoffs;
+
     @InjectMocks
     private IdleService idleService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUpHandoffs() {
+        org.mockito.Mockito.doAnswer(call -> {
+            call.<IdleAppointment>getArgument(0).setId(APPOINT_ID);
+            return 1;
+        }).when(appointmentMapper).insert(any(IdleAppointment.class));
+        when(handoffs.markDone(any(), anyLong())).thenReturn(true);
+    }
 
     private IdleItem item(int auditStatus, int status) {
         IdleItem it = new IdleItem();
@@ -294,7 +306,7 @@ class IdleServiceTest {
         @Test
         @DisplayName("接受：预约转已接受 + 通知买家 + 物品保持已预约")
         void handle_accept() {
-            when(appointmentMapper.selectById(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_PENDING));
+            when(appointmentMapper.selectForUpdate(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_PENDING));
             when(idleItemMapper.selectById(ITEM_ID)).thenReturn(item(Constants.AUDIT_PASS, Constants.IDLE_RESERVED));
 
             idleService.handleAppoint(SELLER, APPOINT_ID, true);
@@ -310,7 +322,7 @@ class IdleServiceTest {
         @Test
         @DisplayName("拒绝：预约转已拒绝 + 物品必须恢复在架（否则永久锁死）")
         void handle_reject_shouldRestoreOnShelf() {
-            when(appointmentMapper.selectById(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_PENDING));
+            when(appointmentMapper.selectForUpdate(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_PENDING));
             when(idleItemMapper.selectById(ITEM_ID)).thenReturn(item(Constants.AUDIT_PASS, Constants.IDLE_RESERVED));
 
             idleService.handleAppoint(SELLER, APPOINT_ID, false);
@@ -325,7 +337,7 @@ class IdleServiceTest {
         @Test
         @DisplayName("非卖家处理 → 403")
         void handle_notSeller() {
-            when(appointmentMapper.selectById(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_PENDING));
+            when(appointmentMapper.selectForUpdate(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_PENDING));
 
             assertThatThrownBy(() -> idleService.handleAppoint(OTHER, APPOINT_ID, true))
                     .isInstanceOf(BizException.class)
@@ -335,7 +347,7 @@ class IdleServiceTest {
         @Test
         @DisplayName("重复处理已接受的预约 → 1005")
         void handle_duplicate() {
-            when(appointmentMapper.selectById(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_ACCEPTED));
+            when(appointmentMapper.selectForUpdate(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_ACCEPTED));
 
             assertThatThrownBy(() -> idleService.handleAppoint(SELLER, APPOINT_ID, true))
                     .isInstanceOf(BizException.class)
@@ -352,7 +364,7 @@ class IdleServiceTest {
         @Test
         @DisplayName("买家确认完成：预约+物品均转完成，并通知卖家（对方）")
         void finish_byBuyer() {
-            when(appointmentMapper.selectById(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_ACCEPTED));
+            when(appointmentMapper.selectForUpdate(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_ACCEPTED));
             when(idleItemMapper.selectById(ITEM_ID)).thenReturn(item(Constants.AUDIT_PASS, Constants.IDLE_RESERVED));
 
             idleService.finishAppoint(BUYER, APPOINT_ID);
@@ -370,7 +382,7 @@ class IdleServiceTest {
         @Test
         @DisplayName("卖家确认完成：通知对象应为买家")
         void finish_bySeller_notifiesBuyer() {
-            when(appointmentMapper.selectById(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_ACCEPTED));
+            when(appointmentMapper.selectForUpdate(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_ACCEPTED));
             when(idleItemMapper.selectById(ITEM_ID)).thenReturn(item(Constants.AUDIT_PASS, Constants.IDLE_RESERVED));
 
             idleService.finishAppoint(SELLER, APPOINT_ID);
@@ -382,7 +394,7 @@ class IdleServiceTest {
         @Test
         @DisplayName("无关用户确认 → 403")
         void finish_stranger() {
-            when(appointmentMapper.selectById(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_ACCEPTED));
+            when(appointmentMapper.selectForUpdate(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_ACCEPTED));
 
             assertThatThrownBy(() -> idleService.finishAppoint(OTHER, APPOINT_ID))
                     .isInstanceOf(BizException.class)
@@ -392,7 +404,7 @@ class IdleServiceTest {
         @Test
         @DisplayName("尚未接受的预约不能直接完成 → 400")
         void finish_notAccepted() {
-            when(appointmentMapper.selectById(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_PENDING));
+            when(appointmentMapper.selectForUpdate(APPOINT_ID)).thenReturn(appointment(Constants.APPOINT_PENDING));
 
             assertThatThrownBy(() -> idleService.finishAppoint(BUYER, APPOINT_ID))
                     .isInstanceOf(BizException.class)
@@ -505,6 +517,7 @@ class IdleServiceTest {
         // 2) 卖家接受
         created.setId(APPOINT_ID);
         when(appointmentMapper.selectById(APPOINT_ID)).thenReturn(created);
+        when(appointmentMapper.selectForUpdate(APPOINT_ID)).thenReturn(created);
         idleService.handleAppoint(SELLER, APPOINT_ID, true);
         assertThat(created.getStatus()).isEqualTo(Constants.APPOINT_ACCEPTED);
 

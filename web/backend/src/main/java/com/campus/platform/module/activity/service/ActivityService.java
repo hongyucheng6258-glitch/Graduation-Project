@@ -60,6 +60,7 @@ public class ActivityService {
     private final SensitiveWordService sensitiveWordService;
     private final ContentAiAuditService contentAiAuditService;
     private final SystemConfigHolder systemConfigHolder;
+    private final ActivityWaitlist waitlist;
 
     @Value("${CAMPUS_ADMIN_ASSISTANT_ENABLED:false}")
     private boolean versionedAudit;
@@ -205,8 +206,27 @@ public class ActivityService {
      * 报名（审批制，联合唯一索引防重复报名）。
      * 时间/人数/下架等校验统一走 checkSignAllowed（最终安全边界）。
      */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void signup(Long userId, Long activityId, SignupDTO dto) {
-        Activity activity = checkSignAllowed(activityId);
+        Activity activity = activityMapper.selectForUpdate(activityId);
+        long approved = checkSignAllowed(activityId, activity);
+        waitlist.refresh(activity);
+        if (waitlist.queued(activityId, userId) || waitlist.reservedForOthers(activity, userId, approved)) {
+            throw new BizException(ResultCode.BAD_REQUEST, "请从候补入口操作，当前空位优先用于递补");
+        }
+        createSignup(userId, activity, dto);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void acceptWaitlist(Long userId, Long activityId, Long entryId, SignupDTO dto) {
+        Activity activity = activityMapper.selectForUpdate(activityId);
+        if (waitlist.claim(activity, userId, entryId)) {
+            createSignup(userId, activity, dto);
+        }
+    }
+
+    private void createSignup(Long userId, Activity activity, SignupDTO dto) {
+        Long activityId = activity.getId();
         if (activity.getUserId().equals(userId)) {
             throw new BizException(ResultCode.BAD_REQUEST, "不能报名自己发布的活动");
         }
@@ -241,8 +261,9 @@ public class ActivityService {
     }
 
     /** 取消报名（仅待审批/已通过可取消；已结束/已签到不可取消） */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void cancelSignup(Long userId, Long activityId) {
-        Activity activity = activityMapper.selectById(activityId);
+        Activity activity = activityMapper.selectForUpdate(activityId);
         if (activity == null) {
             throw new BizException(ResultCode.NOT_FOUND, "活动不存在");
         }
@@ -262,6 +283,8 @@ public class ActivityService {
             throw new BizException(ResultCode.BAD_REQUEST, "你已签到，无法取消报名");
         }
         memberMapper.deleteById(member.getId());
+        waitlist.release(activityId, userId, "CANCELLED");
+        waitlist.refresh(activity);
         // 人数回退：已报满 -> 恢复报名中
         activityMapper.replaceStatus(activityId, Constants.ACTIVITY_FULL, Constants.ACTIVITY_SIGNING);
         messageService.send(activity.getUserId(), Constants.MSG_INTERACT,
@@ -332,6 +355,7 @@ public class ActivityService {
         if (activity.getEndTime() != null && !LocalDateTime.now().isBefore(activity.getEndTime())) {
             throw new BizException(ResultCode.BAD_REQUEST, "活动已结束，无法审批");
         }
+        waitlist.refresh(activity);
         // 人数上限校验
         if (approve && activity.getMaxMembers() != null && activity.getMaxMembers() > 0) {
             Long approved = memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
@@ -342,6 +366,9 @@ public class ActivityService {
                 activityMapper.updateById(activity);
                 throw new BizException(ResultCode.BAD_REQUEST, "活动人数已满");
             }
+            if (waitlist.reservedForOthers(activity, member.getUserId(), approved)) {
+                throw new BizException(ResultCode.BAD_REQUEST, "空位已为候补学生保留");
+            }
         }
         member.setStatus(approve ? Constants.MEMBER_APPROVED : Constants.MEMBER_REJECTED);
         int changed = memberMapper.update(null, new LambdaUpdateWrapper<ActivityMember>()
@@ -351,6 +378,8 @@ public class ActivityService {
         if (changed != 1) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "该报名已审批或已取消");
         }
+        waitlist.release(activity.getId(), member.getUserId(), approve ? "APPROVED" : "REJECTED");
+        if (!approve) waitlist.refresh(activity);
         // 满员自动变更状态
         if (approve && activity.getMaxMembers() != null && activity.getMaxMembers() > 0) {
             Long approved = memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
@@ -447,8 +476,7 @@ public class ActivityService {
      * 顺序：不存在/未审核 → 已下架 → 已结束 → 报名已截止 → 已开始 → 人数已满。
      * signupDeadline 为空时，默认截止时间 = startTime（活动开始后不允许新报名）。
      */
-    private Activity checkSignAllowed(Long activityId) {
-        Activity activity = activityMapper.selectById(activityId);
+    private long checkSignAllowed(Long activityId, Activity activity) {
         if (activity == null || activity.getAuditStatus() != Constants.AUDIT_PASS) {
             throw new BizException(ResultCode.NOT_FOUND, "活动不存在或未通过审核");
         }
@@ -466,16 +494,18 @@ public class ActivityService {
         if (activity.getStartTime() != null && !now.isBefore(activity.getStartTime())) {
             throw new BizException(ResultCode.BAD_REQUEST, "活动已开始，无法报名");
         }
-        // 人数已满（审批通过数达到上限）
-        if (activity.getMaxMembers() != null && activity.getMaxMembers() > 0) {
-            Long approved = memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
-                    .eq(ActivityMember::getActivityId, activityId)
-                    .eq(ActivityMember::getStatus, Constants.MEMBER_APPROVED));
-            if (approved >= activity.getMaxMembers()) {
-                throw new BizException(ResultCode.BAD_REQUEST, "活动人数已满");
-            }
+        if (activity.getMaxMembers() == null || activity.getMaxMembers() <= 0) return 0;
+        long approved = approvedCount(activityId);
+        if (approved >= activity.getMaxMembers()) {
+            throw new BizException(ResultCode.BAD_REQUEST, "活动人数已满");
         }
-        return activity;
+        return approved;
+    }
+
+    private long approvedCount(Long activityId) {
+        return memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
+                .eq(ActivityMember::getActivityId, activityId)
+                .eq(ActivityMember::getStatus, Constants.MEMBER_APPROVED));
     }
 
     private Activity checkPublisher(Long userId, Long activityId) {

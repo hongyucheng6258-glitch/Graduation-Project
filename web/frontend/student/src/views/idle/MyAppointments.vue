@@ -6,6 +6,7 @@
         <el-tab-pane label="我发起的" name="buyer" />
         <el-tab-pane label="我收到的" name="seller" />
       </el-tabs>
+      <el-button v-if="linkedId" size="small" text @click="linkedId = null; load()">查看全部预约</el-button>
       <div v-loading="loading" class="record-list">
         <article v-for="row in list" :key="row.id" class="record-row">
           <header class="record-head">
@@ -24,10 +25,12 @@
               <el-button size="small" type="success" @click="handle(row, true)">接受</el-button>
               <el-button size="small" type="danger" @click="handle(row, false)">拒绝</el-button>
             </template>
-            <el-button v-if="row.status === 1" size="small" type="primary" @click="finish(row)">确认完成</el-button>
+            <el-button v-if="row.status === 1" size="small" type="primary" :aria-expanded="handoffId === row.id"
+              @click="handoffId = handoffId === row.id ? null : row.id">交接安排</el-button>
             <el-button v-if="row.status === 3 && !row.reviewed" size="small" type="warning" @click="openReview(row)">评价</el-button>
             <span v-if="row.status === 3 && row.reviewed" class="done-text">已评价</span>
           </div>
+          <IdleHandoffPanel v-if="row.status === 1 && handoffId === row.id" :appointment-id="row.id" :role="role" @updated="load" />
         </article>
         <EmptyBox v-if="!loading && !list.length" description="暂无预约记录" />
       </div>
@@ -55,13 +58,16 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import EmptyBox from '../../components/EmptyBox.vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
+import IdleHandoffPanel from './IdleHandoffPanel.vue'
 import { ElMessage } from 'element-plus'
-import { myAppointments, handleAppoint, finishAppoint, reviewAppoint } from '../../api/idle'
+import { myAppointments, handleAppoint, reviewAppoint } from '../../api/idle'
 
 const route = useRoute()
 // 从消息中心跳转时通过 ?role=buyer/seller 指定初始标签
 const role = ref(route.query.role === 'seller' ? 'seller' : 'buyer')
 const list = ref([])
+const handoffId = ref(Number(route.query.appointmentId) || null)
+const linkedId = ref(handoffId.value)
 const pageNum = ref(1)
 const total = ref(0)
 const loading = ref(false)
@@ -77,13 +83,15 @@ const statusType = (s) => TYPES[s] ?? 'info'
 
 function changeRole() {
   pageNum.value = 1
+  handoffId.value = null
+  linkedId.value = null
   load()
 }
 
 async function load() {
   loading.value = true
   try {
-    const res = await myAppointments({ role: role.value, pageNum: pageNum.value, pageSize: 10 })
+    const res = await myAppointments({ role: role.value, appointmentId: linkedId.value, pageNum: pageNum.value, pageSize: 10 })
     list.value = res.list
     total.value = res.total
   } finally {
@@ -94,12 +102,6 @@ async function load() {
 async function handle(row, accept) {
   await handleAppoint(row.id, accept)
   ElMessage.success(accept ? '已接受预约' : '已拒绝预约')
-  load()
-}
-
-async function finish(row) {
-  await finishAppoint(row.id)
-  ElMessage.success('交易已完成，快去互评吧')
   load()
 }
 

@@ -58,6 +58,7 @@ public class IdleService {
     private final MessageService messageService;
     private final SensitiveWordService sensitiveWordService;
     private final ContentAiAuditService contentAiAuditService;
+    private final IdleHandoffService handoffs;
 
     @Value("${CAMPUS_ADMIN_ASSISTANT_ENABLED:false}")
     private boolean versionedAudit;
@@ -319,6 +320,7 @@ public class IdleService {
         appointment.setMessage(dto.getMessage());
         appointment.setStatus(Constants.APPOINT_PENDING);
         appointmentMapper.insert(appointment);
+        handoffs.register(appointment.getId());
 
         User buyer = userMapper.selectById(userId);
         messageService.send(item.getUserId(), Constants.MSG_INTERACT,
@@ -336,7 +338,7 @@ public class IdleService {
     /** 卖家接受/拒绝预约 */
     @Transactional
     public void handleAppoint(Long userId, Long appointId, boolean accept) {
-        IdleAppointment appointment = getAppointment(appointId);
+        IdleAppointment appointment = lockAppointment(appointId);
         if (!appointment.getSellerId().equals(userId)) {
             throw new BizException(ResultCode.FORBIDDEN, "只有物品发布者可以处理预约");
         }
@@ -357,16 +359,17 @@ public class IdleService {
                 Constants.BIZ_IDLE, appointment.getItemId());
     }
 
-    /** 双方确认完成（任一一方点击即完成，毕设简化） */
+    /** 完成交接。新增预约在双方确认后才完成，旧预约保持原流程。 */
     @Transactional
     public void finishAppoint(Long userId, Long appointId) {
-        IdleAppointment appointment = getAppointment(appointId);
+        IdleAppointment appointment = lockAppointment(appointId);
         if (!appointment.getBuyerId().equals(userId) && !appointment.getSellerId().equals(userId)) {
             throw new BizException(ResultCode.FORBIDDEN, "无权操作该预约");
         }
         if (appointment.getStatus() != Constants.APPOINT_ACCEPTED) {
             throw new BizException(ResultCode.BAD_REQUEST, "预约未处于已接受状态");
         }
+        if (!handoffs.markDone(appointment, userId)) return;
         appointment.setStatus(Constants.APPOINT_FINISHED);
         appointmentMapper.updateById(appointment);
         idleItemMapper.updateAvailability(appointment.getItemId(), Constants.IDLE_FINISHED, null, false);
@@ -409,10 +412,17 @@ public class IdleService {
 
     /** 我的预约（买/卖双向） */
     public PageResult<AppointmentVO> myAppointments(Long userId, String role, int pageNum, int pageSize) {
+        return myAppointments(userId, role, pageNum, pageSize, null);
+    }
+
+    public PageResult<AppointmentVO> myAppointments(Long userId, String role, int pageNum, int pageSize, Long appointmentId) {
         Page<IdleAppointment> page = appointmentMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<IdleAppointment>()
+                        .eq(appointmentId != null, IdleAppointment::getId, appointmentId)
                         .eq("buyer".equals(role), IdleAppointment::getBuyerId, userId)
                         .eq("seller".equals(role), IdleAppointment::getSellerId, userId)
+                        .and(!"buyer".equals(role) && !"seller".equals(role), q -> q
+                                .eq(IdleAppointment::getBuyerId, userId).or().eq(IdleAppointment::getSellerId, userId))
                         .orderByDesc(IdleAppointment::getId));
         List<IdleAppointment> records = page.getRecords();
         // 批量取物品与用户信息
@@ -448,6 +458,12 @@ public class IdleService {
     }
 
     // ---------- 内部方法 ----------
+
+    private IdleAppointment lockAppointment(long id) {
+        IdleAppointment appointment = appointmentMapper.selectForUpdate(id);
+        if (appointment == null) throw new BizException(ResultCode.NOT_FOUND, "预约不存在");
+        return appointment;
+    }
 
     private IdleAppointment getAppointment(Long id) {
         IdleAppointment appointment = appointmentMapper.selectById(id);

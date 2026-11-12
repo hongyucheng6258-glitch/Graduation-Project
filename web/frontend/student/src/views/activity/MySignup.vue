@@ -1,6 +1,6 @@
 <template>
   <div class="my-signup record-page">
-    <WtPageHeader title="我的报名" subtitle="查看报名状态和已发布的活动" eyebrow="我的" />
+    <WtPageHeader title="我的报名" subtitle="查看日程、报名状态和已发布的活动" eyebrow="我的" />
     <el-card>
       <el-tabs v-model="tab">
         <el-tab-pane label="我的报名" name="signup">
@@ -17,6 +17,12 @@
           </div>
           <el-pagination v-if="signupTotal > 10" v-model:current-page="signupPage" :total="signupTotal" :page-size="10"
             class="record-pager" layout="prev, pager, next" :pager-count="5" small @current-change="loadSignups" />
+        </el-tab-pane>
+        <el-tab-pane label="校园日程" name="schedule">
+          <CampusSchedule v-if="tab === 'schedule'" />
+        </el-tab-pane>
+        <el-tab-pane label="我的候补" name="waitlist">
+          <MyWaitlist v-if="tab === 'waitlist'" />
         </el-tab-pane>
         <el-tab-pane label="我的发布" name="published">
           <div v-loading="loading" class="record-list">
@@ -94,13 +100,15 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import EmptyBox from '../../components/EmptyBox.vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
+import CampusSchedule from './components/CampusSchedule.vue'
+import MyWaitlist from './components/MyWaitlist.vue'
 import { mySignups, myActivities, activityMembers, handleMember as handleMemberApi } from '../../api/activity'
 import { formatTime } from '../../utils/date'
 
 const router = useRouter()
 const route = useRoute()
 const tab = ref('signup')
-watch(() => route.query.tab, value => { tab.value = value === 'published' ? 'published' : 'signup' }, { immediate: true })
+watch(() => route.query.tab, value => { tab.value = ['published', 'schedule', 'waitlist'].includes(value) ? value : 'signup' }, { immediate: true })
 const loading = ref(false)
 const signups = ref([])
 const signupPage = ref(1)

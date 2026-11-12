@@ -10,6 +10,7 @@ import { responseAction } from './request-policy.mjs'
  * - 响应统一解包：code!==200 弹提示；401 跳登录
  * - 传 { silent: true } 的请求不弹全局错误提示，错误对象带 code/message 供调用方自行展示
  *   （AI 场景需要区分失败原因并给出重试按钮，见 WrongQuizDrawer / WrongOutlineDialog）
+ * - 传 { skipMaintenanceRedirect: true } 时，附加查询的 503 留给当前组件处理
  */
 const request = axios.create({
   baseURL: '/api',
@@ -36,7 +37,7 @@ request.interceptors.response.use(
     if (!response.config?.silent) {
       ElMessage.error(res.message || '请求失败')
     }
-    handleResponseAction(res.code)
+    handleResponseAction(res.code, response.status, response.config)
     const err = new Error(res.message || '请求失败')
     err.code = res.code
     err.message = res.message || '请求失败'
@@ -48,19 +49,19 @@ request.interceptors.response.use(
     if (!error.config?.silent) {
       ElMessage.error(message)
     }
-    handleResponseAction(biz?.code, error.response?.status)
+    handleResponseAction(biz?.code, error.response?.status, error.config)
     error.code = biz?.code ?? error.response?.status ?? error.code ?? -1
     error.message = message
     return Promise.reject(error)
   }
 )
 
-function handleResponseAction(code, status) {
+function handleResponseAction(code, status, config) {
   const action = responseAction(code, status)
   const target = requestRouter(router)
   if (action === 'login') {
     handleAuthExpired(target, target.currentRoute.value.fullPath)
-  } else if (action === 'maintenance' && target.currentRoute.value.path !== '/maintenance') {
+  } else if (action === 'maintenance' && !config?.skipMaintenanceRedirect && target.currentRoute.value.path !== '/maintenance') {
     target.replace('/maintenance')
   }
 }

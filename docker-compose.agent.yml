@@ -28,6 +28,8 @@ services:
       - ./web/backend/src/main/resources/db/2026-11-09-idle-audit-revision.sql:/migrations/09-idle-audit-revision.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-09-agent-activity-draft.sql:/migrations/10-activity-draft.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-09-admin-assistant-activity-review.sql:/migrations/11-activity-review.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-12-activity-reminder.sql:/migrations/12-activity-reminder.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-12-campus-workflows.sql:/migrations/13-campus-workflows.sql:ro
     command:
       - /bin/sh
       - -ec

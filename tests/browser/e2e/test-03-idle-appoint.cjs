@@ -90,18 +90,21 @@ async function run(browser, request, ctx) {
 
   // 6. 双方确认完成
   if (appointId) {
+    const meetingAt = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Asia/Shanghai', dateStyle: 'short', timeStyle: 'medium'
+    }).format(new Date(Date.now() + 12_000)).replace(' ', 'T');
+    const plan = await buyer.put(`/idle/appoint/${appointId}/handoff`, {
+      version: 0, meetingAt, location: '图书馆服务台'
+    });
+    const agreed = await seller.put(`/idle/appoint/${appointId}/handoff/confirm`, { version: plan.data?.version || 1 });
+    h.record(C, '提出并确认交接安排', plan.code === 200 && agreed.data?.confirmed ? 'PASS' : 'FAIL');
+    await new Promise(resolve => setTimeout(resolve, Math.max(0, Date.parse(meetingAt + '+08:00') - Date.now()) + 200));
     const finish1 = await buyer.put(`/idle/appoint/${appointId}/finish`);
-    if (finish1.code === 200) {
-      h.record(C, '买家确认完成', 'PASS');
-    } else {
-      h.record(C, '买家确认完成', 'FAIL', finish1.message);
-    }
+    const early = await buyer.post(`/idle/appoint/${appointId}/review`, { score: 5 });
+    h.record(C, '买家确认后等待卖家', finish1.code === 200 && early.code !== 200 ? 'PASS' : 'FAIL');
     const finish2 = await seller.put(`/idle/appoint/${appointId}/finish`);
-    if (finish2.code !== 200) {
-      h.record(C, '卖家重复确认完成被拒绝', 'PASS', `code=${finish2.code}`);
-    } else {
-      h.record(C, '卖家重复确认完成被拒绝', 'FAIL', '已完成预约仍可重复确认');
-    }
+    const again = await seller.put(`/idle/appoint/${appointId}/finish`);
+    h.record(C, '双方确认完成且重复完成被拒绝', finish2.code === 200 && again.code !== 200 ? 'PASS' : 'FAIL');
 
     // 7. 双方互评
     const review1 = await buyer.post(`/idle/appoint/${appointId}/review`, { score: 5, comment: `${h.PREFIX}交易愉快` });

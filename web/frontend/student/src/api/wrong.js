@@ -10,8 +10,8 @@ export function wrongSubjects() {
   return request.get('/wrong-question/subjects')
 }
 
-export function wrongStats() {
-  return request.get('/wrong-question/stats')
+export function wrongStats(config) {
+  return request.get('/wrong-question/stats', config)
 }
 
 export function todayWrongs() {

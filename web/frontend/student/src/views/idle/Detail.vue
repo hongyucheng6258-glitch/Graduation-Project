@@ -38,7 +38,8 @@
               评价
             </el-button>
             <el-button v-else-if="item.reviewAppointmentId && item.reviewed" disabled>已评价</el-button>
-            <el-button v-else-if="item.myAppointmentId" disabled>已预约，等待卖家处理</el-button>
+            <RouterLink v-else-if="item.myAppointmentId" class="btn"
+              :to="{ name: 'MyAppointments', query: { role: 'buyer', appointmentId: item.myAppointmentId } }">查看我的预约</RouterLink>
             <el-button v-else type="primary" size="large" :disabled="item.status !== 0" @click="appointVisible = true">
               {{ item.status === 0 ? '发起预约互换' : '该物品暂不可预约' }}
             </el-button>

@@ -53,3 +53,15 @@ export function myAppointments(params) {
 export function idleEstimate(data) {
   return request.post('/idle/estimate', data, { silent: true, timeout: 120000 })
 }
+
+export function getIdleHandoff(id) {
+  return request.get(`/idle/appoint/${id}/handoff`, { silent: true, skipMaintenanceRedirect: true })
+}
+
+export function proposeIdleHandoff(id, plan) {
+  return request.put(`/idle/appoint/${id}/handoff`, plan)
+}
+
+export function confirmIdleHandoff(id, version) {
+  return request.put(`/idle/appoint/${id}/handoff/confirm`, { version })
+}

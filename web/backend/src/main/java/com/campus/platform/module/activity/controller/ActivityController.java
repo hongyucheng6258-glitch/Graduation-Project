@@ -3,6 +3,8 @@ package com.campus.platform.module.activity.controller;
 import com.campus.platform.module.activity.dto.ActivityPublishDTO;
 import com.campus.platform.module.activity.vo.ActivityDetailVO;
 import com.campus.platform.module.activity.service.ActivityService;
+import com.campus.platform.module.activity.service.ActivityScheduleService;
+import com.campus.platform.module.activity.service.ActivityWaitlist;
 import com.campus.platform.module.activity.service.ActivityRecommendService;
 import com.campus.platform.module.activity.vo.ActivityRecommendVO;
 import com.campus.platform.module.activity.dto.MemberHandleDTO;
@@ -27,6 +29,8 @@ import java.util.List;
 public class ActivityController {
     private final ActivityService activityService;
     private final ActivityRecommendService activityRecommendService;
+    private final ActivityScheduleService activityScheduleService;
+    private final ActivityWaitlist waitlist;
 
     /** 活动 AI 智能推荐 */
     @PostMapping("/recommend")
@@ -69,6 +73,16 @@ public class ActivityController {
         return R.ok(activityService.mySignups(UserContext.getUid(), pageNum, pageSize));
     }
 
+    @GetMapping("/my/schedule")
+    public R<ActivityScheduleService.Schedule> mySchedule() {
+        return R.ok(activityScheduleService.schedule(UserContext.getUid()));
+    }
+
+    @GetMapping("/{id}/signup-conflicts")
+    public R<ActivityScheduleService.ConflictCheck> signupConflicts(@PathVariable Long id) {
+        return R.ok(activityScheduleService.conflicts(UserContext.getUid(), id));
+    }
+
     @GetMapping("/{id}")
     public R<ActivityDetailVO> detail(@PathVariable Long id) {
         UserContext.CurrentUser current = UserContext.get();
@@ -85,6 +99,33 @@ public class ActivityController {
     @DeleteMapping("/{id}/signup")
     public R<Void> cancelSignup(@PathVariable Long id) {
         activityService.cancelSignup(UserContext.getUid(), id);
+        return R.ok();
+    }
+
+    @GetMapping("/my/waitlist")
+    public R<List<ActivityWaitlist.Entry>> myWaitlist() {
+        return R.ok(waitlist.mine(UserContext.getUid()));
+    }
+
+    @GetMapping("/{id}/waitlist")
+    public R<ActivityWaitlist.View> waitlist(@PathVariable Long id) {
+        return R.ok(waitlist.view(UserContext.getUid(), id));
+    }
+
+    @PostMapping("/{id}/waitlist")
+    public R<ActivityWaitlist.Entry> joinWaitlist(@PathVariable Long id) {
+        return R.ok(waitlist.join(UserContext.getUid(), id));
+    }
+
+    @DeleteMapping("/{id}/waitlist/{entryId}")
+    public R<Void> leaveWaitlist(@PathVariable Long id, @PathVariable Long entryId) {
+        waitlist.leave(UserContext.getUid(), id, entryId);
+        return R.ok();
+    }
+
+    @PostMapping("/{id}/waitlist/{entryId}/accept")
+    public R<Void> acceptWaitlist(@PathVariable Long id, @PathVariable Long entryId, @Valid @RequestBody SignupDTO dto) {
+        activityService.acceptWaitlist(UserContext.getUid(), id, entryId, dto);
         return R.ok();
     }
 

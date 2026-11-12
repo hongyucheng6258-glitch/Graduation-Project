@@ -86,9 +86,12 @@
         <p v-if="action.remark" class="section-sub">备注：{{ action.remark }}</p>
         <p v-if="action.result === 'SUBMITTED'" role="status">报名已提交，等待审核。</p>
         <p v-else-if="action.result === 'EXPIRED'" role="status">确认卡已过期，请重新发起报名。</p>
-        <el-button v-else type="primary" :loading="action.sending" @click="confirmAction(action)">
-          确认提交报名
-        </el-button>
+        <template v-else>
+          <SignupConflictNotice :activity-id="action.activityId" @checking="action.checkingConflicts = $event" />
+          <el-button type="primary" :loading="action.sending" :disabled="action.checkingConflicts" @click="confirmAction(action)">
+            确认提交报名
+          </el-button>
+        </template>
       </AssistantCard>
     </template>
   </AssistantShell>
@@ -105,6 +108,7 @@ import AssistantCard from '../../../../shared/assistant/AssistantCard.vue'
 import AssistantCitations from '../../../../shared/assistant/AssistantCitations.vue'
 import { renderMarkdown } from '../../utils/markdown'
 import IdleGuideCards from '../../components/IdleGuideCards.vue'
+import SignupConflictNotice from '../activity/components/SignupConflictNotice.vue'
 import WtEmptyState from '../../components/wt/WtEmptyState.vue'
 import { useUserStore } from '../../store/user'
 import * as aiApi from '../../api/ai'
@@ -533,7 +537,7 @@ async function openCitation(source) {
 }
 
 async function confirmAction(action) {
-  if (action.sending || action.result === 'SUBMITTED') return
+  if (action.sending || action.checkingConflicts || action.result === 'SUBMITTED') return
   action.sending = true
   try {
     const result = await aiApi.confirmAgentAction(action.id)
