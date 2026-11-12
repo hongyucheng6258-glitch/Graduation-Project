@@ -171,7 +171,7 @@ public class ActivityService {
                         .ge(startInclusive != null, Activity::getStartTime, startInclusive)
                         .lt(endExclusive != null, Activity::getStartTime, endExclusive)
                         .orderByDesc(Activity::getId));
-        return PageResult.of(page, this::toVO);
+        return toPage(page);
     }
 
     /** 详情（含报名数、我的报名状态） */
@@ -447,7 +447,7 @@ public class ActivityService {
                 new LambdaQueryWrapper<Activity>()
                         .eq(Activity::getUserId, userId)
                         .orderByDesc(Activity::getId));
-        return PageResult.of(page, this::toVO);
+        return toPage(page);
     }
 
     /** 我的报名 */
@@ -519,18 +519,30 @@ public class ActivityService {
         return activity;
     }
 
+    private PageResult<ActivityVO> toPage(Page<Activity> page) {
+        List<Activity> activities = page.getRecords();
+        Map<Long, User> publishers = userMapper.findPublisherProfiles(
+                activities.stream().map(Activity::getUserId).distinct().toList());
+        Map<Long, Long> counts = memberMapper.approvedCounts(activities.stream().map(Activity::getId).toList());
+        LocalDateTime now = LocalDateTime.now();
+        return PageResult.of(page, activity -> toVO(activity, publishers.get(activity.getUserId()),
+                counts.getOrDefault(activity.getId(), 0L), now));
+    }
+
     private ActivityVO toVO(Activity activity) {
+        return toVO(activity, userMapper.selectById(activity.getUserId()), approvedCount(activity.getId()),
+                LocalDateTime.now());
+    }
+
+    private ActivityVO toVO(Activity activity, User publisher, long memberCount, LocalDateTime now) {
         ActivityVO vo = new ActivityVO();
         BeanUtil.copyProperties(activity, vo);
         vo.setImageList(IdleService.parseJson(activity.getImages()));
-        User publisher = userMapper.selectById(activity.getUserId());
         vo.setPublisherNickname(publisher == null ? "" : publisher.getNickname());
         vo.setPublisherAvatar(publisher == null ? null : publisher.getAvatar());
-        vo.setMemberCount(memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
-                .eq(ActivityMember::getActivityId, activity.getId())
-                .eq(ActivityMember::getStatus, Constants.MEMBER_APPROVED)));
+        vo.setMemberCount(memberCount);
         // 按当前时间动态计算有效展示状态（不落库，避免时间驱动状态不一致）
-        DisplayInfo info = resolveDisplayStatus(activity, LocalDateTime.now(), vo.getMemberCount());
+        DisplayInfo info = resolveDisplayStatus(activity, now, memberCount);
         vo.setDisplayStatus(info.status);
         vo.setDisplayStatusText(info.text);
         vo.setCanSignup(info.canSignup);

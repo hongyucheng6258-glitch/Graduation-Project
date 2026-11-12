@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 失物招领服务（C4）：发布→审核→检索→认领标记完成。
@@ -71,7 +72,7 @@ public class LostFoundService {
                                 .like(LostFound::getTitle, keyword)
                                 .or().like(LostFound::getDescription, keyword))
                         .orderByDesc(LostFound::getId));
-        return PageResult.of(page, this::toVO);
+        return toPage(page);
     }
 
     /** 详情 */
@@ -282,14 +283,23 @@ public class LostFoundService {
                 new LambdaQueryWrapper<LostFound>()
                         .eq(LostFound::getUserId, userId)
                         .orderByDesc(LostFound::getId));
-        return PageResult.of(page, this::toVO);
+        return toPage(page);
+    }
+
+    private PageResult<LostFoundVO> toPage(Page<LostFound> page) {
+        Map<Long, User> publishers = userMapper.findPublisherProfiles(
+                page.getRecords().stream().map(LostFound::getUserId).distinct().toList());
+        return PageResult.of(page, lf -> toVO(lf, publishers.get(lf.getUserId())));
     }
 
     private LostFoundVO toVO(LostFound lf) {
+        return toVO(lf, userMapper.selectById(lf.getUserId()));
+    }
+
+    private LostFoundVO toVO(LostFound lf, User publisher) {
         LostFoundVO vo = new LostFoundVO();
         BeanUtil.copyProperties(lf, vo);
         vo.setImageList(IdleService.parseJson(lf.getImages()));
-        User publisher = userMapper.selectById(lf.getUserId());
         vo.setPublisherNickname(publisher == null ? "" : publisher.getNickname());
         vo.setPublisherAvatar(publisher == null ? null : publisher.getAvatar());
         return vo;

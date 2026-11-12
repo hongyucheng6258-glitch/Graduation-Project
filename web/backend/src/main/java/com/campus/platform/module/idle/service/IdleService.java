@@ -100,7 +100,7 @@ public class IdleService {
                                 .or().like(IdleItem::getDescription, keyword))
                         .eq(StrUtil.isNotBlank(category), IdleItem::getCategory, category)
                         .orderByDesc(IdleItem::getId));
-        return PageResult.of(page, this::toVO);
+        return toPage(page);
     }
 
     public List<IdleGuideCard> guideSearch(Long uid, String keyword, String category, String exchange, int limit) {
@@ -286,7 +286,7 @@ public class IdleService {
                 new LambdaQueryWrapper<IdleItem>()
                         .eq(IdleItem::getUserId, userId)
                         .orderByDesc(IdleItem::getId));
-        return PageResult.of(page, this::toVO);
+        return toPage(page);
     }
 
     /**
@@ -484,11 +484,20 @@ public class IdleService {
         return item;
     }
 
+    private PageResult<IdleItemVO> toPage(Page<IdleItem> page) {
+        Map<Long, User> publishers = userMapper.findPublisherProfiles(
+                page.getRecords().stream().map(IdleItem::getUserId).distinct().toList());
+        return PageResult.of(page, item -> toVO(item, publishers.get(item.getUserId())));
+    }
+
     private IdleItemVO toVO(IdleItem item) {
+        return toVO(item, userMapper.selectById(item.getUserId()));
+    }
+
+    private IdleItemVO toVO(IdleItem item, User publisher) {
         IdleItemVO vo = new IdleItemVO();
         BeanUtil.copyProperties(item, vo);
         vo.setImageList(parseJson(item.getImages()));
-        User publisher = userMapper.selectById(item.getUserId());
         vo.setPublisherNickname(publisher == null ? "" : publisher.getNickname());
         vo.setPublisherAvatar(publisher == null ? null : publisher.getAvatar());
         return vo;

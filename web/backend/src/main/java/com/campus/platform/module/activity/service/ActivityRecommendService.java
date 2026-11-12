@@ -74,12 +74,9 @@ public class ActivityRecommendService {
             return Collections.emptyList();
         }
         StringBuilder sb = new StringBuilder();
-        Map<Long, Long> counts = new HashMap<>();
+        Map<Long, Long> counts = memberMapper.approvedCounts(candidates.stream().map(Activity::getId).toList());
         for (Activity a : candidates) {
-            Long cnt = memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
-                    .eq(ActivityMember::getActivityId, a.getId())
-                    .eq(ActivityMember::getStatus, Constants.MEMBER_APPROVED));
-            counts.put(a.getId(), cnt);
+            long cnt = counts.getOrDefault(a.getId(), 0L);
             sb.append("[id=").append(a.getId()).append("] 标题：").append(nullTo(a.getTitle(), ""))
                     .append(" | 类别：").append(nullTo(a.getCategory(), ""))
                     .append(" | 时间：").append(a.getStartTime() == null ? "" : a.getStartTime().format(FMT))
