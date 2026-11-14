@@ -604,10 +604,7 @@ public class DrawGuessRoomService {
     private DrawGuessRoomVO roomView(RuntimeRoom runtime, Long viewerUserId) {
         DrawGuessGame game = runtime.game;
         Set<Long> onlineUsers = sessionRegistry.onlineUserIds(runtime.entity.getId());
-        List<DrawGuessPlayerVO> players = game.players().stream()
-                .map(player -> new DrawGuessPlayerVO(player.userId(), player.nickname(), player.avatar(),
-                        player.score(), onlineUsers.contains(player.userId()), player.userId() == game.ownerUserId()))
-                .toList();
+        List<DrawGuessPlayerVO> players = roomPlayers(game, onlineUsers);
         Long drawerUserId = game.drawerUserId();
         String privateAnswer = drawerUserId == null ? null : game.answerFor(drawerUserId);
         int answerLength = privateAnswer == null ? 0 : privateAnswer.codePointCount(0, privateAnswer.length());
@@ -622,6 +619,13 @@ public class DrawGuessRoomService {
                 viewerUserId != null && drawerUserId != null && viewerUserId.equals(drawerUserId),
                 players, List.copyOf(runtime.strokes), List.copyOf(runtime.messages),
                 runtime.currentRound == null ? null : runtime.currentRound.getId(), pendingArtworks);
+    }
+
+    private List<DrawGuessPlayerVO> roomPlayers(DrawGuessGame game, Set<Long> onlineUsers) {
+        return game.players().stream()
+                .map(player -> new DrawGuessPlayerVO(player.userId(), player.nickname(), player.avatar(),
+                        player.score(), onlineUsers.contains(player.userId()), player.userId() == game.ownerUserId()))
+                .toList();
     }
 
     private List<DrawGuessCompletedArtworkVO> pendingCompletedArtworks(RuntimeRoom runtime, Long viewerUserId) {

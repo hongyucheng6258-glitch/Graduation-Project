@@ -81,7 +81,7 @@ public class QuestionService {
         q.setViewCount(q.getViewCount() == null ? 1 : q.getViewCount() + 1);
         questionMapper.update(null, new LambdaUpdateWrapper<CampusQuestion>()
                 .eq(CampusQuestion::getId, id).setSql("view_count=COALESCE(view_count,0)+1"));
-        QuestionVO qvo = toVO(q, currentUid);
+        QuestionVO qvo = toVO(q, currentUid, userMapper.selectById(q.getUserId()));
         qvo.setViewCount(q.getViewCount());
 
         Page<CampusAnswer> answerPage = answerMapper.selectPage(new Page<>(pageNum, pageSize),
@@ -180,10 +180,14 @@ public class QuestionService {
     }
 
     private PageResult<QuestionVO> toQuestionPage(Page<CampusQuestion> page, Long currentUid) {
-        List<Long> questionIds = page.getRecords().stream().map(CampusQuestion::getId).toList();
+        List<CampusQuestion> questions = page.getRecords();
+        List<Long> questionIds = questions.stream().map(CampusQuestion::getId).toList();
         Map<Long, Long> answerCounts = countAnswers(questionIds);
+        Map<Long, User> authors = questions.isEmpty() ? Map.of() : userMapper.findPublisherProfiles(
+                questions.stream().map(CampusQuestion::getUserId).distinct().toList());
         return PageResult.of(page, question -> {
-            QuestionVO questionView = toVO(question, currentUid);
+            User author = authors.get(question.getUserId());
+            QuestionVO questionView = toVO(question, currentUid, author);
             questionView.setAnswerCount(answerCounts.getOrDefault(question.getId(), 0L));
             return questionView;
         });
@@ -213,7 +217,7 @@ public class QuestionService {
         return counts;
     }
 
-    private QuestionVO toVO(CampusQuestion q, Long currentUid) {
+    private QuestionVO toVO(CampusQuestion q, Long currentUid, User author) {
         QuestionVO vo = new QuestionVO();
         vo.setId(q.getId());
         vo.setUserId(q.getUserId());
@@ -224,9 +228,8 @@ public class QuestionService {
         vo.setAcceptedAnswerId(q.getAcceptedAnswerId());
         vo.setViewCount(q.getViewCount());
         vo.setCreateTime(q.getCreateTime());
-        User u = userMapper.selectById(q.getUserId());
-        vo.setPublisherNickname(u == null ? "" : u.getNickname());
-        vo.setPublisherAvatar(u == null ? null : u.getAvatar());
+        vo.setPublisherNickname(author == null ? "" : author.getNickname());
+        vo.setPublisherAvatar(author == null ? null : author.getAvatar());
         vo.setIsOwner(currentUid != null && currentUid.equals(q.getUserId()));
         return vo;
     }

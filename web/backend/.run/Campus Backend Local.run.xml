@@ -1,0 +1,18 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Campus Backend Local" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.campus.platform.PlatformApplication" />
+    <module name="platform-server" />
+    <option name="VM_PARAMETERS" value="-Duser.timezone=Asia/Shanghai" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="PROGRAM_PARAMETERS" value="--server.port=18081 --spring.config.import=optional:file:./.env.idea[.properties]" />
+    <envs>
+      <env name="MYSQL_HOST" value="127.0.0.1" />
+      <env name="MYSQL_PORT" value="13306" />
+      <env name="REDIS_HOST" value="127.0.0.1" />
+      <env name="REDIS_PORT" value="16379" />
+    </envs>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

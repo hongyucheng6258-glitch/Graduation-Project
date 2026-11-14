@@ -15,7 +15,7 @@ import com.campus.platform.module.ai.service.ContentAiAuditService;
 import com.campus.platform.module.favorite.entity.Favorite;
 import com.campus.platform.module.favorite.mapper.FavoriteMapper;
 import com.campus.platform.module.message.service.MessageService;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.utils.ImageListJson;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -66,7 +66,7 @@ public class PostService {
         Post post = new Post();
         post.setUserId(userId);
         post.setContent(dto.getContent());
-        post.setImages(IdleService.toJson(dto.getImages()));
+        post.setImages(ImageListJson.toJson(dto.getImages()));
         post.setLikeCount(0);
         post.setCommentCount(0);
         post.setAuditStatus(Constants.AUDIT_PENDING);
@@ -117,10 +117,10 @@ public class PostService {
         return PageResult.of(page, post -> {
             PostVO postView = new PostVO();
             BeanUtil.copyProperties(post, postView);
-            List<String> images = IdleService.parseJson(post.getImages());
+            List<String> images = ImageListJson.parseJson(post.getImages());
             if (compactImages) {
                 images = listedImages(post.getId(), images);
-                postView.setImages(IdleService.toJson(images));
+                postView.setImages(ImageListJson.toJson(images));
             }
             postView.setImageList(images);
 
@@ -151,7 +151,7 @@ public class PostService {
     }
 
     public InlineImage image(Long postId, int index) {
-        List<String> images = IdleService.parseJson(checkVisible(postId).getImages());
+        List<String> images = ImageListJson.parseJson(checkVisible(postId).getImages());
         if (index < 0 || index >= images.size() || images.get(index) == null) {
             throw new BizException(ResultCode.NOT_FOUND, "动态图片不存在");
         }
@@ -173,7 +173,7 @@ public class PostService {
         Post post = checkVisible(postId);
         PostVO vo = new PostVO();
         BeanUtil.copyProperties(post, vo);
-        vo.setImageList(IdleService.parseJson(post.getImages()));
+        vo.setImageList(ImageListJson.parseJson(post.getImages()));
         User u = userMapper.selectById(post.getUserId());
         vo.setNickname(u == null ? "" : u.getNickname());
         vo.setAvatar(u == null ? null : u.getAvatar());

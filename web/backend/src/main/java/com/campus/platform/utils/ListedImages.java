@@ -2,7 +2,6 @@ package com.campus.platform.utils;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
-import com.campus.platform.module.idle.service.IdleService;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +32,7 @@ public final class ListedImages {
     }
 
     public static String at(String images, int index) {
-        var values = IdleService.parseJson(images);
+        var values = ImageListJson.parseJson(images);
         if (index < 0 || index >= values.size()) throw missing();
         return values.get(index);
     }

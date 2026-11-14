@@ -46,11 +46,11 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.CAMPUS_BACKEND_URL || 'http://localhost:8080',
         changeOrigin: true
       },
       '/ws': {
-        target: 'ws://localhost:8080',
+        target: process.env.CAMPUS_BACKEND_URL || 'ws://localhost:8080',
         ws: true,
         changeOrigin: true
       }

@@ -10,7 +10,7 @@ import com.campus.platform.module.lostfound.vo.LostFoundVO;
 import com.campus.platform.module.lostfound.entity.LostFound;
 
 import com.campus.platform.module.ai.service.ContentAiAuditService;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.utils.ImageListJson;
 import com.campus.platform.module.message.service.MessageService;
 
 import cn.hutool.core.bean.BeanUtil;
@@ -53,7 +53,7 @@ public class LostFoundService {
         LostFound lf = new LostFound();
         BeanUtil.copyProperties(dto, lf);
         lf.setUserId(userId);
-        lf.setImages(IdleService.toJson(dto.getImages()));
+        lf.setImages(ImageListJson.toJson(dto.getImages()));
         lf.setAuditStatus(Constants.AUDIT_PENDING);
         lf.setStatus(Constants.LF_DOING);
         lostFoundMapper.insert(lf);
@@ -111,7 +111,7 @@ public class LostFoundService {
         lf.setLocation(dto.getLocation());
         lf.setHappenTime(dto.getHappenTime());
         lf.setContact(dto.getContact());
-        lf.setImages(IdleService.toJson(dto.getImages()));
+        lf.setImages(ImageListJson.toJson(dto.getImages()));
         lf.setAuditStatus(Constants.AUDIT_PENDING);
         lf.setAuditReason(null);
         lostFoundMapper.updateById(lf);
@@ -310,7 +310,7 @@ public class LostFoundService {
     private LostFoundVO toVO(LostFound lf, User publisher) {
         LostFoundVO vo = new LostFoundVO();
         BeanUtil.copyProperties(lf, vo);
-        vo.setImageList(IdleService.parseJson(lf.getImages()));
+        vo.setImageList(ImageListJson.parseJson(lf.getImages()));
         vo.setPublisherNickname(publisher == null ? "" : publisher.getNickname());
         vo.setPublisherAvatar(publisher == null ? null : publisher.getAvatar());
         return vo;

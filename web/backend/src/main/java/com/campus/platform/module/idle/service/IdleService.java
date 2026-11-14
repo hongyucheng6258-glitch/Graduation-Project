@@ -19,11 +19,11 @@ import com.campus.platform.module.message.service.MessageService;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.platform.common.BizException;
+import com.campus.platform.utils.ImageListJson;
 import com.campus.platform.utils.ListedImages;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.PageResult;
@@ -37,7 +37,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -73,7 +72,7 @@ public class IdleService {
         item.setUserId(userId);
         item.setTitle(dto.getTitle());
         item.setDescription(dto.getDescription());
-        item.setImages(toJson(dto.getImages()));
+        item.setImages(ImageListJson.toJson(dto.getImages()));
         item.setExpectItem(dto.getExpectItem());
         item.setCategory(dto.getCategory());
         item.setAuditStatus(Constants.AUDIT_PENDING);
@@ -230,7 +229,7 @@ public class IdleService {
         IdleItem item = checkOwner(userId, id);
         item.setTitle(dto.getTitle());
         item.setDescription(dto.getDescription());
-        item.setImages(toJson(dto.getImages()));
+        item.setImages(ImageListJson.toJson(dto.getImages()));
         item.setExpectItem(dto.getExpectItem());
         item.setCategory(dto.getCategory());
         item.setAuditStatus(Constants.AUDIT_PENDING);
@@ -472,7 +471,7 @@ public class IdleService {
             BeanUtil.copyProperties(a, vo);
             IdleItem item = itemMap.get(a.getItemId());
             vo.setItemTitle(item == null ? "物品已删除" : item.getTitle());
-            vo.setItemImage(firstImage(item == null ? null : item.getImages()));
+            vo.setItemImage(ImageListJson.firstImage(item == null ? null : item.getImages()));
             User buyer = userMap.get(a.getBuyerId());
             User seller = userMap.get(a.getSellerId());
             vo.setBuyerNickname(buyer == null ? "" : buyer.getNickname());
@@ -516,7 +515,7 @@ public class IdleService {
             var card = toVO(item, publishers.get(item.getUserId()));
             if (compactImages) {
                 card.setImageList(ListedImages.urls("idle", item.getId(), card.getImageList()));
-                card.setImages(toJson(card.getImageList()));
+                card.setImages(ImageListJson.toJson(card.getImageList()));
                 card.setPublisherAvatar(ListedImages.avatar(item.getUserId(), card.getPublisherAvatar()));
             }
             return card;
@@ -530,29 +529,9 @@ public class IdleService {
     private IdleItemVO toVO(IdleItem item, User publisher) {
         IdleItemVO vo = new IdleItemVO();
         BeanUtil.copyProperties(item, vo);
-        vo.setImageList(parseJson(item.getImages()));
+        vo.setImageList(ImageListJson.parseJson(item.getImages()));
         vo.setPublisherNickname(publisher == null ? "" : publisher.getNickname());
         vo.setPublisherAvatar(publisher == null ? null : publisher.getAvatar());
         return vo;
-    }
-
-    public static String toJson(List<String> images) {
-        return images == null || images.isEmpty() ? null : JSONUtil.toJsonStr(images);
-    }
-
-    public static List<String> parseJson(String json) {
-        if (StrUtil.isBlank(json)) {
-            return Collections.emptyList();
-        }
-        try {
-            return JSONUtil.toList(json, String.class);
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
-    }
-
-    public static String firstImage(String json) {
-        List<String> list = parseJson(json);
-        return list.isEmpty() ? null : list.get(0);
     }
 }

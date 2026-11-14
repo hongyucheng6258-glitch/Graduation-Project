@@ -15,7 +15,7 @@ import com.campus.platform.module.activity.vo.MemberVO;
 
 import com.campus.platform.module.ai.service.ContentAiAuditService;
 import com.campus.platform.module.message.service.MessageService;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.utils.ImageListJson;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
@@ -95,7 +95,7 @@ public class ActivityService {
         Activity activity = new Activity();
         BeanUtil.copyProperties(dto, activity);
         activity.setUserId(userId);
-        activity.setImages(IdleService.toJson(dto.getImages()));
+        activity.setImages(ImageListJson.toJson(dto.getImages()));
         activity.setAuditStatus(Constants.AUDIT_PENDING);
         activity.setStatus(Constants.ACTIVITY_SIGNING);
         activityMapper.insert(activity);
@@ -145,7 +145,7 @@ public class ActivityService {
             throw new BizException(ResultCode.BAD_REQUEST, "人数上限不能小于待审批及已通过的报名人数");
         }
         activity.setMaxMembers(capacity);
-        activity.setImages(IdleService.toJson(dto.getImages()));
+        activity.setImages(ImageListJson.toJson(dto.getImages()));
         activity.setAuditStatus(Constants.AUDIT_PENDING);
         activity.setAuditReason(null);
         activityMapper.updateById(activity);
@@ -372,9 +372,7 @@ public class ActivityService {
         waitlist.refresh(activity);
         // 兼容上线前已超量积压的待审记录，审批仍以实际通过人数为上限。
         if (approve && activity.getMaxMembers() != null && activity.getMaxMembers() > 0) {
-            Long approved = memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
-                    .eq(ActivityMember::getActivityId, activity.getId())
-                    .eq(ActivityMember::getStatus, Constants.MEMBER_APPROVED));
+            Long approved = countApprovedMembers(activity.getId());
             if (approved >= activity.getMaxMembers()) {
                 throw new BizException(ResultCode.BAD_REQUEST, "活动人数已满");
             }
@@ -391,12 +389,12 @@ public class ActivityService {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "该报名已审批或已取消");
         }
         waitlist.release(activity.getId(), member.getUserId(), approve ? "APPROVED" : "REJECTED");
-        if (!approve) waitlist.refresh(activity);
+        if (!approve) {
+            waitlist.refresh(activity);
+        }
         // 满员自动变更状态
         if (approve && activity.getMaxMembers() != null && activity.getMaxMembers() > 0) {
-            Long approved = memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
-                    .eq(ActivityMember::getActivityId, activity.getId())
-                    .eq(ActivityMember::getStatus, Constants.MEMBER_APPROVED));
+            Long approved = countApprovedMembers(activity.getId());
             if (approved >= activity.getMaxMembers()) {
                 activity.setStatus(Constants.ACTIVITY_FULL);
                 activityMapper.updateById(activity);
@@ -407,6 +405,12 @@ public class ActivityService {
                 String.format("你对活动「%s」的报名%s。",
                         activity.getTitle(), approve ? "已通过，记得准时参加并扫码签到" : "未通过"),
                 Constants.BIZ_ACTIVITY, activity.getId());
+    }
+
+    private long countApprovedMembers(Long activityId) {
+        return memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
+                .eq(ActivityMember::getActivityId, activityId)
+                .eq(ActivityMember::getStatus, Constants.MEMBER_APPROVED));
     }
 
     private boolean signinOpen(Activity activity, LocalDateTime now) {
@@ -550,7 +554,7 @@ public class ActivityService {
             if (Objects.equals(activity.getAuditStatus(), Constants.AUDIT_PASS)
                     && !Objects.equals(activity.getStatus(), Constants.ACTIVITY_OFF)) {
                 card.setImageList(ListedImages.urls("activity", activity.getId(), card.getImageList()));
-                card.setImages(IdleService.toJson(card.getImageList()));
+                card.setImages(ImageListJson.toJson(card.getImageList()));
                 card.setPublisherAvatar(ListedImages.avatar(activity.getUserId(), card.getPublisherAvatar()));
             }
             return card;
@@ -566,7 +570,7 @@ public class ActivityService {
     private ActivityVO toVO(Activity activity, User publisher, long memberCount, long pending, LocalDateTime now) {
         ActivityVO vo = new ActivityVO();
         BeanUtil.copyProperties(activity, vo);
-        vo.setImageList(IdleService.parseJson(activity.getImages()));
+        vo.setImageList(ImageListJson.parseJson(activity.getImages()));
         vo.setPublisherNickname(publisher == null ? "" : publisher.getNickname());
         vo.setPublisherAvatar(publisher == null ? null : publisher.getAvatar());
         vo.setMemberCount(memberCount);

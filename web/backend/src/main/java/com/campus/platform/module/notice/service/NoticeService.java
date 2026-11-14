@@ -6,7 +6,7 @@ import com.campus.platform.module.notice.entity.Notice;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.platform.common.BizException;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.utils.ImageListJson;
 import com.campus.platform.utils.ListedImages;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.PageResult;
@@ -86,6 +86,6 @@ public class NoticeService {
     }
 
     private String compact(String resource, long id, String images) {
-        return IdleService.toJson(ListedImages.urls(resource, id, IdleService.parseJson(images)));
+        return ImageListJson.toJson(ListedImages.urls(resource, id, ImageListJson.parseJson(images)));
     }
 }

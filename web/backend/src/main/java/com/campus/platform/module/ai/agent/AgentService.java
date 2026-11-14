@@ -143,15 +143,7 @@ public class AgentService {
                 + CampusResourceTools.SEARCH + "，kind 使用 " + requiredResourceKind + "，以工具结果为准。";
         messages.add(message("system", INSTRUCTIONS + "\n当前校园日期：" + today
                 + (prompt.content().isBlank() ? "" : "\n校园问答风格与术语：\n" + prompt.content()) + resourceInstruction));
-        for (var previous : conversation.history(userId, sessionId)) {
-            String role = previous.getRole();
-            if ("context".equals(role)) {
-                restoreActivities(previous.getContent(), messages);
-            } else if ("user".equals(role) || "assistant".equals(role)) {
-                messages.add(message(role, previous.getContent()));
-                if ("user".equals(role)) state.userQuestions.add(previous.getContent());
-            }
-        }
+        restoreHistory(userId, sessionId, messages, state);
         state.userQuestions.add(question);
         String shortTitle = shortActivityTitle(question);
         if (shortTitle != null) {
@@ -371,6 +363,20 @@ public class AgentService {
             context.set("idleSearch", json.valueToTree(state.lastIdleSearch));
         }
         return context.toString();
+    }
+
+    private void restoreHistory(Long userId, Long sessionId, List<ObjectNode> messages, RunState state) {
+        for (var previous : conversation.history(userId, sessionId)) {
+            String role = previous.getRole();
+            if ("context".equals(role)) {
+                restoreActivities(previous.getContent(), messages);
+            } else if ("user".equals(role) || "assistant".equals(role)) {
+                messages.add(message(role, previous.getContent()));
+                if ("user".equals(role)) {
+                    state.userQuestions.add(previous.getContent());
+                }
+            }
+        }
     }
 
     private void restoreActivities(String content, List<ObjectNode> messages) {

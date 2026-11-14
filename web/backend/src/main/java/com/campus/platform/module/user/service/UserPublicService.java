@@ -12,7 +12,7 @@ import com.campus.platform.module.idle.entity.IdleReview;
 import com.campus.platform.module.idle.mapper.IdleAppointmentMapper;
 import com.campus.platform.module.idle.mapper.IdleItemMapper;
 import com.campus.platform.module.idle.mapper.IdleReviewMapper;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.utils.ImageListJson;
 import com.campus.platform.module.lostfound.entity.LostFound;
 import com.campus.platform.module.lostfound.mapper.LostFoundMapper;
 import com.campus.platform.module.post.entity.Post;
@@ -200,7 +200,7 @@ public class UserPublicService {
     }
 
     private String firstImage(String imagesJson) {
-        List<String> list = IdleService.parseJson(imagesJson);
+        List<String> list = ImageListJson.parseJson(imagesJson);
         return list.isEmpty() ? null : list.get(0);
     }
 
