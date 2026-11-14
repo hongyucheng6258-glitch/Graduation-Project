@@ -4,6 +4,7 @@ import com.campus.platform.module.post.entity.Post;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 
@@ -23,4 +24,6 @@ public interface PostMapper extends BaseMapper<Post> {
     /** 原子增减评论数（delta 可为 ±1），计数不小于 0 */
     @Update("UPDATE post SET comment_count = GREATEST(0, comment_count + #{delta}) WHERE id = #{id}")
     int incrCommentCount(@Param("id") Long id, @Param("delta") int delta);
+    @Select("SELECT * FROM post WHERE id = #{id} FOR UPDATE")
+    Post selectByIdForUpdate(@Param("id") Long id);
 }

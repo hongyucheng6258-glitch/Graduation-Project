@@ -168,7 +168,7 @@ public class IdleService {
         }
         // 浏览数自增
         item.setViewCount(item.getViewCount() + 1);
-        idleItemMapper.update(null, new UpdateWrapper<IdleItem>().eq("id", id).setSql("view_count = view_count + 1"));
+        idleItemMapper.incrementViewCount(id);
 
         IdleDetailVO detail = new IdleDetailVO();
         BeanUtil.copyProperties(toVO(item), detail);

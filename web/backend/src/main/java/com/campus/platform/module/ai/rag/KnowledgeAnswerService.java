@@ -64,8 +64,7 @@ public class KnowledgeAnswerService {
     }
 
     private void validateSession(Long userId, long sessionId, long pdfId, boolean lock) {
-        var session = lock ? sessions.selectOne(new LambdaQueryWrapper<AiSession>()
-                .eq(AiSession::getId, sessionId).last("FOR UPDATE")) : sessions.selectById(sessionId);
+        var session = lock ? sessions.selectByIdForUpdate(sessionId) : sessions.selectById(sessionId);
         if (session == null || !userId.equals(session.getUserId()) || !"pdf".equals(session.getScene())
                 || !Long.valueOf(pdfId).equals(session.getDocId())) {
             throw new BizException(ResultCode.NOT_FOUND, "未找到与该 PDF 关联的会话");

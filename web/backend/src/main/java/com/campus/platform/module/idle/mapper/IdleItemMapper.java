@@ -46,4 +46,6 @@ public interface IdleItemMapper extends BaseMapper<IdleItem> {
             """)
     int updateAvailability(@Param("id") Long id, @Param("status") int status,
                            @Param("expectedStatus") Integer expectedStatus, @Param("approvedOnly") boolean approvedOnly);
+    @Update("UPDATE idle_item SET view_count = view_count + 1 WHERE id = #{id}")
+    int incrementViewCount(@Param("id") Long id);
 }

@@ -79,8 +79,7 @@ public class QuestionService {
         }
         // 浏览计数
         q.setViewCount(q.getViewCount() == null ? 1 : q.getViewCount() + 1);
-        questionMapper.update(null, new LambdaUpdateWrapper<CampusQuestion>()
-                .eq(CampusQuestion::getId, id).setSql("view_count=COALESCE(view_count,0)+1"));
+        questionMapper.incrementViewCount(id);
         QuestionVO qvo = toVO(q, currentUid, userMapper.selectById(q.getUserId()));
         qvo.setViewCount(q.getViewCount());
 

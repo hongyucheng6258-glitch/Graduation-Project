@@ -239,7 +239,7 @@ class AuditServiceTest {
         record.setUserId(7L);
         record.setTitle("学生卡");
         record.setAuditStatus(Constants.AUDIT_PENDING);
-        when(lostFoundMapper.selectOne(any())).thenReturn(record);
+        when(lostFoundMapper.selectByIdForUpdate(anyLong())).thenReturn(record);
 
         auditService.pass(Constants.BIZ_LOSTFOUND, 30L, true);
 
@@ -258,8 +258,8 @@ class AuditServiceTest {
         post.setAuditStatus(Constants.AUDIT_PASS);
         StudyPartner partner = new StudyPartner();
         partner.setAuditStatus(Constants.AUDIT_REJECT);
-        when(postMapper.selectOne(any())).thenReturn(post);
-        when(studyPartnerMapper.selectOne(any())).thenReturn(partner);
+        when(postMapper.selectByIdForUpdate(anyLong())).thenReturn(post);
+        when(studyPartnerMapper.selectByIdForUpdate(anyLong())).thenReturn(partner);
 
         assertThatThrownBy(() -> auditService.reject(Constants.BIZ_POST, 40L, "已处理", true))
                 .isInstanceOf(BizException.class)

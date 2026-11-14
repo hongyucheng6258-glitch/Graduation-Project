@@ -53,8 +53,7 @@ class AgentConversation {
             sessions.insert(session);
             sessionId = session.getId();
         } else {
-            var locked = sessions.selectOne(new LambdaQueryWrapper<AiSession>().eq(AiSession::getId, sessionId)
-                    .last("FOR UPDATE"));
+            var locked = sessions.selectByIdForUpdate(sessionId);
             validate(uid, locked);
         }
         memory.saveMessage(sessionId, "user", question, null);

@@ -104,8 +104,7 @@ public class AiChatService {
     /** 删除会话（含消息） */
     @Transactional
     public void deleteSession(Long userId, Long sessionId) {
-        AiSession session = aiSessionMapper.selectOne(new LambdaQueryWrapper<AiSession>()
-                .eq(AiSession::getId, sessionId).last("FOR UPDATE"));
+        AiSession session = aiSessionMapper.selectByIdForUpdate(sessionId);
         verifyOwner(userId, session);
         chatMemoryService.deleteBySession(sessionId);
         aiSessionMapper.deleteById(sessionId);

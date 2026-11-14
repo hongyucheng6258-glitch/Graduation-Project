@@ -219,7 +219,7 @@ public class AuditService {
         switch (type) {
             case Constants.BIZ_LOSTFOUND -> {
                 LostFound lf = pendingOnly
-                        ? lostFoundMapper.selectOne(new LambdaQueryWrapper<LostFound>().eq(LostFound::getId, id).last("FOR UPDATE"))
+                        ? lostFoundMapper.selectByIdForUpdate(id)
                         : lostFoundMapper.selectById(id);
                 if (lf == null) {
                     throw new BizException(ResultCode.NOT_FOUND, "内容不存在");
@@ -233,7 +233,7 @@ public class AuditService {
             }
             case Constants.BIZ_POST -> {
                 Post post = pendingOnly
-                        ? postMapper.selectOne(new LambdaQueryWrapper<Post>().eq(Post::getId, id).last("FOR UPDATE"))
+                        ? postMapper.selectByIdForUpdate(id)
                         : postMapper.selectById(id);
                 if (post == null) {
                     throw new BizException(ResultCode.NOT_FOUND, "内容不存在");
@@ -249,7 +249,7 @@ public class AuditService {
             }
             case Constants.BIZ_PARTNER -> {
                 StudyPartner p = pendingOnly
-                        ? studyPartnerMapper.selectOne(new LambdaQueryWrapper<StudyPartner>().eq(StudyPartner::getId, id).last("FOR UPDATE"))
+                        ? studyPartnerMapper.selectByIdForUpdate(id)
                         : studyPartnerMapper.selectById(id);
                 if (p == null) {
                     throw new BizException(ResultCode.NOT_FOUND, "内容不存在");
