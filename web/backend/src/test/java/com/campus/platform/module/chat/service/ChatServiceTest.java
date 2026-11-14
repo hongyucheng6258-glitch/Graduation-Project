@@ -29,6 +29,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 
+import java.util.List;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -127,6 +130,9 @@ class ChatServiceTest {
     void duplicateClientMessageReturnsExistingMessage() {
         ChatMessage existing = new ChatMessage();
         existing.setId(42L);
+        existing.setConversationId(10L);
+        when(conversationMapper.selectById(10L)).thenReturn(conversation(10L, 7L, 8L));
+        when(memberMapper.findMember(10L, 7L)).thenReturn(member(10L, 7L, 0));
         when(messageMapper.findBySenderAndClientMessageId(7L, "client-1")).thenReturn(existing);
 
         ChatMessage actual = chatService.sendMessage(7L, 10L, send("client-1", "text", "hello"));
@@ -166,7 +172,8 @@ class ChatServiceTest {
         ChatConversation conversation = conversation(10L, 7L, 8L);
         ChatMessage committed = new ChatMessage();
         committed.setId(42L);
-        when(messageMapper.findBySenderAndClientMessageId(7L, "client-race")).thenReturn(null, committed);
+        committed.setConversationId(10L);
+        when(messageMapper.findDuplicateForUpdate(7L, "client-race")).thenReturn(committed);
         when(conversationMapper.findByIdForUpdate(10L)).thenReturn(conversation);
         when(memberMapper.findMemberForUpdate(10L, 7L)).thenReturn(member(10L, 7L, 0));
         when(blockMapper.countEitherDirection(7L, 8L)).thenReturn(0L);
@@ -179,6 +186,42 @@ class ChatServiceTest {
         verify(memberMapper, never()).incrementUnreadAndRestore(anyLong(), anyLong());
         verify(conversationMapper, never()).updateById(any(ChatConversation.class));
         verifyNoInteractions(notificationService, realtimePublisher);
+    }
+
+    @Test
+    void groupMessageTracksEachMemberAndPublishesAfterCommit() {
+        ChatConversation group = new ChatConversation();
+        group.setId(10L);
+        group.setGroupName("自习小组");
+        when(conversationMapper.findByIdForUpdate(10L)).thenReturn(group);
+        when(memberMapper.findMemberForUpdate(10L, 7L)).thenReturn(member(10L, 7L, 0));
+        when(memberMapper.findGroupRecipientsForUpdate(10L, 7L))
+                .thenReturn(List.of(member(10L, 8L, 1), member(10L, 9L, 3)));
+
+        ChatMessage result = chatService.sendMessage(7L, 10L, send("group-1", "text", "图书馆见"));
+
+        assertNull(result.getReceiverId());
+        verify(memberMapper).incrementGroupUnread(10L, 7L);
+        verify(realtimePublisher).groupMessageAfterCommit(result, Map.of(8L, 1, 9L, 3));
+        verifyNoInteractions(notificationService, blockMapper);
+    }
+
+    @Test
+    void readingGroupMessageUpdatesOnlyReaderMembership() {
+        ChatConversation group = new ChatConversation();
+        group.setId(10L);
+        group.setGroupName("自习小组");
+        ChatConversationMember before = member(10L, 8L, 3);
+        before.setLastReadMessageId(40L);
+        when(conversationMapper.findByIdForUpdate(10L)).thenReturn(group);
+        when(memberMapper.findMemberForUpdate(10L, 8L)).thenReturn(before, member(10L, 8L, 1));
+        when(messageMapper.findMessageInConversation(42L, 10L)).thenReturn(new ChatMessage());
+
+        chatService.markRead(8L, 10L, 42L);
+
+        verify(memberMapper).markGroupRead(eq(10L), eq(8L), eq(40L), eq(42L), any());
+        verify(realtimePublisher).groupReadAfterCommit(8L, 10L, 42L, 1);
+        verify(messageMapper, never()).markReadUpTo(anyLong(), anyLong(), anyLong(), any());
     }
 
     @Test

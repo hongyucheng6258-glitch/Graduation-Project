@@ -1,0 +1,19 @@
+.chat-workspace {
+  display: grid;
+  grid-template-columns: minmax(240px, 290px) minmax(0, 1fr);
+  height: max(480px, calc(100dvh - 168px));
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dee4df;
+  border-radius: 12px;
+  background: #f4f5f4;
+  color: #202521;
+}
+.chat-workspace > :first-child { border-right: 1px solid #dee4df; }
+.chat-workspace > .inbox-layout { display: block; min-width: 0; min-height: 0; }
+.chat-workspace > .inbox-layout > .inbox { height: 100%; }
+@media (max-width: 820px) {
+  .chat-workspace { grid-template-columns: minmax(0, 1fr); }
+  .chat-workspace > :first-child { border-right: 0; }
+  .chat-workspace.open-room > .inbox-layout { display: none; }
+}

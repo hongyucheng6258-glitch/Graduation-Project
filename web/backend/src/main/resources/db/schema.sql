@@ -490,11 +490,12 @@ CREATE TABLE IF NOT EXISTS `upload_resource` (
   KEY `idx_upload_biz` (`biz_type`, `biz_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='上传资源归属与消费记录';
 
--- ---------------- 3.7 一对一私信 ----------------
+-- ---------------- 3.7 私信与群聊 ----------------
 CREATE TABLE IF NOT EXISTS `chat_conversation` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
-  `user1_id` BIGINT NOT NULL,
-  `user2_id` BIGINT NOT NULL,
+  `user1_id` BIGINT DEFAULT NULL,
+  `user2_id` BIGINT DEFAULT NULL,
+  `group_name` VARCHAR(32) DEFAULT NULL,
   `last_message_id` BIGINT DEFAULT NULL,
   `last_message_summary` VARCHAR(255) DEFAULT NULL,
   `last_message_time` DATETIME DEFAULT NULL,
@@ -506,7 +507,7 @@ CREATE TABLE IF NOT EXISTS `chat_conversation` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_chat_user_pair` (`user1_id`, `user2_id`),
   KEY `idx_chat_last_time` (`last_message_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='一对一私信会话';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='私信和群聊会话';
 
 CREATE TABLE IF NOT EXISTS `chat_conversation_member` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
@@ -528,7 +529,7 @@ CREATE TABLE IF NOT EXISTS `chat_message` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `conversation_id` BIGINT NOT NULL,
   `sender_id` BIGINT NOT NULL,
-  `receiver_id` BIGINT NOT NULL,
+  `receiver_id` BIGINT DEFAULT NULL,
   `client_message_id` VARCHAR(64) NOT NULL,
   `message_type` VARCHAR(16) NOT NULL COMMENT 'text/image',
   `content` MEDIUMTEXT NOT NULL,

@@ -14,7 +14,12 @@ public class ChatConversation {
     private Long id;
     private Long user1Id;
     private Long user2Id;
+    private String groupName;
     private Long lastMessageId;
+
+    public boolean isGroup() {
+        return groupName != null;
+    }
     private String lastMessageSummary;
     private LocalDateTime lastMessageTime;
     private String contextType;

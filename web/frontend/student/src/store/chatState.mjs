@@ -1,6 +1,6 @@
 function identity(message) {
   if (message?.id != null) return `id:${message.id}`
-  return message?.clientMessageId ? `client:${message.clientMessageId}` : null
+  return message?.clientMessageId ? `client:${message.senderId}:${message.clientMessageId}` : null
 }
 
 export function mergeMessages(current = [], incoming = []) {
@@ -8,10 +8,11 @@ export function mergeMessages(current = [], incoming = []) {
   const clientIds = new Set()
   for (const item of [...current, ...incoming]) {
     if (!item) continue
-    if (item.clientMessageId && clientIds.has(item.clientMessageId)) continue
+    const clientKey = item.clientMessageId && `${item.senderId}:${item.clientMessageId}`
+    if (clientKey && clientIds.has(clientKey)) continue
     const key = identity(item)
     if (key && byId.has(key)) continue
-    if (item.clientMessageId) clientIds.add(item.clientMessageId)
+    if (clientKey) clientIds.add(clientKey)
     byId.set(key || `temp:${byId.size}`, item)
   }
   return [...byId.values()].sort((a, b) => {

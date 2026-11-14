@@ -266,7 +266,7 @@ const navGroups = [
       { to: '/draw-guess', label: '你画我猜', icon: 'spark' },
       { to: '/notice', label: '校园公告', icon: 'megaphone' },
       { to: '/message', label: '消息中心', icon: 'bell' },
-      { to: '/chat', label: '私信会话', icon: 'chat' }
+      { to: '/chat', label: '聊天会话', icon: 'chat' }
     ]
   },
   {

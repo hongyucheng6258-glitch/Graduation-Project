@@ -18,6 +18,7 @@ export const useChatStore = defineStore('chat', {
     conversations: [],
     messagesByConversation: {},
     historyDone: {},
+    conversationLoadVersion: 0,
     unreadTotal: 0,
     socketState: 'disconnected',
     socket: null,
@@ -38,8 +39,13 @@ export const useChatStore = defineStore('chat', {
           onState: (state) => {
             this.socketState = state
             if (state === 'connected') {
-              this.refreshUnread()
-              this.loadConversations()
+              this.loadConversations().catch(() => {})
+              if (this.activeConversationId != null) {
+                const id = this.activeConversationId
+                this.loadHistory(id, true).then(() => {
+                  if (this.activeConversationId === id) return this.markRead(id)
+                }).catch(() => {})
+              }
             }
           },
           onEvent: (event) => this.handleEvent(event)
@@ -55,10 +61,16 @@ export const useChatStore = defineStore('chat', {
       this.socketState = 'disconnected'
       this.conversations = []
       this.messagesByConversation = {}
+      this.historyDone = {}
+      this.activeConversationId = null
+      this.conversationLoadVersion++
       this.unreadTotal = 0
     },
     async loadConversations() {
-      this.conversations = await api.listConversations()
+      const version = ++this.conversationLoadVersion
+      const conversations = await api.listConversations()
+      if (version !== this.conversationLoadVersion) return
+      this.conversations = conversations
       this.unreadTotal = this.conversations.reduce((sum, item) => sum + Number(item.unreadCount || 0), 0)
     },
     async refreshUnread() {
@@ -67,14 +79,15 @@ export const useChatStore = defineStore('chat', {
     },
     async createConversation(payload) {
       const conversation = await api.createConversation(payload)
-      await this.loadConversations()
+      this.loadConversations().catch(() => {})
       return conversation
     },
     async loadHistory(conversationId, reset = false) {
       const current = reset ? [] : this.messages(conversationId)
       const beforeId = reset ? undefined : current.find((item) => item.id != null)?.id
       const list = await api.listChatMessages(conversationId, { beforeId, limit: 20 })
-      this.messagesByConversation[conversationId] = reset ? mergeMessages([], list) : prependHistory(current, list)
+      const latest = this.messages(conversationId)
+      this.messagesByConversation[conversationId] = reset ? mergeMessages(latest, list) : prependHistory(latest, list)
       this.historyDone[conversationId] = list.length < 20
       return list
     },
@@ -92,7 +105,7 @@ export const useChatStore = defineStore('chat', {
         resourceId: imageResourceId,
         clientMessageId
       })
-      this.messagesByConversation[conversation.id] = mergeMessages(this.messages(conversation.id).filter((m) => m.clientMessageId !== clientMessageId), [pending])
+      this.messagesByConversation[conversation.id] = mergeMessages(this.messages(conversation.id).filter((m) => m.senderId !== this.currentUserId || m.clientMessageId !== clientMessageId), [pending])
       const payload = { conversationId: conversation.id, clientMessageId, messageType, content: imageUrl, resourceId: imageResourceId }
       if (this.connected && shouldUseChatSocket(messageType)) {
         const result = this.socket.sendMessage(payload)
@@ -105,6 +118,7 @@ export const useChatStore = defineStore('chat', {
       try {
         const confirmed = await api.sendChatMessage(conversation.id, { clientMessageId, messageType, content: imageUrl, resourceId: imageResourceId })
         this.replacePending(conversation.id, clientMessageId, confirmed)
+        this.loadConversations().catch(() => {})
       } catch (error) {
         this.markFailed(conversation.id, clientMessageId, error.message)
       }
@@ -121,17 +135,18 @@ export const useChatStore = defineStore('chat', {
           resourceId: pending.resourceId
         })
         this.replacePending(pending.conversationId, pending.clientMessageId, confirmed)
+        this.loadConversations().catch(() => {})
       } catch (error) {
         this.markFailed(pending.conversationId, pending.clientMessageId, error.message)
       }
     },
     replacePending(conversationId, clientMessageId, confirmed) {
-      this.messagesByConversation[conversationId] = this.messages(conversationId).map((item) => item.clientMessageId === clientMessageId
+      this.messagesByConversation[conversationId] = this.messages(conversationId).map((item) => item.senderId === this.currentUserId && item.clientMessageId === clientMessageId
         ? confirmMessage(item, confirmed)
         : item)
     },
     markFailed(conversationId, clientMessageId, error) {
-      this.messagesByConversation[conversationId] = this.messages(conversationId).map((item) => item.clientMessageId === clientMessageId
+      this.messagesByConversation[conversationId] = this.messages(conversationId).map((item) => item.senderId === this.currentUserId && item.clientMessageId === clientMessageId
         ? failMessage(item, error)
         : item)
     },
@@ -140,8 +155,10 @@ export const useChatStore = defineStore('chat', {
     },
     async markRead(conversationId) {
       const last = [...this.messages(conversationId)].reverse().find((item) => item.id != null)
-      if (this.connected) this.socket.markRead(conversationId, last?.id)
-      else await api.markConversationRead(conversationId, { lastReadMessageId: last?.id })
+      if (!last) return
+      if (!(this.connected && this.socket.markRead(conversationId, last.id))) {
+        await api.markConversationRead(conversationId, { lastReadMessageId: last.id })
+      }
       const next = applyUnreadEvent(this.$state, { conversationId, unreadCount: 0 })
       this.conversations = next.conversations
       this.unreadTotal = next.unreadTotal
@@ -150,8 +167,8 @@ export const useChatStore = defineStore('chat', {
       if (event.type === 'chat.message' && event.message) {
         const id = event.message.conversationId
         this.messagesByConversation[id] = mergeMessages(this.messages(id), [event.message])
-        if (Number(this.activeConversationId) === Number(id)) this.markRead(id)
-        this.loadConversations()
+        if (Number(this.activeConversationId) === Number(id)) this.markRead(id).catch(() => {})
+        this.loadConversations().catch(() => {})
       } else if (event.type === 'chat.ack' && event.message) {
         const pending = this.pendingRequests.get(event.requestId)
         if (pending) {
@@ -159,7 +176,9 @@ export const useChatStore = defineStore('chat', {
           this.replacePending(pending.conversationId, pending.clientMessageId, event.message)
           this.pendingRequests.delete(event.requestId)
         }
-        this.loadConversations()
+        this.loadConversations().catch(() => {})
+      } else if (event.type === 'chat.conversation') {
+        this.loadConversations().catch(() => {})
       } else if (event.type === 'chat.unread') {
         const next = applyUnreadEvent(this.$state, event)
         this.conversations = next.conversations

@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Mapper
 public interface ChatConversationMemberMapper extends BaseMapper<ChatConversationMember> {
@@ -28,6 +29,27 @@ public interface ChatConversationMemberMapper extends BaseMapper<ChatConversatio
     @Update("UPDATE chat_conversation_member SET unread_count = unread_count + 1, hidden = 0 " +
             "WHERE conversation_id = #{conversationId} AND user_id = #{userId}")
     int incrementUnreadAndRestore(Long conversationId, Long userId);
+
+    @Select("SELECT * FROM chat_conversation_member WHERE conversation_id = #{conversationId} ORDER BY id")
+    List<ChatConversationMember> findMembers(Long conversationId);
+
+    @Select("SELECT * FROM chat_conversation_member WHERE conversation_id = #{conversationId} AND user_id != #{senderId} ORDER BY id FOR UPDATE")
+    List<ChatConversationMember> findGroupRecipientsForUpdate(Long conversationId, Long senderId);
+
+    @Update("UPDATE chat_conversation_member SET unread_count = unread_count + 1, hidden = 0 " +
+            "WHERE conversation_id = #{conversationId} AND user_id != #{senderId}")
+    int incrementGroupUnread(Long conversationId, Long senderId);
+
+    @Update("""
+            UPDATE chat_conversation_member SET unread_count = GREATEST(0, unread_count - (
+                SELECT COUNT(*) FROM chat_message
+                WHERE conversation_id = #{conversationId} AND sender_id != #{userId}
+                AND id > COALESCE(#{previousReadId}, 0) AND id <= #{lastReadMessageId}
+            )), last_read_message_id = #{lastReadMessageId}, read_time = #{readTime}
+            WHERE conversation_id = #{conversationId} AND user_id = #{userId}
+            """)
+    int markGroupRead(Long conversationId, Long userId, Long previousReadId,
+                      Long lastReadMessageId, LocalDateTime readTime);
 
     @Update("UPDATE chat_conversation_member SET " +
             "unread_count = GREATEST(0, unread_count - (" +

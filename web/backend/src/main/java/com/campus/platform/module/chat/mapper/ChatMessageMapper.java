@@ -14,6 +14,9 @@ public interface ChatMessageMapper extends BaseMapper<ChatMessage> {
     @Select("SELECT * FROM chat_message WHERE sender_id = #{senderId} AND client_message_id = #{clientMessageId} LIMIT 1")
     ChatMessage findBySenderAndClientMessageId(Long senderId, String clientMessageId);
 
+    @Select("SELECT * FROM chat_message WHERE sender_id = #{senderId} AND client_message_id = #{clientMessageId} LIMIT 1 FOR UPDATE")
+    ChatMessage findDuplicateForUpdate(Long senderId, String clientMessageId);
+
     @Select("SELECT * FROM chat_message WHERE id = #{messageId} AND conversation_id = #{conversationId} LIMIT 1")
     ChatMessage findMessageInConversation(Long messageId, Long conversationId);
 

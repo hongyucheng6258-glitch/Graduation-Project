@@ -34,6 +34,7 @@ services:
       - ./web/backend/src/main/resources/db/2026-11-13-temporary-password.sql:/migrations/15-temporary-password.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-13-account-recovery.sql:/migrations/16-account-recovery.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-14-agent-campus-draft.sql:/migrations/17-campus-draft.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-14-chat-groups.sql:/migrations/18-chat-groups.sql:ro
     command:
       - /bin/sh
       - -ec

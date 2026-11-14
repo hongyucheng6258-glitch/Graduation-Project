@@ -82,3 +82,9 @@ test('乐观消息可确认或转为失败并保留重试数据', () => {
   assert.equal(confirmMessage(pending, message(11, { clientMessageId: 'c-1' })).sendState, 'sent')
   assert.equal(failMessage(pending, '网络异常').sendState, 'failed')
 })
+
+test('群聊允许不同成员使用相同的客户端消息标识', () => {
+  const first = message(1, { senderId: 1, clientMessageId: 'group-message' })
+  const second = message(2, { senderId: 2, clientMessageId: 'group-message' })
+  assert.deepEqual(mergeMessages([first], [second]).map((item) => item.id), [1, 2])
+})

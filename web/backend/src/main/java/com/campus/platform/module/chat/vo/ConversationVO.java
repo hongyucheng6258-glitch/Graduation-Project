@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Data
 public class ConversationVO {
     private Long id;
+    private String groupName;
     private Long peerUserId;
     private String peerNickname;
     private String peerAvatar;
@@ -23,6 +24,7 @@ public class ConversationVO {
     public static ConversationVO of(ChatConversation c, ChatConversationMember member, User peer) {
         ConversationVO vo = new ConversationVO();
         vo.id = c.getId();
+        vo.groupName = c.getGroupName();
         vo.peerUserId = peer == null ? null : peer.getId();
         vo.peerNickname = peer == null ? null : peer.getNickname();
         vo.peerAvatar = peer == null ? null : peer.getAvatar();

@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
 import com.campus.platform.module.chat.dto.ChatSendDTO;
+import com.campus.platform.module.chat.dto.GroupCreateDTO;
+import com.campus.platform.module.chat.vo.ChatUserVO;
 import com.campus.platform.module.chat.entity.ChatConversation;
 import com.campus.platform.module.chat.entity.ChatConversationMember;
 import com.campus.platform.module.chat.entity.ChatMessage;
@@ -33,7 +35,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.Objects;
 
 @Service
@@ -101,11 +107,66 @@ public class ChatService {
     }
 
     @Transactional
+    public ChatConversation createGroup(Long userId, GroupCreateDTO dto) {
+        var invitees = new LinkedHashSet<>(dto.getMemberIds());
+        invitees.remove(userId);
+        if (invitees.size() < 2 || invitees.size() > 49) {
+            throw new BizException(ResultCode.BAD_REQUEST, "请选择 2 至 49 位同学");
+        }
+        String name = dto.getName().strip();
+        if (name.isEmpty()) throw new BizException(ResultCode.BAD_REQUEST, "请输入群聊名称");
+        if (sensitiveWordService.contains(name)) throw new BizException(ResultCode.SENSITIVE_WORD);
+        if (userMapper.selectList(new LambdaQueryWrapper<User>().in(User::getId, invitees)
+                .select(User::getId).eq(User::getStatus, 0)).size() != invitees.size()) {
+            throw new BizException(ResultCode.BAD_REQUEST, "部分同学当前无法加入群聊");
+        }
+        for (Long invitee : invitees) {
+            if (blockMapper.countEitherDirection(userId, invitee) > 0) {
+                throw new BizException(ResultCode.FORBIDDEN, "无法邀请存在拉黑关系的同学");
+            }
+        }
+        ChatConversation group = new ChatConversation();
+        group.setGroupName(name);
+        conversationMapper.insert(group);
+        memberMapper.insertMemberIfAbsent(group.getId(), userId);
+        for (Long invitee : invitees) {
+            memberMapper.insertMemberIfAbsent(group.getId(), invitee);
+        }
+        realtimePublisher.groupCreatedAfterCommit(group.getId(), invitees);
+        return group;
+    }
+
+    public List<ChatUserVO> searchUsers(Long userId, String keyword) {
+        String term = keyword.strip();
+        if (term.isEmpty() || term.length() > 32) return List.of();
+        return userMapper.selectList(new LambdaQueryWrapper<User>()
+                        .select(User::getId, User::getNickname, User::getAvatar)
+                        .ne(User::getId, userId)
+                        .eq(User::getStatus, 0)
+                        .like(User::getNickname, term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_"))
+                        .orderByAsc(User::getNickname, User::getId)
+                        .last("LIMIT 20"))
+                .stream().map(ChatUserVO::from).toList();
+    }
+
+    public List<ChatUserVO> groupMembers(Long userId, Long conversationId) {
+        ChatConversation group = requireMember(conversationId, userId);
+        if (!group.isGroup()) throw new BizException(ResultCode.BAD_REQUEST, "该会话不是群聊");
+        List<Long> userIds = memberMapper.findMembers(conversationId).stream()
+                .map(ChatConversationMember::getUserId).toList();
+        var users = userMapper.selectBatchIds(userIds).stream().collect(Collectors.toMap(User::getId, Function.identity()));
+        return userIds.stream().map(users::get).filter(Objects::nonNull).map(ChatUserVO::from).toList();
+    }
+
+    @Transactional
     public ChatMessage sendMessage(Long senderId, Long conversationId, ChatSendDTO dto) {
         ChatMessage duplicate = messageMapper.findBySenderAndClientMessageId(senderId, dto.getClientMessageId());
-        if (duplicate != null) return duplicate;
+        if (duplicate != null) {
+            requireMember(conversationId, senderId);
+            return retryMessage(duplicate, conversationId);
+        }
         rateLimiter.checkSend(senderId);
-        // 私信长度校验（从系统配置读取，管理端可在线调整）
+        // 聊天消息长度可由管理端调整。
         if ("text".equals(dto.getMessageType()) && dto.getContent() != null) {
             int maxLen = systemConfigHolder.getChatMessageMaxLength();
             if (dto.getContent().length() > maxLen) {
@@ -113,8 +174,8 @@ public class ChatService {
             }
         }
         ChatConversation conversation = requireMemberForUpdate(conversationId, senderId);
-        Long receiverId = conversation.getUser1Id().equals(senderId) ? conversation.getUser2Id() : conversation.getUser1Id();
-        if (blockMapper.countEitherDirection(senderId, receiverId) > 0) {
+        Long receiverId = conversation.isGroup() ? null : peerId(conversation, senderId);
+        if (receiverId != null && blockMapper.countEitherDirection(senderId, receiverId) > 0) {
             throw new BizException(ResultCode.FORBIDDEN, "你们之间已存在拉黑关系");
         }
         UploadResource uploadResource = validateContent(senderId, dto);
@@ -126,20 +187,16 @@ public class ChatService {
         message.setMessageType(dto.getMessageType());
         message.setContent(dto.getContent().trim());
         message.setStatus(0);
+        message.setCreateTime(LocalDateTime.now().withNano(0));
         try {
             messageMapper.insert(message);
         } catch (DuplicateKeyException error) {
-            ChatMessage committed = messageMapper.findBySenderAndClientMessageId(senderId, dto.getClientMessageId());
-            if (committed != null) return committed;
+            ChatMessage committed = messageMapper.findDuplicateForUpdate(senderId, dto.getClientMessageId());
+            if (committed != null) return retryMessage(committed, conversationId);
             throw error;
         }
 
         uploadResourceService.bindChatMessage(uploadResource, senderId, message.getId());
-        if (memberMapper.incrementUnreadAndRestore(conversationId, receiverId) != 1) {
-            throw new BizException(ResultCode.SYSTEM_ERROR, "会话成员数据异常");
-        }
-        ChatConversationMember receiver = memberMapper.findMember(conversationId, receiverId);
-        if (receiver == null) throw new BizException(ResultCode.SYSTEM_ERROR, "会话成员数据异常");
         memberMapper.update(null, new LambdaUpdateWrapper<ChatConversationMember>()
                 .eq(ChatConversationMember::getConversationId, conversationId)
                 .eq(ChatConversationMember::getUserId, senderId)
@@ -147,12 +204,35 @@ public class ChatService {
 
         conversation.setLastMessageId(message.getId());
         conversation.setLastMessageSummary("image".equals(dto.getMessageType()) ? "图片" : StrUtil.sub(dto.getContent().trim(), 0, 255));
-        conversation.setLastMessageTime(LocalDateTime.now());
+        conversation.setLastMessageTime(message.getCreateTime());
         conversationMapper.updateById(conversation);
+        if (conversation.isGroup()) {
+            memberMapper.incrementGroupUnread(conversationId, senderId);
+            Map<Long, Integer> unread = memberMapper.findGroupRecipientsForUpdate(conversationId, senderId).stream()
+                    .collect(Collectors.toMap(ChatConversationMember::getUserId, ChatConversationMember::getUnreadCount));
+            realtimePublisher.groupMessageAfterCommit(message, unread);
+            return message;
+        }
+        if (memberMapper.incrementUnreadAndRestore(conversationId, receiverId) != 1) {
+            throw new BizException(ResultCode.SYSTEM_ERROR, "会话成员数据异常");
+        }
+        ChatConversationMember receiver = memberMapper.findMember(conversationId, receiverId);
+        if (receiver == null) throw new BizException(ResultCode.SYSTEM_ERROR, "会话成员数据异常");
         User sender = userMapper.selectById(senderId);
         notificationService.remind(receiverId, conversationId, sender == null ? null : sender.getNickname());
         realtimePublisher.messageAfterCommit(message, receiver.getUnreadCount());
         return message;
+    }
+
+    private ChatMessage retryMessage(ChatMessage previous, Long conversationId) {
+        if (!conversationId.equals(previous.getConversationId())) {
+            throw new BizException(ResultCode.BAD_REQUEST, "消息标识已用于其他会话");
+        }
+        return previous;
+    }
+
+    private Long peerId(ChatConversation conversation, Long userId) {
+        return Objects.equals(conversation.getUser1Id(), userId) ? conversation.getUser2Id() : conversation.getUser1Id();
     }
 
     @Transactional
@@ -167,7 +247,7 @@ public class ChatService {
             if (requested == null) {
                 throw new BizException(ResultCode.BAD_REQUEST, "已读消息不属于当前会话");
             }
-            if (!userId.equals(requested.getReceiverId())) {
+            if (!conversation.isGroup() && !userId.equals(requested.getReceiverId())) {
                 effectiveLastReadMessageId = messageMapper.findLatestReceivedMessageId(conversationId, userId, lastReadMessageId);
             }
         }
@@ -176,14 +256,20 @@ public class ChatService {
             return;
         }
         LocalDateTime readTime = LocalDateTime.now();
+        if (conversation.isGroup()) {
+            memberMapper.markGroupRead(conversationId, userId, member.getLastReadMessageId(),
+                    effectiveLastReadMessageId, readTime);
+            int remainingUnread = memberMapper.findMemberForUpdate(conversationId, userId).getUnreadCount();
+            realtimePublisher.groupReadAfterCommit(userId, conversationId, effectiveLastReadMessageId, remainingUnread);
+            return;
+        }
         if (memberMapper.markReadMonotonic(conversationId, userId, effectiveLastReadMessageId, readTime) != 1) {
             return;
         }
         int markedCount = messageMapper.markReadUpTo(conversationId, userId, effectiveLastReadMessageId, readTime);
         long remainingUnread = Math.max(0L, (member.getUnreadCount() == null ? 0L : member.getUnreadCount()) - markedCount);
         if (remainingUnread == 0L) notificationService.clear(userId, conversationId);
-        Long peerId = conversation.getUser1Id().equals(userId) ? conversation.getUser2Id() : conversation.getUser1Id();
-        realtimePublisher.readAfterCommit(userId, peerId, conversationId, effectiveLastReadMessageId, remainingUnread);
+        realtimePublisher.readAfterCommit(userId, peerId(conversation, userId), conversationId, effectiveLastReadMessageId, remainingUnread);
     }
 
     public ChatConversation requireMember(Long conversationId, Long userId) {
@@ -232,26 +318,33 @@ public class ChatService {
         return memberships.stream().map(member -> {
             ChatConversation conversation = conversationMapper.selectById(member.getConversationId());
             if (conversation == null) return null;
-            Long peerId = conversation.getUser1Id().equals(userId) ? conversation.getUser2Id() : conversation.getUser1Id();
-            return ConversationVO.of(conversation, member, userMapper.selectById(peerId));
+            return toConversationVO(conversation, member, userId);
         }).filter(Objects::nonNull)
                 .sorted((left, right) -> {
                     if (left.getLastMessageTime() == null && right.getLastMessageTime() == null) return Long.compare(right.getId(), left.getId());
                     if (left.getLastMessageTime() == null) return 1;
                     if (right.getLastMessageTime() == null) return -1;
-                    return right.getLastMessageTime().compareTo(left.getLastMessageTime());
+                    int timeOrder = right.getLastMessageTime().compareTo(left.getLastMessageTime());
+                    return timeOrder != 0 ? timeOrder : Long.compare(right.getId(), left.getId());
                 }).toList();
     }
 
     public ConversationVO conversation(Long userId, Long conversationId) {
-        ChatConversation conversation = requireMember(conversationId, userId);
-        ChatConversationMember member = requireMemberEntity(conversationId, userId);
-        Long peerId = conversation.getUser1Id().equals(userId) ? conversation.getUser2Id() : conversation.getUser1Id();
-        return ConversationVO.of(conversation, member, userMapper.selectById(peerId));
+        ChatConversation conversation = conversationMapper.selectById(conversationId);
+        if (conversation == null) throw new BizException(ResultCode.NOT_FOUND, "会话不存在");
+        return toConversationVO(conversation, requireMemberEntity(conversationId, userId), userId);
     }
 
+    private ConversationVO toConversationVO(ChatConversation conversation, ChatConversationMember member, Long userId) {
+        User peer = conversation.isGroup() ? null : userMapper.selectById(peerId(conversation, userId));
+        return ConversationVO.of(conversation, member, peer);
+    }
+
+    @Transactional
     public void hideConversation(Long userId, Long conversationId) {
+        ChatConversation conversation = requireMemberForUpdate(conversationId, userId);
         ChatConversationMember member = requireMemberEntity(conversationId, userId);
+        if (conversation.isGroup()) member.setLastReadMessageId(conversation.getLastMessageId());
         member.setHidden(1);
         member.setUnreadCount(0);
         memberMapper.updateById(member);

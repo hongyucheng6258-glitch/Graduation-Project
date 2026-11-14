@@ -12,3 +12,7 @@ export const getChatWsTicket = () => request.post('/chat/ws-ticket')
 export const blockChatUser = (userId) => request.post(`/chat/block/${userId}`)
 export const unblockChatUser = (userId) => request.delete(`/chat/block/${userId}`)
 export const reportChatMessage = (id, data) => request.post(`/chat/messages/${id}/report`, data)
+
+export const createGroup = (data) => request.post('/chat/groups', data)
+export const listGroupMembers = (id) => request.get(`/chat/groups/${id}/members`)
+export const searchChatUsers = (keyword) => request.get('/chat/users', { params: { keyword } })

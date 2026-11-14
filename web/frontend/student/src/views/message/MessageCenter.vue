@@ -17,7 +17,7 @@
         <el-badge v-if="t.badge !== undefined" :value="t.badge" :hidden="!t.badge" />
       </button>
       <RouterLink class="msg-side-item private" to="/chat">
-        <span>私信会话</span>
+        <span>聊天会话</span>
         <el-badge :value="chatStore.unreadTotal" :hidden="!chatStore.unreadTotal" />
       </RouterLink>
     </nav>
