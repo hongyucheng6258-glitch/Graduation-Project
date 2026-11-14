@@ -54,6 +54,7 @@ flowchart LR
 ```
 
 - **后端**使用 Java 17、Spring Boot、MyBatis-Plus、JWT、BCrypt 和 Spring WebSocket。MySQL 保存业务记录、上传资源、文档切片和提示词版本，Redis 用于验证码、缓存与限流。
+- **数据库访问**由 Mapper 层负责。常规增删改查使用 MyBatis-Plus，自定义 SQL 放在对应的 Mapper。Service 负责业务规则和事务。
 - **前端**使用 Vue 3、Vite、Pinia、Vue Router、Element Plus 和 ECharts。Three.js 渲染校园场景，Tesseract.js 支持浏览器内的错题 OCR。
 - **部署**使用 Docker Compose、Nginx 和多阶段构建。完整环境包含 MySQL、Redis、Spring Boot、两个 Web 端、Embedding 和 Qdrant，Agent 表结构由一次性迁移任务初始化。
 
@@ -109,6 +110,22 @@ docker compose @stack down
 ## 开发与测试
 
 源码开发需要 Java 17、Maven、Node.js/npm、MySQL 和 Redis。本地 Vite 默认使用 `5173`、`5174`，代理到后端 `8080`。Java 服务的配置和 SQL 初始化见 [部署说明](./部署说明.md)。
+
+### 在 IntelliJ IDEA 启动后端
+
+1. 在仓库根目录按 Docker 快速启动一节准备 `.env`，再启动独立的开发数据库和 Redis。
+
+   ```sh
+   docker compose -p campus-idea -f docker-compose.yml -f docker-compose.idea.yml up -d --wait mysql redis
+   ```
+
+2. 在 `web/backend` 下创建 `.env.idea`，每行填写一个 `键=值`。填写 `MYSQL_PASSWORD`、`MYSQL_DB`、`REDIS_PASSWORD`、`JWT_SECRET` 和 `SIGNIN_SECRET`。MySQL 密码对应 Compose 使用的 `MYSQL_ROOT_PASSWORD`，库名默认为 `ai_campus_platform`，Redis 密码与开发容器一致。首次初始化后，MySQL 密码以现有数据库账户的实际密码为准。
+3. 用 IDEA 打开 `web/backend`，等待 Maven 导入后，在右上角选择 **Campus Backend Local** 并运行。该配置会读取 `.env.idea`。启动后访问 [本地后端健康检查](http://127.0.0.1:18081/readyz)，确认返回 `READY`。
+4. 若 Mapper 的表名标红，在 IDEA 的 **数据库**窗口添加 MySQL 数据源，主机填 `127.0.0.1`，端口填 `13306`，用户填 `root`，密码使用开发库密码。在 **Schemas（架构）** 中勾选 `ai_campus_platform` 后刷新。若编辑器仍有提示，用 **选择架构** 将 SQL 关联到该库。
+
+联调前端时，在各自启动 Vite 的终端中设置 `CAMPUS_BACKEND_URL=http://127.0.0.1:18081`。用 PowerShell 时可执行 `$env:CAMPUS_BACKEND_URL = 'http://127.0.0.1:18081'`。
+
+### 前端与测试命令
 
 ```powershell
 npm.cmd --prefix web/frontend/student ci
