@@ -34,6 +34,8 @@ public class ActivityPublishDrafts implements AgentToolSource {
     private static final long MAX_ENCODED_IMAGE_LENGTH = 15L * 1024 * 1024;
     private static final Pattern MEMBER_LIMIT = Pattern.compile(
             "(?:人数上限|人数限制|最多|限额|限招|(?<!不)限|容纳)\\s*[:：为]?\\s*([0-9]{1,9}|[一二两三四五六七八九十百零]{1,8})(?![0-9])");
+    private static final Pattern STANDALONE_COUNT = Pattern.compile(
+            "^(?:共|一共)?\\s*([0-9]{1,3}|[一二两三四五六七八九十百零]{1,8})\\s*(?:个)?人$");
     private static final Pattern UNLIMITED = Pattern.compile(
             "不限(?:制)?人数|人数(?:不限|不设上限|无限制)|无人数限制|不设人数上限|人数上限\\s*[:：为]?\\s*0(?![0-9])");
     private static final Pattern SIGNUP_CUTOFF = Pattern.compile("截止|截至|报名[^。！？；]{0,8}关闭");
@@ -188,6 +190,10 @@ public class ActivityPublishDrafts implements AgentToolSource {
     }
 
     static void retainStudentFacts(ObjectNode args, List<String> questions) {
+        retainStudentFacts(args, questions, LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")));
+    }
+
+    static void retainStudentFacts(ObjectNode args, List<String> questions, LocalDateTime now) {
         for (String field : List.of("description", "category", "location")) {
             var value = args.path(field);
             if (value.isNull() || (value.isTextual() && questions.stream().noneMatch(q -> q.contains(value.asText().strip())))) {
@@ -196,8 +202,28 @@ public class ActivityPublishDrafts implements AgentToolSource {
         }
         for (String field : List.of("startTime", "endTime", "signupDeadline")) {
             var value = args.path(field);
-            if (value.isNull() || (value.isTextual() && !hasDateEvidence(questions, field, time(args, field)))) {
+            if (value.isNull() || (value.isTextual() && !hasDateEvidence(questions, field, time(args, field), now))) {
                 args.remove(field);
+            }
+        }
+        if (!questions.isEmpty()) {
+            String latest = questions.get(questions.size() - 1);
+            for (String clause : latest.split("[。！？；，,;\\r\\n]")) {
+                var relative = ActivityRelativeTime.resolve(clause, now);
+                if (relative != null) {
+                    if (SIGNUP_CUTOFF.matcher(clause).find()) {
+                        args.put("signupDeadline", relative.start().toString());
+                    } else {
+                        args.put("startTime", relative.start().toString());
+                        args.remove("endTime");
+                        if (relative.end() != null) args.put("endTime", relative.end().toString());
+                    }
+                }
+                var count = STANDALONE_COUNT.matcher(clause.strip());
+                if (count.matches()) {
+                    int provided = parseMemberCount(count.group(1));
+                    if (provided > 0 && provided <= MAX_MEMBERS) args.put("maxMembers", provided);
+                }
             }
         }
         var members = args.path("maxMembers");
@@ -207,14 +233,23 @@ public class ActivityPublishDrafts implements AgentToolSource {
         }
     }
 
-    private static boolean hasDateEvidence(List<String> questions, String field, LocalDateTime time) {
+    private static int parseMemberCount(String value) {
+        try {
+            return Character.isDigit(value.charAt(0)) ? Integer.parseInt(value)
+                    : NumberChineseFormatter.chineseToNumber(value.replace('两', '二'));
+        } catch (IllegalArgumentException ignored) {
+            return -1;
+        }
+    }
+
+    private static boolean hasDateEvidence(List<String> questions, String field, LocalDateTime time, LocalDateTime now) {
         if (time == null) return false;
         String month = paddedNumber(time.getMonthValue());
         String day = paddedNumber(time.getDayOfMonth());
         String monthDay = month + "月" + day + "[日号]\\s*";
         String year = Integer.toString(time.getYear());
         String explicitDate = year + "(?:[-/]" + month + "[-/]" + day + "[ T]+|年" + monthDay + ")";
-        String date = time.getYear() == LocalDate.now().getYear() ? "(?:" + explicitDate + "|" + monthDay + ")" : explicitDate;
+        String date = time.getYear() == now.getYear() ? "(?:" + explicitDate + "|" + monthDay + ")" : explicitDate;
         String minute = paddedNumber(time.getMinute());
         String second = paddedNumber(time.getSecond());
         String numericClock = "[:：]" + minute + (time.getSecond() == 0 ? "(?:[:：]00)?" : "[:：]" + second);
@@ -225,7 +260,13 @@ public class ActivityPublishDrafts implements AgentToolSource {
         var exactDateTime = Pattern.compile("(?<![0-9年])" + date + rangeStart + clock + "(?![0-9:：点时分秒半.])");
         return questions.stream().flatMap(q -> Arrays.stream(q.split("[。！？；，,;\\r\\n]")))
                 .filter(clause -> !"signupDeadline".equals(field) || SIGNUP_CUTOFF.matcher(clause).find())
-                .anyMatch(clause -> exactDateTime.matcher(clause.replaceAll("年\\s+", "年")).find());
+                .anyMatch(clause -> {
+                    if (exactDateTime.matcher(clause.replaceAll("年\\s+", "年")).find()) return true;
+                    boolean deadline = "signupDeadline".equals(field);
+                    if (deadline != SIGNUP_CUTOFF.matcher(clause).find()) return false;
+                    var relative = ActivityRelativeTime.resolve(clause, now);
+                    return relative != null && time.equals("endTime".equals(field) ? relative.end() : relative.start());
+                });
     }
 
     private static String paddedNumber(int number) {
@@ -238,6 +279,10 @@ public class ActivityPublishDrafts implements AgentToolSource {
             return questions.stream().anyMatch(q -> UNLIMITED.matcher(q).find() || q.strip().matches("不限[。！!]?"));
         }
         for (String question : questions) {
+            for (String clause : question.split("[。！？；，,;\\r\\n]")) {
+                var standalone = STANDALONE_COUNT.matcher(clause.strip());
+                if (standalone.matches() && parseMemberCount(standalone.group(1)) == members) return true;
+            }
             var matches = MEMBER_LIMIT.matcher(question);
             while (matches.find()) {
                 String value = matches.group(1);

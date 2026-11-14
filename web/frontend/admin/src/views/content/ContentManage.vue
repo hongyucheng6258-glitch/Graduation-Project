@@ -14,8 +14,8 @@
         :fields="[['类型', contentTypes[type]], ['作者 ID', list[0].userId], ['发布时间', formatTime(list[0].createTime) || '—']]"
         :description="list[0].description || list[0].intro || list[0].content || ''">
         <template v-if="canManage(list[0])" #actions>
-          <el-button v-if="!isOff(list[0])" type="danger" plain @click="doOff(list[0])">下架</el-button>
-          <el-button v-else type="primary" @click="doOn(list[0])">恢复上架</el-button>
+          <el-button v-if="list[0].status === 0" type="danger" plain @click="doOff(list[0])">下架</el-button>
+          <el-button v-else-if="isOff(list[0])" type="primary" @click="doOn(list[0])">恢复上架</el-button>
           <el-button v-if="type === 'activity' && !isOff(list[0])" @click="openReport(list[0])">签到报表</el-button>
         </template>
       </AdminRecordCard>
@@ -52,8 +52,8 @@
       <el-table-column label="操作" width="145">
         <template #default="{ row }">
           <template v-if="canManage(row)">
-            <el-button v-if="!isOff(row)" link type="danger" @click="doOff(row)">下架</el-button>
-            <el-button v-else link type="primary" @click="doOn(row)">恢复上架</el-button>
+            <el-button v-if="row.status === 0" link type="danger" @click="doOff(row)">下架</el-button>
+            <el-button v-else-if="isOff(row)" link type="primary" @click="doOn(row)">恢复上架</el-button>
             <el-button v-if="type === 'activity' && !isOff(row)" link type="primary" @click="openReport(row)">签到报表</el-button>
           </template>
           <span v-else style="color: var(--ink-3); font-size: 12px">—</span>
@@ -67,8 +67,8 @@
     <el-dialog v-model="reportVisible" title="签到报表" width="min(720px, calc(100vw - 32px))" destroy-on-close>
       <template v-if="report">
         <div class="report-actions">
-          <el-button size="small" :loading="exporting" @click="doExport('members')">导出报名名单</el-button>
-          <el-button size="small" type="primary" :loading="exporting" @click="doExport('signins')">导出签到名单</el-button>
+          <el-button v-if="canExport" size="small" :loading="exporting" @click="doExport('members')">导出报名名单</el-button>
+          <el-button v-if="canExport" size="small" type="primary" :loading="exporting" @click="doExport('signins')">导出签到名单</el-button>
         </div>
         <div class="report-summary">
           <div class="sum-item"><b>{{ report.joinedCount }}</b><span>已通过报名</span></div>
@@ -99,6 +99,7 @@
 </template>
 
 <script setup>
+import { useAdminStore } from '../../store/admin'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
@@ -109,6 +110,8 @@ import { contentOff, contentOn, signinReport, exportMembers, exportSignins } fro
 import { formatTime } from '../../utils/date'
 import { searchRecordId } from '../../utils/searchQuery.mjs'
 
+const admin = useAdminStore()
+const canExport = computed(() => admin.can('activity:export'))
 const contentTypes = {
   activity: '活动',
   idle: '闲置',

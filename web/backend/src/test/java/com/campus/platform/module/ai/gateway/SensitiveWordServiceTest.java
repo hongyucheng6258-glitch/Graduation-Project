@@ -3,6 +3,10 @@ package com.campus.platform.module.ai.gateway;
 
 import com.campus.platform.module.ai.entity.SensitiveWord;
 import com.campus.platform.module.ai.mapper.SensitiveWordMapper;
+import com.campus.platform.utils.RedisCache;
+import java.util.function.Supplier;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.mock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,10 +36,16 @@ class SensitiveWordServiceTest {
 
     private SensitiveWordService service;
 
+    private RedisCache cache() {
+        RedisCache cache = mock(RedisCache.class);
+        when(cache.get(anyString(), any(), any(), any())).thenAnswer(call -> call.<Supplier<?>>getArgument(3).get());
+        return cache;
+    }
+
     @BeforeEach
     void setUp() {
         when(sensitiveWordMapper.selectList(any())).thenReturn(List.of());
-        service = new SensitiveWordService(sensitiveWordMapper);
+        service = new SensitiveWordService(sensitiveWordMapper, cache());
         service.init();
     }
 
@@ -80,7 +90,7 @@ class SensitiveWordServiceTest {
         dbWord.setWord("测试专用违禁词");
         when(sensitiveWordMapper.selectList(any())).thenReturn(List.of(dbWord));
 
-        SensitiveWordService mergedService = new SensitiveWordService(sensitiveWordMapper);
+        SensitiveWordService mergedService = new SensitiveWordService(sensitiveWordMapper, cache());
         mergedService.init();
 
         assertThat(mergedService.contains("这里有测试专用违禁词出现")).isTrue();
@@ -94,7 +104,7 @@ class SensitiveWordServiceTest {
         blank.setWord("   ");
         when(sensitiveWordMapper.selectList(any())).thenReturn(List.of(blank));
 
-        SensitiveWordService mergedService = new SensitiveWordService(sensitiveWordMapper);
+        SensitiveWordService mergedService = new SensitiveWordService(sensitiveWordMapper, cache());
         mergedService.init();
 
         assertThat(mergedService.contains("任意正常文本")).isFalse();

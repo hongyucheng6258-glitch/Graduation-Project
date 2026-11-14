@@ -23,10 +23,10 @@
           <div class="contact">
             <b>联系方式：</b>{{ lf.contact || '请通过消息联系发布者' }}
           </div>
-          <div class="publisher" style="cursor:pointer" @click="goUser(lf.userId)">
+          <RouterLink v-if="lf.userId" class="publisher" :to="publisherRoute">
             <el-avatar :size="36" :src="lf.publisherAvatar">{{ lf.publisherNickname?.charAt(0) }}</el-avatar>
-            <span style="color:var(--brand-strong);font-weight:600">{{ lf.publisherNickname }}</span>
-          </div>
+            <span style="color:var(--brand-strong);font-weight:600">{{ lf.publisherNickname || '查看发布者主页' }}</span>
+          </RouterLink>
 
           <!-- 我的认领状态（非发布者） -->
           <el-alert v-if="!lf.isOwner && myClaim" :type="myClaim.status === 1 ? 'success' : 'warning'"
@@ -42,7 +42,7 @@
             <el-button v-if="lf.isOwner && lf.type === 1 && lf.status === 0" type="warning" plain @click="openClaims">
               认领申请<el-badge v-if="claims.length" :value="claims.filter(c => c.status === 0).length" style="margin-left: 6px" />
             </el-button>
-            <el-button v-if="!lf.isOwner && lf.type === 1 && lf.status === 0 && !myClaim"
+            <el-button v-if="!lf.isOwner && lf.type === 1 && lf.status === 0 && (!myClaim || myClaim.status === 2)"
                        type="primary" @click="claimVisible = true">申请认领</el-button>
             <el-button v-if="!lf.isOwner && myClaim && myClaim.status === 1" type="success" @click="confirmReturn">确认已找回</el-button>
             <el-button v-if="!lf.isOwner" type="primary" plain @click="contactPublisher">私信发布者</el-button>
@@ -256,11 +256,8 @@ async function confirmReturn() {
   load()
 }
 
-function goUser(id) {
-  if (!id) return
-  if (Number(id) === Number(userStore.userInfo?.id)) router.push('/profile')
-  else router.push(`/user/${id}`)
-}
+const publisherRoute = computed(() => Number(lf.value?.userId) === Number(userStore.userInfo?.id)
+  ? '/profile' : `/user/${lf.value?.userId}`)
 
 async function contactPublisher() {
   await startChat(router, userStore, lf.value?.userId, { type: 'lostfound', id, title: lf.value?.title })
@@ -316,6 +313,7 @@ onMounted(load)
   margin-bottom: 14px;
 }
 .publisher {
+  width: fit-content;
   display: flex;
   gap: 10px;
   align-items: center;

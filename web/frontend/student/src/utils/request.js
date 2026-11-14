@@ -19,7 +19,7 @@ const request = axios.create({
 
 request.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
-  const isAuthRequest = /^\/auth\/(login|register|captcha)$/.test(config.url || '')
+  const isAuthRequest = /^\/auth\/(?:login$|register$|captcha$|phone\/|recovery\/)/.test(config.url || '')
   if (token && !isAuthRequest) {
     config.headers.Authorization = `Bearer ${token}`
   } else if (isAuthRequest && config.headers?.Authorization) {

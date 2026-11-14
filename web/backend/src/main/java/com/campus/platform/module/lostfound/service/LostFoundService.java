@@ -143,6 +143,10 @@ public class LostFoundService {
         if (active > 0) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "该信息已有待处理的认领申请");
         }
+        if (dto == null || (cn.hutool.core.util.StrUtil.isBlank(dto.getMessage())
+                && cn.hutool.core.util.StrUtil.isBlank(dto.getContact()))) {
+            throw new BizException(ResultCode.BAD_REQUEST, "请填写认领说明或联系方式");
+        }
         LostFoundClaim claim = new LostFoundClaim();
         claim.setLostFoundId(lfId);
         claim.setClaimUserId(userId);
@@ -197,6 +201,9 @@ public class LostFoundService {
         LostFound lf = lostFoundMapper.selectByIdForUpdate(claim.getLostFoundId());
         if (lf == null || !lf.getUserId().equals(userId)) {
             throw new BizException(ResultCode.FORBIDDEN, "只有发布者可以处理认领申请");
+        }
+        if (accept && lf.getStatus() != Constants.LF_DOING) {
+            throw new BizException(ResultCode.BAD_REQUEST, "仅可同意进行中的失物认领");
         }
         int affected = claimMapper.updateStatusIfPending(claimId, accept ? 1 : 2);
         if (affected == 0) {
@@ -265,13 +272,17 @@ public class LostFoundService {
     }
 
     /** 标记完成（仅本人） */
+    @Transactional
     public void finish(Long userId, Long id) {
-        LostFound lf = lostFoundMapper.selectById(id);
+        LostFound lf = lostFoundMapper.selectByIdForUpdate(id);
         if (lf == null) {
             throw new BizException(ResultCode.NOT_FOUND, "信息不存在");
         }
         if (!lf.getUserId().equals(userId)) {
             throw new BizException(ResultCode.FORBIDDEN, "只能操作自己发布的信息");
+        }
+        if (lf.getStatus() != Constants.LF_DOING || claimMapper.countActiveForUpdate(id) > 0) {
+            throw new BizException(ResultCode.BAD_REQUEST, "请先处理认领申请或等待申请人确认找回");
         }
         lf.setStatus(Constants.LF_DONE);
         lostFoundMapper.updateById(lf);

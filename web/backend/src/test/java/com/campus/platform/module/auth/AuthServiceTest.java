@@ -24,6 +24,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -117,8 +118,24 @@ class AuthServiceTest {
         }
 
         @Test
+        void register_shouldReportDuplicateWhenAnotherRequestInsertsFirst() {
+            when(userMapper.selectCount(any())).thenReturn(0L);
+            when(userMapper.insert(any(User.class))).thenThrow(new DuplicateKeyException("uk_student_no"));
+            RegisterDTO dto = new RegisterDTO();
+            dto.setStudentNo("2021001");
+            dto.setNickname("小明");
+            dto.setPassword("123456");
+
+            assertThatThrownBy(() -> authService.register(dto))
+                    .isInstanceOf(BizException.class)
+                    .hasMessage("该学号已注册");
+            verify(jwtUtils, never()).generate(any(), eq(Constants.ROLE_STUDENT));
+        }
+
+        @Test
         @DisplayName("登录成功应更新最后登录时间并签发 student JWT")
         void login_shouldSucceedAndUpdateLastLoginTime() {
+            when(userMapper.recordLogin(eq(1L), anyString(), any())).thenReturn(1);
             User user = buildUser(1L, "2021001", encoder.encode("123456"), Constants.USER_STATUS_NORMAL);
             when(userMapper.selectOne(any())).thenReturn(user);
             when(jwtUtils.generate(eq(1L), eq(Constants.ROLE_STUDENT))).thenReturn("TOKEN_STUDENT");
@@ -131,7 +148,7 @@ class AuthServiceTest {
 
             assertThat(vo.getToken()).isEqualTo("TOKEN_STUDENT");
             assertThat(user.getLastLoginTime()).isNotNull();
-            verify(userMapper).updateById(user);
+            verify(userMapper).recordLogin(eq(1L), eq(user.getPassword()), any());
             // 口径校验：JWT 角色必须是 student，不能是 admin
             verify(jwtUtils, never()).generate(anyLong(), eq(Constants.ROLE_ADMIN));
         }

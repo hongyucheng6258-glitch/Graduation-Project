@@ -30,6 +30,10 @@ services:
       - ./web/backend/src/main/resources/db/2026-11-09-admin-assistant-activity-review.sql:/migrations/11-activity-review.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-12-activity-reminder.sql:/migrations/12-activity-reminder.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-12-campus-workflows.sql:/migrations/13-campus-workflows.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-12-admin-operation-log.sql:/migrations/14-admin-operation-log.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-13-temporary-password.sql:/migrations/15-temporary-password.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-13-account-recovery.sql:/migrations/16-account-recovery.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-14-agent-campus-draft.sql:/migrations/17-campus-draft.sql:ro
     command:
       - /bin/sh
       - -ec
@@ -42,6 +46,7 @@ services:
     environment:
       TZ: ${CAMPUS_TIMEZONE:-Asia/Shanghai}
       PLATFORM_CAPTCHA_ENABLED: "${CAMPUS_DOCKER_CAPTCHA_ENABLED:-true}"
+      PLATFORM_SMS_CONSOLE_ENABLED: "${CAMPUS_SMS_CONSOLE_ENABLED:-false}"
       CAMPUS_AGENT_ENABLED: "${CAMPUS_AGENT_ENABLED:-true}"
       CAMPUS_ADMIN_ASSISTANT_ENABLED: "${CAMPUS_ADMIN_ASSISTANT_ENABLED:-true}"
       CAMPUS_AGENT_RAG_ENABLED: "${CAMPUS_AGENT_RAG_ENABLED:-true}"

@@ -27,6 +27,9 @@
             </template>
             <el-button v-if="row.status === 1" size="small" type="primary" :aria-expanded="handoffId === row.id"
               @click="handoffId = handoffId === row.id ? null : row.id">交接安排</el-button>
+            <el-button v-if="row.status === 1 || (role === 'buyer' && row.status === 0)"
+              size="small" :loading="cancellingId === row.id" :disabled="cancellingId !== null"
+              @click="cancel(row)">取消预约</el-button>
             <el-button v-if="row.status === 3 && !row.reviewed" size="small" type="warning" @click="openReview(row)">评价</el-button>
             <span v-if="row.status === 3 && row.reviewed" class="done-text">已评价</span>
           </div>
@@ -59,8 +62,8 @@ import { useRoute } from 'vue-router'
 import EmptyBox from '../../components/EmptyBox.vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import IdleHandoffPanel from './IdleHandoffPanel.vue'
-import { ElMessage } from 'element-plus'
-import { myAppointments, handleAppoint, reviewAppoint } from '../../api/idle'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { myAppointments, handleAppoint, cancelAppoint, reviewAppoint } from '../../api/idle'
 
 const route = useRoute()
 // 从消息中心跳转时通过 ?role=buyer/seller 指定初始标签
@@ -73,6 +76,7 @@ const total = ref(0)
 const loading = ref(false)
 const reviewVisible = ref(false)
 const reviewing = ref(false)
+const cancellingId = ref(null)
 const currentRow = ref(null)
 const reviewForm = reactive({ score: 5, content: '' })
 
@@ -103,6 +107,22 @@ async function handle(row, accept) {
   await handleAppoint(row.id, accept)
   ElMessage.success(accept ? '已接受预约' : '已拒绝预约')
   load()
+}
+
+async function cancel(row) {
+  cancellingId.value = row.id
+  try {
+    const confirmed = await ElMessageBox.confirm('取消后原交接安排将失效，并通知对方。', '取消预约', {
+      confirmButtonText: '确认取消', cancelButtonText: '保留预约', type: 'warning'
+    }).then(() => true, () => false)
+    if (!confirmed) return
+    await cancelAppoint(row.id)
+    if (handoffId.value === row.id) handoffId.value = null
+    ElMessage.success('预约已取消')
+    await load()
+  } finally {
+    cancellingId.value = null
+  }
 }
 
 function openReview(row) {

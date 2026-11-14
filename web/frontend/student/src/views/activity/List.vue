@@ -1,10 +1,10 @@
 <template>
   <div v-if="loadError" class="load-error" role="alert"><span>{{ loadError }}</span><button type="button" class="text-btn" @click="load">重新加载</button></div>
   <div class="activity-page">
-    <section class="collection-head activity">
+    <section class="collection-head">
       <div>
         <h1>校园活动</h1>
-        <p>查找讲座、社团活动、运动和志愿服务。</p>
+        <p>发现热爱，也遇见一起参与的人。</p>
       </div>
       <div class="header-actions">
         <RouterLink class="btn" to="/activity/my-signup">我的报名</RouterLink>
@@ -17,45 +17,58 @@
 
     <!-- 工具栏 -->
     <div class="toolbar">
-      <el-input v-model="keyword" class="activity-search" placeholder="搜索活动…" aria-label="搜索活动" clearable @keyup.enter="search" @clear="search">
-        <template #append><el-button @click="search">搜索</el-button></template>
-      </el-input>
       <div class="chips" aria-label="活动分类">
         <button type="button" class="chip" :class="{ active: !category }" :aria-pressed="!category" @click="selectCategory('')">全部</button>
         <button v-for="c in categories" :key="c" type="button" class="chip" :class="{ active: category === c }"
           :aria-pressed="category === c" @click="selectCategory(c)">{{ c }}</button>
       </div>
+      <el-input v-model="keyword" class="activity-search" placeholder="搜索活动…" aria-label="搜索活动" clearable @keyup.enter="search" @clear="search">
+        <template #append><el-button @click="search">搜索</el-button></template>
+      </el-input>
     </div>
 
     <div class="result-heading">
       <h2>{{ category || '活动列表' }}</h2>
       <span v-if="!loading && !loadError">{{ total }} 场活动</span>
     </div>
-    <div class="activity-grid" v-loading="loading">
+    <div class="grid photo-feed activity-grid" v-loading="loading">
       <RouterLink
         v-for="a in list"
         :key="a.id"
-        class="event-card"
+        class="event-card photo-feed__link"
         :to="{ name: 'ActivityDetail', params: { id: a.id } }"
       >
-        <div class="item-body">
-          <time v-if="a.startTime" class="event-date" :datetime="a.startTime">{{ formatEventTime(a.startTime) }}</time>
-          <h3>{{ a.title }}</h3>
-          <div class="item-meta">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span>{{ a.location || '地点待定' }}</span>
-          </div>
-          <div class="event-tags">
-            <span class="event-status" :class="{ open: statusText(a) === '报名中' }">{{ statusText(a) }}</span>
-            <span class="event-category">{{ a.category || '校园活动' }}</span>
-            <span>{{ a.memberCount || 0 }}{{ a.maxMembers ? ' / ' + a.maxMembers : '' }} 人报名</span>
-          </div>
-          <p v-if="a.signupDeadline" class="deadline">报名截止 <time :datetime="a.signupDeadline">{{ formatEventTime(a.signupDeadline, false) }}</time></p>
-        </div>
-        <div class="event-cover">
-          <img v-if="firstContentImage(a)" :src="firstContentImage(a)" alt="" class="event-cover-img" loading="lazy"
+        <div class="content-photo event-cover">
+          <img v-if="firstContentImage(a)" :src="firstContentImage(a)" alt="" class="content-photo__image" loading="lazy"
             @error="onImageError($event, 'activity')" />
-          <WtEventArt v-else :item="a" />
+          <WtEventArt v-else :item="a" aria-hidden="true" />
+          <span class="event-status content-photo__badge" :class="{ open: statusText(a) === '报名中' }">
+            {{ statusText(a) }}
+          </span>
+        </div>
+        <div class="item-body">
+          <h3 :title="a.title">{{ a.title }}</h3>
+          <div class="event-details">
+            <div class="item-meta event-date">
+              <el-icon aria-hidden="true"><Calendar /></el-icon>
+              <time v-if="a.startTime" :datetime="a.startTime">{{ formatEventTime(a.startTime) }}</time>
+              <span v-else>时间待定</span>
+            </div>
+            <div class="item-meta">
+              <el-icon aria-hidden="true"><Location /></el-icon>
+              <span :title="a.location">{{ a.location || '地点待定' }}</span>
+            </div>
+          </div>
+          <footer class="event-footer">
+            <div class="event-tags">
+              <span class="event-category" :title="a.category">{{ a.category || '校园活动' }}</span>
+              <span class="event-count"><strong>{{ a.memberCount || 0 }}{{ a.maxMembers ? ' / ' + a.maxMembers : '' }}</strong> 人报名</span>
+            </div>
+            <p v-if="a.signupDeadline" class="deadline">
+              <span>截止</span>
+              <time :datetime="a.signupDeadline">{{ formatEventTime(a.signupDeadline, false) }}</time>
+            </p>
+          </footer>
         </div>
       </RouterLink>
     </div>
@@ -105,6 +118,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Calendar, Location } from '@element-plus/icons-vue'
 import EmptyBox from '../../components/EmptyBox.vue'
 import WtEventArt from '../../components/wt/WtEventArt.vue'
 import { firstContentImage, onImageError } from '../../utils/content-assets.mjs'
@@ -206,10 +220,16 @@ watch(
 </script>
 
 <style scoped>
-.activity-page { max-width: 1152px; margin-inline: auto; }
+.activity-page { min-width: 0; container-type: inline-size; }
 .collection-head, .header-actions, .result-heading { display: flex; align-items: center; gap: 12px; }
-.collection-head { justify-content: space-between; flex-wrap: wrap; margin-bottom: 20px; }
-.collection-head h1 { margin: 0 0 4px; color: var(--ink); font-size: clamp(25px, 3vw, 33px); }
+.collection-head {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding-bottom: 20px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.collection-head h1 { margin: 0 0 6px; color: var(--ink); font-size: clamp(26px, 3vw, 36px); line-height: 1.18; }
 .collection-head p { margin: 0; color: var(--ink-3); font-size: var(--fs-sm); }
 .header-actions { flex-wrap: wrap; gap: 8px; }
 .header-actions .btn { min-height: 36px; padding: 0 12px; }
@@ -218,16 +238,13 @@ watch(
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px 16px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
+  justify-content: space-between;
+  gap: 10px 16px;
 }
 .activity-search { width: min(100%, 270px); }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
-  padding: 5px 11px;
+  padding: 6px 13px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
@@ -238,51 +255,73 @@ watch(
 }
 .chip:hover { border-color: var(--brand-line); }
 .chip.active { background: var(--brand-soft); color: var(--brand-strong); border-color: var(--brand-line); font-weight: 650; }
-.result-heading { justify-content: space-between; margin: 19px 0 9px; }
+.result-heading { justify-content: space-between; align-items: baseline; margin: 22px 0 12px; }
 .result-heading h2 { margin: 0; color: var(--ink); font-size: 18px; }
 .result-heading span { color: var(--ink-3); font-size: 12px; }
-.activity-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.rec-card:hover { border-color: var(--brand-line); box-shadow: var(--shadow-sm); }
+.rec-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.activity-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.activity-grid .event-cover { aspect-ratio: 16 / 9; }
+@media (max-width: 900px) { .activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .activity-grid { grid-template-columns: minmax(0, 1fr); } }
 .event-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 132px;
-  align-items: center;
-  gap: 13px;
-  padding: 12px;
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 13px;
+  border-radius: var(--r-md);
   background: var(--surface);
-  color: var(--ink);
-  text-decoration: none;
   transition: border-color .18s, box-shadow .18s;
 }
-.event-card:hover, .rec-card:hover { border-color: var(--brand-line); box-shadow: var(--shadow-sm); }
-.event-card:focus-visible, .rec-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
-.item-body { min-width: 0; overflow-wrap: anywhere; }
-.event-date { display: block; color: var(--brand-strong); font-size: 12px; font-weight: 650; }
+.event-card:hover { border-color: var(--brand-line); box-shadow: var(--shadow-sm); }
+.item-body { display: flex; flex: 1; flex-direction: column; gap: 10px; min-width: 0; padding: 12px 14px; }
 .item-body h3 {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  min-block-size: 2.8em;
   overflow: hidden;
-  margin: 3px 0 5px;
-  font-size: 16px;
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: var(--ink);
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.4;
 }
-.item-meta { display: flex; align-items: center; gap: 5px; color: var(--ink-2); font-size: 12px; }
-.item-meta svg { width: 13px; height: 13px; flex: none; color: var(--ink-3); }
-.item-meta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.event-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 7px; margin-top: 8px; color: var(--ink-3); font-size: 11px; }
-.event-status { padding: 2px 6px; border-radius: 5px; color: var(--ink-2); background: var(--surface-2); font-weight: 650; }
+.event-card:hover h3 { color: var(--brand-strong); }
+.event-details { display: grid; gap: 4px; }
+.item-meta { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--ink-2); font-size: 12px; line-height: 1.45; }
+.item-meta .el-icon { flex: none; color: var(--ink-3); font-size: 14px; }
+.item-meta :is(span, time) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.event-date { color: var(--brand-strong); font-weight: 600; }
+.event-date .el-icon { color: inherit; }
+.event-status { padding: 3px 10px; border-radius: var(--r-pill); color: var(--ink-2); background: var(--surface); font-size: var(--fs-cap); font-weight: 650; }
 .event-status.open { background: var(--success-soft); color: var(--success); }
-.deadline { margin: 4px 0 0; color: var(--ink-3); font-size: 11px; }
-.event-cover { position: relative; width: 100%; aspect-ratio: 1; border-radius: 9px; overflow: hidden; background: var(--surface-2); }
-.event-cover-img, .event-cover :deep(.event-art) { position: absolute; inset: 0; width: 100%; height: 100%; }
-.event-cover-img { display: block; object-fit: contain; }
-.event-cover :deep(.event-art) { aspect-ratio: auto; }
-.event-cover :deep(.event-art-copy) { padding: 8px; }
-.event-cover :deep(.event-art-copy strong) { font-size: 14px; }
+.event-footer { padding-top: 9px; border-top: 1px solid var(--line); }
+.event-tags { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.event-category {
+  min-width: 0;
+  padding: 2px 7px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.event-count, .deadline { color: var(--ink-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+.event-count { white-space: nowrap; }
+.event-count strong { color: var(--ink-2); }
+.deadline { display: flex; flex-wrap: wrap; gap: 2px 5px; margin: 6px 0 0; line-height: 1.4; }
+.event-cover :deep(.event-art) { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; }
+.event-cover :deep(.event-art-copy) { display: none; }
+.event-cover :deep(.event-graphic) {
+  inset: 50% auto auto 50%;
+  width: 72%;
+  height: 72%;
+  translate: -50% -50%;
+}
 .page-bar { justify-content: center; margin-top: 13px; }
 
 .rec-block { margin: 22px 0; padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
@@ -298,18 +337,22 @@ watch(
 .rec-cat, .rec-meta { color: var(--ink-3); font-size: var(--fs-cap); }
 .rec-reason { margin: 5px 0; font-size: var(--fs-cap); color: var(--ink-2); }
 
-@media (max-width: 899px) {
-  .activity-grid { grid-template-columns: minmax(0, 1fr); }
+@container (max-width: 1020px) {
+  .activity-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .rec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 540px) {
-  .collection-head { margin-bottom: 13px; }
-  .toolbar { padding: 9px; gap: 8px; }
+@container (max-width: 640px) {
+  .activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .collection-head { padding-bottom: 13px; margin-bottom: 13px; }
   .activity-search { width: 100%; }
-  .chip { padding: 4px 9px; }
-  .event-card { grid-template-columns: minmax(0, 1fr) clamp(84px, 25vw, 108px); gap: 8px; padding: 9px; }
-  .item-body h3 { font-size: 14px; }
-  .event-tags { margin-top: 5px; }
+  .chip { padding: 4px 10px; }
+  .result-heading { margin-top: 16px; }
+  .item-body { gap: 8px; padding: 9px; }
+  .item-body h3 { font-size: 15px; }
+  .item-meta { gap: 4px; font-size: 11px; }
+  .item-meta .el-icon { font-size: 12px; }
+  .event-tags { gap: 4px; }
+  .event-category { padding-inline: 5px; }
   .rec-grid { grid-template-columns: minmax(0, 1fr); }
 }
 </style>

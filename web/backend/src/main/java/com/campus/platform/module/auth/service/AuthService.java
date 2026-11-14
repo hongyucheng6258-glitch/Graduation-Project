@@ -20,6 +20,7 @@ import com.campus.platform.module.user.mapper.UserMapper;
 import com.campus.platform.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -60,7 +61,12 @@ public class AuthService {
         // 新用户默认状态从系统配置读取（0正常 1禁用），管理端可在线调整
         user.setStatus(systemConfigHolder.getInt("user_default_status", Constants.USER_STATUS_NORMAL));
         user.setLastLoginTime(LocalDateTime.now());
-        userMapper.insert(user);
+        try {
+            userMapper.insert(user);
+        } catch (DuplicateKeyException e) {
+            // Two requests can both pass the precheck. The unique index decides which insert wins.
+            throw new BizException(ResultCode.BAD_REQUEST, "该学号已注册");
+        }
         return buildLoginVO(user);
     }
 
@@ -77,8 +83,15 @@ public class AuthService {
         if (Constants.USER_STATUS_BANNED == user.getStatus()) {
             throw new BizException(ResultCode.FORBIDDEN, "账号已被禁用，请联系管理员");
         }
-        user.setLastLoginTime(LocalDateTime.now());
-        userMapper.updateById(user);
+        LocalDateTime now = LocalDateTime.now(java.time.ZoneOffset.UTC);
+        if (user.getTemporaryPasswordExpiresAt() != null && !now.isBefore(user.getTemporaryPasswordExpiresAt())) {
+            throw new BizException(ResultCode.BAD_REQUEST, "临时密码已过期，请联系管理员重新重置");
+        }
+        var loginTime = LocalDateTime.now();
+        if (userMapper.recordLogin(user.getId(), user.getPassword(), loginTime) != 1) {
+            throw new BizException(ResultCode.BAD_REQUEST, "账号状态已变化，请重新登录");
+        }
+        user.setLastLoginTime(loginTime);
         return buildLoginVO(user);
     }
 
@@ -108,8 +121,22 @@ public class AuthService {
         return passwordEncoder.encode(raw);
     }
 
+    public LoginVO loginVerifiedPhone(User user) {
+        if (user.getTemporaryPasswordExpiresAt() != null) {
+            throw new BizException(ResultCode.BAD_REQUEST, "请先通过手机号找回密码，再登录");
+        }
+        var now = LocalDateTime.now();
+        if (userMapper.recordLogin(user.getId(), user.getPassword(), now) != 1) {
+            throw new BizException(ResultCode.BAD_REQUEST, "账号状态已变化，请重试");
+        }
+        user.setLastLoginTime(now);
+        return buildLoginVO(user);
+    }
+
     private LoginVO buildLoginVO(User user) {
-        String token = jwtUtils.generate(user.getId(), Constants.ROLE_STUDENT);
-        return new LoginVO(token, user);
+        LocalDateTime expiresAt = user.getTemporaryPasswordExpiresAt();
+        String token = expiresAt == null ? jwtUtils.generate(user.getId(), Constants.ROLE_STUDENT)
+                : jwtUtils.generate(user.getId(), Constants.ROLE_STUDENT, expiresAt.toInstant(java.time.ZoneOffset.UTC));
+        return new LoginVO(token, user, expiresAt != null);
     }
 }

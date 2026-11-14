@@ -57,6 +57,14 @@ public class ActivitySignupActions implements AgentToolSource {
 
     @Transactional
     public Confirmation confirm(Long uid, String id) {
+        return confirm(uid, id, null);
+    }
+
+    @Transactional
+    public Confirmation confirm(Long uid, String id, String remark) {
+        if (remark != null && remark.length() > 255) {
+            throw new BizException(ResultCode.BAD_REQUEST, "备注最多 255 字");
+        }
         if (uid == null) {
             throw new BizException(ResultCode.UNAUTHORIZED);
         }
@@ -70,17 +78,17 @@ public class ActivitySignupActions implements AgentToolSource {
                         rs.getString(4), rs.getBoolean(5)), id, uid).stream().findFirst()
                 .orElseThrow(() -> new BizException(ResultCode.NOT_FOUND, "未找到报名确认卡"));
         if ("SUBMITTED".equals(row.state())) {
-            return new Confirmation(row.activityId(), row.title(), "SUBMITTED");
+            return new Confirmation(row.activityId(), row.title(), "SUBMITTED", row.remark());
         }
         if (!row.current()) {
             throw new BizException(ResultCode.BAD_REQUEST, "确认卡已过期，请重新请求报名");
         }
 
         var dto = new SignupDTO();
-        dto.setRemark(row.remark());
+        dto.setRemark(remark == null ? row.remark() : remark.strip());
         activities.signup(uid, row.activityId(), dto);
-        jdbc.update("UPDATE agent_action SET state='SUBMITTED',confirmed_at=NOW() WHERE id=?", id);
-        return new Confirmation(row.activityId(), row.title(), "SUBMITTED");
+        jdbc.update("UPDATE agent_action SET state='SUBMITTED',confirmed_at=NOW(),remark=? WHERE id=?", dto.getRemark(), id);
+        return new Confirmation(row.activityId(), row.title(), "SUBMITTED", dto.getRemark());
     }
 
     Card card(Long uid, String id) {
@@ -94,6 +102,6 @@ public class ActivitySignupActions implements AgentToolSource {
 
     private record Action(long activityId, String title, String remark, String state, boolean current) {}
     public record Proposal(String id, long activityId, String activityTitle, String remark, LocalDateTime expiresAt) {}
-    public record Confirmation(long activityId, String activityTitle, String status) {}
+    public record Confirmation(long activityId, String activityTitle, String status, String remark) {}
     public record Card(String id, long activityId, String activityTitle, String remark, LocalDateTime expiresAt, String result) {}
 }

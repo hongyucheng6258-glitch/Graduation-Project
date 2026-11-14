@@ -1,10 +1,15 @@
 <template>
   <div v-if="loadError" class="load-error" role="alert"><span>{{ loadError }}</span><button type="button" class="text-btn" @click="load">重新加载</button></div>
-  <WtPageHeader title="闲置互换" subtitle="把闲置分享给同学，交换你需要的好物。">
+  <WtPageHeader title="闲置互换" subtitle="让闲置遇见新主人，也让物品继续被需要。">
     <el-button type="primary" @click="goPublish">＋ 发布闲置</el-button>
   </WtPageHeader>
+  <WtFeature image="/images/generated-idle-items.webp" title="好物不闲置"
+    description="支持分类搜索、收藏、预约与交接安排。双方确认后，再留下真实评价。">
+    <a class="btn primary" href="#idle-list">浏览闲置物品</a>
+    <RouterLink class="btn" to="/idle/appointments">我的预约</RouterLink>
+  </WtFeature>
 
-  <div class="idle-list">
+  <div id="idle-list" class="idle-list">
     <!-- 搜索栏 + 分类筛选 -->
     <div class="toolbar">
       <el-input v-model="keyword" placeholder="搜索闲置物品…" clearable style="width: 280px" @keyup.enter="search" @clear="search">
@@ -14,8 +19,6 @@
         <button type="button" class="chip" :class="{ active: !category }" :aria-pressed="!category" @click="selectCategory('')">全部</button>
         <button v-for="c in categories" :key="c" type="button" class="chip" :class="{ active: category === c }" :aria-pressed="category === c" @click="selectCategory(c)">{{ c }}</button>
       </div>
-      <div class="spacer" />
-      <el-button @click="$router.push('/idle/appointments')">我的预约</el-button>
     </div>
 
     <!-- 卡片网格 -->
@@ -49,6 +52,7 @@
 <script setup>
 import { useListState } from '../../utils/list-state'
 import { ref, watch } from 'vue'
+import WtFeature from '../../components/wt/WtFeature.vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -139,9 +143,7 @@ watch(
   flex-wrap: wrap;
   align-items: center;
 }
-.spacer {
-  flex: 1;
-}
+#idle-list { scroll-margin-top: 84px; }
 .chips {
   display: flex;
   gap: 8px;

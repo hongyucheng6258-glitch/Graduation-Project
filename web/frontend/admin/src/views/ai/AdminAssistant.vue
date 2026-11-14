@@ -94,6 +94,7 @@
 </template>
 
 <script setup>
+import { useAdminPendingStore } from '../../store/adminPending'
 import { computed, onMounted, ref } from 'vue'
 import AssistantShell from '../../../../shared/assistant/AssistantShell.vue'
 import AssistantBubble from '../../../../shared/assistant/AssistantBubble.vue'
@@ -104,6 +105,8 @@ import { formatTime as formatActivityTime } from '../../utils/date'
 import AdminAssistantOperations from './AdminAssistantOperations.vue'
 import { askAssistant, assistantCapabilities, assistantHistory, assistantReviews, assistantSessions,
   confirmAssistantReview, prepareAssistantReview } from '../../api/assistant'
+
+const pending = useAdminPendingStore()
 
 const audit = (type, label) => ({ label, route: { path: `/audit/${type}`, query: { view: 'pending' } } })
 const destinations = {
@@ -257,6 +260,7 @@ async function confirmReview(card) {
   error.value = ''
   try {
     const receipt = await confirmAssistantReview(card.id)
+    pending.refresh({ afterMutation: true })
     Object.assign(card, receipt)
     const key = recordKey(card.kind, card.itemId)
     for (const turn of turns.value) {

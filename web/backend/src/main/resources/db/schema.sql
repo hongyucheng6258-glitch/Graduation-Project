@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `gender`          TINYINT      NOT NULL DEFAULT 0 COMMENT '0未知 1男 2女',
   `bio`             VARCHAR(255) DEFAULT NULL COMMENT '个人简介',
   `status`          TINYINT      NOT NULL DEFAULT 0 COMMENT '0正常 1禁用',
+  `temporary_password_expires_at` DATETIME DEFAULT NULL COMMENT '临时密码到期时间 UTC',
   `last_login_time` DATETIME     DEFAULT NULL COMMENT '最近登录时间（今日活跃口径）',
   `create_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -98,6 +99,25 @@ CREATE TABLE IF NOT EXISTS `ai_call_log` (
   KEY `idx_user` (`user_id`),
   KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI调用日志表';
+
+CREATE TABLE IF NOT EXISTS `admin_operation_log` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `admin_id` BIGINT NOT NULL,
+  `admin_username` VARCHAR(64) NOT NULL,
+  `module` VARCHAR(32) NOT NULL,
+  `action` VARCHAR(32) NOT NULL,
+  `target_type` VARCHAR(32) DEFAULT NULL,
+  `target_id` BIGINT DEFAULT NULL,
+  `source` VARCHAR(16) NOT NULL,
+  `succeeded` TINYINT(1) NOT NULL,
+  `result_code` INT NOT NULL,
+  `duration_ms` BIGINT NOT NULL,
+  `create_time` DATETIME NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_admin_op_target` (`target_id`, `module`, `id`),
+  KEY `idx_admin_op_actor` (`admin_username`, `id`),
+  KEY `idx_admin_op_time` (`create_time`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='管理端操作日志';
 
 -- AI配置键值表（改后即时生效，免重启）
 CREATE TABLE IF NOT EXISTS `ai_config` (

@@ -4,7 +4,13 @@
     <WtPageHeader title="学习搭子" subtitle="按学科与目标找到一起自习的人。">
       <el-button type="primary" @click="goPublish">＋ 发布需求</el-button>
     </WtPageHeader>
-    <div class="toolbar">
+    <WtFeature image="/images/generated-study-partner.webp" title="今天的难题，一起解。" reverse
+      description="学习搭子、互助问答、代码纠错与错题复习。">
+      <a class="btn primary" href="#partner-results">匹配学习搭子</a>
+      <RouterLink class="btn" to="/qa">互助问答</RouterLink>
+      <RouterLink class="btn" to="/ai/chat">向 AI 提问</RouterLink>
+    </WtFeature>
+    <div id="partner-results" class="toolbar">
       <div class="subject-filters" aria-label="学科快捷搜索">
         <button v-for="subject in subjects" :key="subject" type="button" class="subject-filter"
           :aria-pressed="activeKeyword === subject" @click="selectSubject(subject)">{{ subject || '全部' }}</button>
@@ -47,6 +53,7 @@
 <script setup>
 import { useListState } from '../../utils/list-state'
 import { ref } from 'vue'
+import WtFeature from '../../components/wt/WtFeature.vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -117,6 +124,7 @@ load()
 </script>
 
 <style scoped>
+#partner-results { scroll-margin-top: 84px; }
 .partner-list { max-width: 1100px; margin-inline: auto; }
 .collection-search { width: min(100%, 290px); }
 .collection-count { margin: 0 0 7px; color: var(--ink-3); font-size: 12px; }

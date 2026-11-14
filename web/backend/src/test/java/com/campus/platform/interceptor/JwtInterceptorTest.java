@@ -41,6 +41,9 @@ class JwtInterceptorTest {
     @Mock
     private RedisUtils redisUtils;
 
+    @Mock
+    private com.campus.platform.module.user.mapper.UserMapper userMapper;
+
     @InjectMocks
     private JwtInterceptor interceptor;
 
@@ -56,6 +59,25 @@ class JwtInterceptorTest {
         MockHttpServletRequest req = new MockHttpServletRequest();
         req.addHeader("Authorization", BEARER);
         return req;
+    }
+
+    @Test
+    void temporarySessionCanOnlyChangePasswordAndIsRetiredAfterwards() throws Exception {
+        when(jwtUtils.getUid("TOKEN_X")).thenReturn(42L);
+        when(jwtUtils.getRole("TOKEN_X")).thenReturn(Constants.ROLE_STUDENT);
+        when(jwtUtils.isPasswordChangeOnly("TOKEN_X")).thenReturn(true);
+        when(userMapper.requiresPasswordChange(42L)).thenReturn(true);
+        var request = requestWithBearer();
+        request.setMethod("POST");
+        request.setRequestURI("/api/chat/ws-ticket");
+        assertThat(interceptor.preHandle(request, new MockHttpServletResponse(), new Object())).isFalse();
+
+        request.setMethod("PUT");
+        request.setRequestURI("/api/user/password");
+        assertThat(interceptor.preHandle(request, new MockHttpServletResponse(), new Object())).isTrue();
+
+        when(userMapper.requiresPasswordChange(42L)).thenReturn(false);
+        assertThat(interceptor.preHandle(request, new MockHttpServletResponse(), new Object())).isFalse();
     }
 
     // ==================== 黑名单核心行为 ====================

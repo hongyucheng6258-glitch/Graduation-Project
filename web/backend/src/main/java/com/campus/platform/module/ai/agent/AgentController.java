@@ -5,6 +5,7 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.common.UserContext;
 import com.campus.platform.module.activity.dto.ActivityPublishDTO;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -24,12 +25,13 @@ public class AgentController {
     private final ActivityPublishDrafts activityDrafts;
     private final IdlePublishDrafts idleDrafts;
     private final IdleAppointmentActions idleAppointments;
+    private final CampusPublishDrafts campusDrafts;
     private final boolean enabled;
     private final boolean ragEnabled;
 
     public AgentController(AgentService agent, ActivitySignupActions actions, ActivityPublishDrafts activityDrafts,
                            IdlePublishDrafts idleDrafts,
-                           IdleAppointmentActions idleAppointments,
+                           IdleAppointmentActions idleAppointments, CampusPublishDrafts campusDrafts,
                            @Value("${campus.agent.enabled:false}") boolean enabled,
                            @Value("${campus.agent.rag.enabled:false}") boolean ragEnabled) {
         this.agent = agent;
@@ -37,6 +39,7 @@ public class AgentController {
         this.activityDrafts = activityDrafts;
         this.idleDrafts = idleDrafts;
         this.idleAppointments = idleAppointments;
+        this.campusDrafts = campusDrafts;
         this.enabled = enabled;
         this.ragEnabled = ragEnabled;
     }
@@ -53,9 +56,9 @@ public class AgentController {
     }
 
     @PostMapping("/actions/{id}/confirm")
-    public R<ActivitySignupActions.Confirmation> confirm(@PathVariable String id) {
+    public R<ActivitySignupActions.Confirmation> confirm(@PathVariable String id, @Valid @RequestBody(required = false) ActionInput input) {
         checkEnabled();
-        return R.ok(actions.confirm(UserContext.getUid(), id));
+        return R.ok(actions.confirm(UserContext.getUid(), id, input == null ? null : input.remark()));
     }
 
     @GetMapping("/activity-drafts/{id}")
@@ -85,9 +88,16 @@ public class AgentController {
     }
 
     @PostMapping("/idle-appointments/{id}/confirm")
-    public R<IdleAppointmentActions.Card> confirmIdleAppointment(@PathVariable String id) {
+    public R<IdleAppointmentActions.Card> confirmIdleAppointment(@PathVariable String id, @Valid @RequestBody(required = false) ActionInput input) {
         checkEnabled();
-        return R.ok(idleAppointments.confirm(UserContext.getUid(), id));
+        return R.ok(idleAppointments.confirm(UserContext.getUid(), id, input == null ? null : input.remark()));
+    }
+
+    @PostMapping("/campus-drafts/{id}/confirm")
+    public R<CampusPublishDrafts.Draft> confirmCampusDraft(@PathVariable String id,
+                                                         @RequestBody JsonNode request) {
+        checkEnabled();
+        return R.ok(campusDrafts.confirm(UserContext.getUid(), id, request));
     }
 
     private void checkEnabled() {
@@ -95,6 +105,8 @@ public class AgentController {
             throw new BizException(ResultCode.AI_NOT_CONFIGURED, "新版校园向导未启用");
         }
     }
+
+    public record ActionInput(@Size(max = 255) String remark) {}
 
     public record Question(@NotBlank @Size(max = 2000) String question, Long sessionId) {}
     public record Capabilities(boolean enabled, boolean ragEnabled) {}

@@ -115,7 +115,11 @@ public class ActivityWaitlist {
                 """, state, activityId, userId, state);
     }
 
-    boolean reservedForOthers(Activity activity, long userId, long approved) {
+    boolean reservedForOthers(Activity activity, long userId) {
+        return limit(activity) > 0 && occupied(activity.getId(), now(), userId) >= limit(activity);
+    }
+
+    boolean offersFillRemainingSeats(Activity activity, long userId, long approved) {
         if (limit(activity) == 0) return false;
         return approved + holds(activity.getId(), now(), userId) >= limit(activity);
     }
@@ -162,8 +166,8 @@ public class ActivityWaitlist {
                 WHERE (w.state='OFFERED' AND w.offer_until<=?)
                    OR (w.state='WAITING' AND (a.status IN (2,3) OR a.audit_status<>1 OR a.max_members=0
                       OR a.start_time<=? OR a.end_time<=? OR a.signup_deadline<=?
-                      OR a.max_members > (SELECT COUNT(*) FROM activity_member m WHERE m.activity_id=a.id AND m.status=1)
-                         + (SELECT COUNT(*) FROM activity_waitlist q WHERE q.activity_id=a.id AND q.state IN ('OFFERED','CLAIMED'))))
+                      OR a.max_members > (SELECT COUNT(*) FROM activity_member m WHERE m.activity_id=a.id AND m.status IN (0,1))
+                         + (SELECT COUNT(*) FROM activity_waitlist q WHERE q.activity_id=a.id AND q.state='OFFERED' AND q.offer_until>NOW())))
                    OR (w.state='OFFERED' AND (a.status IN (2,3) OR a.audit_status<>1 OR a.max_members=0
                       OR a.start_time<=? OR a.end_time<=? OR a.signup_deadline<=?))
                 ORDER BY w.activity_id LIMIT 100
@@ -188,15 +192,15 @@ public class ActivityWaitlist {
     }
 
     private long occupied(long activityId, LocalDateTime now, Long exceptUser) {
-        long approved = jdbc.queryForObject("SELECT COUNT(*) FROM activity_member WHERE activity_id=? AND status=?",
-                Long.class, activityId, Constants.MEMBER_APPROVED);
-        return approved + holds(activityId, now, exceptUser);
+        long reserved = jdbc.queryForObject("SELECT COUNT(*) FROM activity_member WHERE activity_id=? AND status IN (?,?)",
+                Long.class, activityId, Constants.MEMBER_PENDING, Constants.MEMBER_APPROVED);
+        return reserved + holds(activityId, now, exceptUser);
     }
 
     private long holds(long activityId, LocalDateTime now, Long exceptUser) {
         return jdbc.queryForObject("""
                 SELECT COUNT(*) FROM activity_waitlist WHERE activity_id=?
-                AND (state='CLAIMED' OR (state='OFFERED' AND offer_until>?))
+                AND state='OFFERED' AND offer_until>?
                 AND (? IS NULL OR user_id<>?)
                 """, Long.class, activityId, now, exceptUser, exceptUser);
     }

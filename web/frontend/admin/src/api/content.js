@@ -1,4 +1,4 @@
-import request from './request'
+import request, { expireAdminSession } from './request'
 
 /** 内容管理 API */
 export function contentOff(type, id) {
@@ -16,10 +16,17 @@ export function signinReport(id) {
 /** 导出（CSV 流，不走 axios 解包） */
 function downloadCsv(url, filename) {
   const token = localStorage.getItem('admin_token')
-  return fetch('/api/admin' + url, { headers: { Authorization: `Bearer ${token}` } })
-    .then(r => {
-      if (!r.ok) throw new Error('导出失败')
-      return r.blob()
+  const authorization = token ? `Bearer ${token}` : undefined
+  return fetch('/api/admin' + url, { headers: authorization ? { Authorization: authorization } : {} })
+    .then(async response => {
+      if (response.headers.get('content-type')?.includes('application/json')) {
+        const failure = await response.json()
+        if (failure.code === 401) expireAdminSession(authorization)
+        throw new Error(failure.message || '导出失败')
+      }
+      if (response.status === 401) expireAdminSession(authorization)
+      if (!response.ok) throw new Error('导出失败')
+      return response.blob()
     })
     .then(blob => {
       const a = document.createElement('a')

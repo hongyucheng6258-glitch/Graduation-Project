@@ -45,11 +45,20 @@ public class JwtUtils {
 
     /** 生成 token */
     public String generate(Long uid, String role) {
+        return generate(uid, role, null);
+    }
+
+    public String generate(Long uid, String role, java.time.Instant expiresNoLaterThan) {
         Date now = new Date();
-        Date exp = new Date(now.getTime() + expireDays * 24 * 3600 * 1000);
+        long expiryMillis = now.getTime() + expireDays * 24 * 3600 * 1000;
+        if (expiresNoLaterThan != null) {
+            expiryMillis = Math.min(expiryMillis, expiresNoLaterThan.toEpochMilli());
+        }
+        Date exp = new Date(expiryMillis);
         return Jwts.builder()
                 .claim("uid", uid)
                 .claim("role", role)
+                .claim("password_change_only", expiresNoLaterThan == null ? null : true)
                 // 标准 iat 在部分 JWT 库中按秒序列化；保留毫秒自定义 claim，
                 // 让管理员撤销时间在同一秒重新登录时也能区分新旧令牌。
                 .claim("iat_ms", now.getTime())
@@ -66,6 +75,10 @@ public class JwtUtils {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    public boolean isPasswordChangeOnly(String token) {
+        return Boolean.TRUE.equals(parse(token).get("password_change_only", Boolean.class));
     }
 
     public Long getUid(String token) {

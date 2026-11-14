@@ -30,12 +30,16 @@ async function run(browser, request, ctx) {
   await mobilePage.waitForTimeout(2000);
   const mShot = await h.screenshot(mobilePage, '19-responsive', 'mobile-home');
   h.record(C, '移动端首页布局', 'PASS', '375x812', mShot);
-  // 移动端检查汉堡菜单或底部导航
-  const mobileNav = await mobilePage.locator('nav, .tab-bar, .bottom-nav, .mobile-nav').first().isVisible().catch(() => false);
-  h.record(C, '移动端导航可见', mobileNav ? 'PASS' : 'UNCOVERED', '未检测到底部导航元素');
+  const menu = mobilePage.getByRole('button', { name: '切换导航', exact: true });
+  await menu.click();
+  const drawer = mobilePage.getByRole('navigation', { name: '全部功能' });
+  await drawer.getByRole('link', { name: '校园活动', exact: true }).click();
+  await mobilePage.waitForURL('**/activity');
+  h.record(C, '移动端抽屉可打开并导航', await drawer.isHidden() ? 'PASS' : 'FAIL');
+  await mobilePage.goto(h.STUDENT_WEB + '/');
   // 滚动测试
   await mobilePage.mouse.wheel(0, 500);
-  await mobilePage.waitForTimeout(500);
+  await mobilePage.waitForFunction(() => window.scrollY > 0);
   const mScroll = await h.screenshot(mobilePage, '19-responsive', 'mobile-scroll');
   h.record(C, '移动端滚动正常', 'PASS', '', mScroll);
   await mobilePage.close();

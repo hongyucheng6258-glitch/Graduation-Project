@@ -58,6 +58,14 @@ public class IdleAppointmentActions implements AgentToolSource {
 
     @Transactional
     public Card confirm(Long uid, String id) {
+        return confirm(uid, id, null);
+    }
+
+    @Transactional
+    public Card confirm(Long uid, String id, String remark) {
+        if (remark != null && remark.length() > 200) {
+            throw new BizException(ResultCode.BAD_REQUEST, "留言最多 200 字");
+        }
         var row = query(uid, id, true);
         if (row == null) throw new BizException(ResultCode.NOT_FOUND, "未找到闲置预约确认卡");
         var current = row.card();
@@ -69,9 +77,9 @@ public class IdleAppointmentActions implements AgentToolSource {
             throw new BizException(ResultCode.BAD_REQUEST, "闲置条件已更新或物品已不可预约，请重新查询");
         }
         var form = new AppointDTO();
-        form.setMessage(current.remark());
+        form.setMessage(remark == null ? current.remark() : remark.strip());
         var appointment = idle.appoint(uid, current.itemId(), form);
-        jdbc.update("UPDATE agent_idle_appointment SET appointment_id=? WHERE id=?", appointment.getId(), id);
+        jdbc.update("UPDATE agent_idle_appointment SET appointment_id=?,remark=? WHERE id=?", appointment.getId(), form.getMessage(), id);
         return card(uid, id);
     }
 

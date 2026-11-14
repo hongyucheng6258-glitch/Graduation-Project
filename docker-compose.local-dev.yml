@@ -1,0 +1,10 @@
+services:
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
+  qdrant:
+    ports:
+      - "127.0.0.1:6333:6333"
+  embedding:
+    ports:
+      - "127.0.0.1:11434:11434"

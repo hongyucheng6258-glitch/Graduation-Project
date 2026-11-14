@@ -61,7 +61,7 @@ async function run(browser, request, ctx) {
     const reports = h.unwrapList(myReport);
     h.record(C, '"我的举报"记录接口存在', reportId && reports.some(r => String(r.id) === String(reportId)) ? 'PASS' : 'FAIL', `records=${reports.length}`);
   } else {
-    h.record(C, '"我的举报"记录页存在', 'UNCOVERED', 'API /report/my 不存在或不可访问，记录为缺口');
+    h.record(C, '"我的举报"记录页存在', 'FAIL', 'API /report/my 不存在或不可访问，记录为缺口');
   }
 
   // UI 截图

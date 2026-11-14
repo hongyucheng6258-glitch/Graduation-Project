@@ -14,4 +14,6 @@ public class LoginVO {
     private String token;
 
     private User userInfo;
+
+    private boolean passwordChangeRequired;
 }

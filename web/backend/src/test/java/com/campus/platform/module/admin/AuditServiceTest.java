@@ -11,6 +11,8 @@ import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.idle.entity.IdleItem;
 import com.campus.platform.module.lostfound.entity.LostFound;
 import com.campus.platform.module.post.entity.Post;
+import com.campus.platform.module.partner.entity.StudyPartner;
+import com.campus.platform.module.partner.mapper.StudyPartnerMapper;
 import com.campus.platform.module.activity.mapper.ActivityMapper;
 import com.campus.platform.module.idle.mapper.IdleItemMapper;
 import com.campus.platform.module.lostfound.mapper.LostFoundMapper;
@@ -51,6 +53,7 @@ class AuditServiceTest {
     @Mock private ActivityMapper activityMapper;
     @Mock private LostFoundMapper lostFoundMapper;
     @Mock private PostMapper postMapper;
+    @Mock private StudyPartnerMapper studyPartnerMapper;
     @Mock private MessageService messageService;
 
     @InjectMocks
@@ -227,6 +230,46 @@ class AuditServiceTest {
                     contentCaptor.capture(), anyString(), any());
             assertThat(contentCaptor.getValue()).contains("短动态").doesNotContain("...");
         }
+    }
+
+    @Test
+    void pendingLostFoundShouldNotifyOnlyForTheFirstDecision() {
+        LostFound record = new LostFound();
+        record.setId(30L);
+        record.setUserId(7L);
+        record.setTitle("学生卡");
+        record.setAuditStatus(Constants.AUDIT_PENDING);
+        when(lostFoundMapper.selectOne(any())).thenReturn(record);
+
+        auditService.pass(Constants.BIZ_LOSTFOUND, 30L, true);
+
+        assertThatThrownBy(() -> auditService.reject(Constants.BIZ_LOSTFOUND, 30L, "已处理", true))
+                .isInstanceOf(BizException.class)
+                .hasFieldOrPropertyWithValue("code", ResultCode.DUPLICATE_OPERATION.getCode());
+        assertThat(record.getAuditStatus()).isEqualTo(Constants.AUDIT_PASS);
+        verify(lostFoundMapper).updateById(record);
+        verify(messageService).send(eq(7L), anyString(), eq("审核通过"), anyString(), anyString(), any());
+        verify(messageService, never()).send(eq(7L), anyString(), eq("审核未通过"), anyString(), anyString(), any());
+    }
+
+    @Test
+    void pendingPostAndPartnerShouldRejectAlreadyReviewedRecords() {
+        Post post = new Post();
+        post.setAuditStatus(Constants.AUDIT_PASS);
+        StudyPartner partner = new StudyPartner();
+        partner.setAuditStatus(Constants.AUDIT_REJECT);
+        when(postMapper.selectOne(any())).thenReturn(post);
+        when(studyPartnerMapper.selectOne(any())).thenReturn(partner);
+
+        assertThatThrownBy(() -> auditService.reject(Constants.BIZ_POST, 40L, "已处理", true))
+                .isInstanceOf(BizException.class)
+                .hasFieldOrPropertyWithValue("code", ResultCode.DUPLICATE_OPERATION.getCode());
+        assertThatThrownBy(() -> auditService.pass(Constants.BIZ_PARTNER, 50L, true))
+                .isInstanceOf(BizException.class)
+                .hasFieldOrPropertyWithValue("code", ResultCode.DUPLICATE_OPERATION.getCode());
+        verify(postMapper, never()).updateById(post);
+        verify(studyPartnerMapper, never()).updateById(partner);
+        verify(messageService, never()).send(any(), anyString(), anyString(), anyString(), anyString(), any());
     }
 
     // ==================== 异常路由 ====================

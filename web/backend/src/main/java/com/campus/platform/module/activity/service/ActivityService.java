@@ -23,6 +23,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.platform.common.BizException;
+import com.campus.platform.utils.ListedImages;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.ResultCode;
@@ -40,6 +41,7 @@ import org.springframework.transaction.annotation.Isolation;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -136,7 +138,13 @@ public class ActivityService {
         activity.setStartTime(dto.getStartTime());
         activity.setEndTime(dto.getEndTime());
         activity.setSignupDeadline(dto.getSignupDeadline());
-        activity.setMaxMembers(dto.getMaxMembers());
+        Integer capacity = dto.getMaxMembers();
+        if (capacity != null && capacity > 0 && memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
+                .eq(ActivityMember::getActivityId, id)
+                .in(ActivityMember::getStatus, Constants.MEMBER_PENDING, Constants.MEMBER_APPROVED)) > capacity) {
+            throw new BizException(ResultCode.BAD_REQUEST, "人数上限不能小于待审批及已通过的报名人数");
+        }
+        activity.setMaxMembers(capacity);
         activity.setImages(IdleService.toJson(dto.getImages()));
         activity.setAuditStatus(Constants.AUDIT_PENDING);
         activity.setAuditReason(null);
@@ -187,6 +195,7 @@ public class ActivityService {
         ActivityDetailVO vo = new ActivityDetailVO();
         BeanUtil.copyProperties(toVO(activity), vo);
         vo.setIsOwner(isOwner);
+        vo.setSigninOpen(signinOpen(activity, LocalDateTime.now()));
         if (currentUid != null && !isOwner) {
             ActivityMember my = memberMapper.selectOne(new LambdaQueryWrapper<ActivityMember>()
                     .eq(ActivityMember::getActivityId, id)
@@ -209,9 +218,9 @@ public class ActivityService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void signup(Long userId, Long activityId, SignupDTO dto) {
         Activity activity = activityMapper.selectForUpdate(activityId);
-        long approved = checkSignAllowed(activityId, activity);
+        checkSignAllowed(activityId, activity);
         waitlist.refresh(activity);
-        if (waitlist.queued(activityId, userId) || waitlist.reservedForOthers(activity, userId, approved)) {
+        if (waitlist.queued(activityId, userId) || waitlist.reservedForOthers(activity, userId)) {
             throw new BizException(ResultCode.BAD_REQUEST, "请从候补入口操作，当前空位优先用于递补");
         }
         createSignup(userId, activity, dto);
@@ -356,17 +365,15 @@ public class ActivityService {
             throw new BizException(ResultCode.BAD_REQUEST, "活动已结束，无法审批");
         }
         waitlist.refresh(activity);
-        // 人数上限校验
+        // 兼容上线前已超量积压的待审记录，审批仍以实际通过人数为上限。
         if (approve && activity.getMaxMembers() != null && activity.getMaxMembers() > 0) {
             Long approved = memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
                     .eq(ActivityMember::getActivityId, activity.getId())
                     .eq(ActivityMember::getStatus, Constants.MEMBER_APPROVED));
             if (approved >= activity.getMaxMembers()) {
-                activity.setStatus(Constants.ACTIVITY_FULL);
-                activityMapper.updateById(activity);
                 throw new BizException(ResultCode.BAD_REQUEST, "活动人数已满");
             }
-            if (waitlist.reservedForOthers(activity, member.getUserId(), approved)) {
+            if (waitlist.offersFillRemainingSeats(activity, member.getUserId(), approved)) {
                 throw new BizException(ResultCode.BAD_REQUEST, "空位已为候补学生保留");
             }
         }
@@ -397,6 +404,15 @@ public class ActivityService {
                 Constants.BIZ_ACTIVITY, activity.getId());
     }
 
+    private boolean signinOpen(Activity activity, LocalDateTime now) {
+        return activity.getAuditStatus() == Constants.AUDIT_PASS
+                && activity.getStatus() != Constants.ACTIVITY_OFF
+                && activity.getStatus() != Constants.ACTIVITY_ENDED
+                && activity.getStartTime() != null
+                && !now.isBefore(activity.getStartTime())
+                && (activity.getEndTime() == null || now.isBefore(activity.getEndTime()));
+    }
+
     /** 发布者获取签到二维码内容（campus://signin/{id}/{token}） */
     public String signinQrCode(Long userId, Long activityId) {
         checkPublisher(userId, activityId);
@@ -411,9 +427,12 @@ public class ActivityService {
         if (!signTokenUtils.verify(dto.getActivityId(), dto.getToken())) {
             throw new BizException(ResultCode.BAD_REQUEST, "签到二维码无效");
         }
-        Activity activity = activityMapper.selectById(dto.getActivityId());
+        Activity activity = activityMapper.selectForUpdate(dto.getActivityId());
         if (activity == null) {
             throw new BizException(ResultCode.NOT_FOUND, "活动不存在");
+        }
+        if (!signinOpen(activity, LocalDateTime.now())) {
+            throw new BizException(ResultCode.BAD_REQUEST, "仅可在活动开始后、结束前签到");
         }
         ActivityMember member = memberMapper.selectOne(new LambdaQueryWrapper<ActivityMember>()
                 .eq(ActivityMember::getActivityId, dto.getActivityId())
@@ -476,7 +495,7 @@ public class ActivityService {
      * 顺序：不存在/未审核 → 已下架 → 已结束 → 报名已截止 → 已开始 → 人数已满。
      * signupDeadline 为空时，默认截止时间 = startTime（活动开始后不允许新报名）。
      */
-    private long checkSignAllowed(Long activityId, Activity activity) {
+    private void checkSignAllowed(Long activityId, Activity activity) {
         if (activity == null || activity.getAuditStatus() != Constants.AUDIT_PASS) {
             throw new BizException(ResultCode.NOT_FOUND, "活动不存在或未通过审核");
         }
@@ -494,18 +513,12 @@ public class ActivityService {
         if (activity.getStartTime() != null && !now.isBefore(activity.getStartTime())) {
             throw new BizException(ResultCode.BAD_REQUEST, "活动已开始，无法报名");
         }
-        if (activity.getMaxMembers() == null || activity.getMaxMembers() <= 0) return 0;
-        long approved = approvedCount(activityId);
-        if (approved >= activity.getMaxMembers()) {
+        if (activity.getMaxMembers() == null || activity.getMaxMembers() <= 0) return;
+        if (memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
+                .eq(ActivityMember::getActivityId, activityId)
+                .in(ActivityMember::getStatus, Constants.MEMBER_PENDING, Constants.MEMBER_APPROVED)) >= activity.getMaxMembers()) {
             throw new BizException(ResultCode.BAD_REQUEST, "活动人数已满");
         }
-        return approved;
-    }
-
-    private long approvedCount(Long activityId) {
-        return memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
-                .eq(ActivityMember::getActivityId, activityId)
-                .eq(ActivityMember::getStatus, Constants.MEMBER_APPROVED));
     }
 
     private Activity checkPublisher(Long userId, Long activityId) {
@@ -523,26 +536,38 @@ public class ActivityService {
         List<Activity> activities = page.getRecords();
         Map<Long, User> publishers = userMapper.findPublisherProfiles(
                 activities.stream().map(Activity::getUserId).distinct().toList());
-        Map<Long, Long> counts = memberMapper.approvedCounts(activities.stream().map(Activity::getId).toList());
+        var capacity = memberMapper.capacityByActivities(activities.stream().map(Activity::getId).toList());
         LocalDateTime now = LocalDateTime.now();
-        return PageResult.of(page, activity -> toVO(activity, publishers.get(activity.getUserId()),
-                counts.getOrDefault(activity.getId(), 0L), now));
+        return PageResult.of(page, activity -> {
+            var count = capacity.get(activity.getId());
+            var card = toVO(activity, publishers.get(activity.getUserId()),
+                    count == null ? 0 : count.approved(), count == null ? 0 : count.pending(), now);
+            if (Objects.equals(activity.getAuditStatus(), Constants.AUDIT_PASS)
+                    && !Objects.equals(activity.getStatus(), Constants.ACTIVITY_OFF)) {
+                card.setImageList(ListedImages.urls("activity", activity.getId(), card.getImageList()));
+                card.setImages(IdleService.toJson(card.getImageList()));
+                card.setPublisherAvatar(ListedImages.avatar(activity.getUserId(), card.getPublisherAvatar()));
+            }
+            return card;
+        });
     }
 
     private ActivityVO toVO(Activity activity) {
-        return toVO(activity, userMapper.selectById(activity.getUserId()), approvedCount(activity.getId()),
+        var count = memberMapper.capacityCounts(activity.getId());
+        return toVO(activity, userMapper.selectById(activity.getUserId()), count.approved(), count.pending(),
                 LocalDateTime.now());
     }
 
-    private ActivityVO toVO(Activity activity, User publisher, long memberCount, LocalDateTime now) {
+    private ActivityVO toVO(Activity activity, User publisher, long memberCount, long pending, LocalDateTime now) {
         ActivityVO vo = new ActivityVO();
         BeanUtil.copyProperties(activity, vo);
         vo.setImageList(IdleService.parseJson(activity.getImages()));
         vo.setPublisherNickname(publisher == null ? "" : publisher.getNickname());
         vo.setPublisherAvatar(publisher == null ? null : publisher.getAvatar());
         vo.setMemberCount(memberCount);
+        vo.setOccupiedSeats(memberCount + pending);
         // 按当前时间动态计算有效展示状态（不落库，避免时间驱动状态不一致）
-        DisplayInfo info = resolveDisplayStatus(activity, now, memberCount);
+        DisplayInfo info = resolveDisplayStatus(activity, now, memberCount + pending);
         vo.setDisplayStatus(info.status);
         vo.setDisplayStatusText(info.text);
         vo.setCanSignup(info.canSignup);
@@ -559,7 +584,7 @@ public class ActivityService {
      * </pre>
      * 报名截止时间优先用 signupDeadline；为空时默认用 startTime（活动开始后不可报名）。
      */
-    public static DisplayInfo resolveDisplayStatus(Activity activity, LocalDateTime now, long approvedCount) {
+    public static DisplayInfo resolveDisplayStatus(Activity activity, LocalDateTime now, long occupiedSeats) {
         int dbStatus = activity.getStatus() == null ? Constants.ACTIVITY_SIGNING : activity.getStatus();
         // 1. 下架（数据库硬状态优先）
         if (dbStatus == Constants.ACTIVITY_OFF) {
@@ -575,7 +600,7 @@ public class ActivityService {
         }
         // 4. 人数已满
         if (activity.getMaxMembers() != null && activity.getMaxMembers() > 0
-                && approvedCount >= activity.getMaxMembers()) {
+                && occupiedSeats >= activity.getMaxMembers()) {
             return new DisplayInfo(Constants.ACT_DISPLAY_FULL, "已满员", false, "活动人数已满");
         }
         // 5. 报名截止

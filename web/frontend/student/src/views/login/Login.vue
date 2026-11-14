@@ -12,7 +12,14 @@
         <h1>登录梧桐校园</h1>
         <span class="muted">学生端 · 学号密码登录</span>
       </div>
-      <el-form ref="formRef" :model="form" :rules="rules" size="large" @keyup.enter="submit">
+      <div class="login-modes">
+        <el-button v-if="phoneEnabled" link type="primary" @click="phoneMode = !phoneMode">
+          {{ phoneMode ? '使用学号和密码' : '手机号验证码登录' }}
+        </el-button>
+        <RouterLink to="/forgot-password">忘记密码？</RouterLink>
+      </div>
+      <PhoneAccountForm v-if="phoneMode" purpose="login" @done="finishLogin" />
+      <el-form v-else ref="formRef" :model="form" :rules="rules" size="large" @keyup.enter="submit">
         <el-form-item prop="studentNo">
           <el-input v-model="form.studentNo" placeholder="请输入学号" :prefix-icon="User" />
         </el-form-item>
@@ -24,9 +31,12 @@
             <el-input v-model="form.captchaCode"
                       :placeholder="captchaMode === 'math' ? '输入运算结果' : '4位验证码'"
                       :maxlength="captchaMode === 'math' ? 3 : 4" @keyup.enter="submit" />
-            <img v-if="captchaMode !== 'math'" class="captcha-img" :src="captchaImage"
-                 title="看不清？点击刷新" @click="loadCaptcha" />
-            <div v-else class="captcha-math" title="换一题" @click="loadCaptcha">{{ captchaExpression }}</div>
+            <button type="button" class="captcha-refresh" :class="captchaMode === 'math' ? 'captcha-math' : 'captcha-img'"
+                    :aria-label="captchaMode === 'math' ? `当前题目：${captchaExpression}。更换验证码` : '刷新图片验证码'"
+                    title="点击刷新验证码" @click="loadCaptcha" @keyup.enter.stop>
+              <span v-if="captchaMode === 'math'">{{ captchaExpression }}</span>
+              <img v-else-if="captchaImage" :src="captchaImage" alt="" />
+            </button>
           </div>
         </el-form-item>
         <el-button type="primary" class="submit" :loading="loading" @click="submit">登 录</el-button>
@@ -45,6 +55,8 @@ import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import AuthCampusShell from '../../components/auth/AuthCampusShell.vue'
 import { login, getCaptcha } from '../../api/auth'
+import PhoneAccountForm from './PhoneAccountForm.vue'
+import { phoneOptions } from '../../api/accountRecovery'
 import { useUserStore } from '../../store/user'
 
 const router = useRouter()
@@ -76,9 +88,7 @@ async function submit() {
   loading.value = true
   try {
     const res = await login(form)
-    userStore.loginSuccess(res.token, res.userInfo)
-    ElMessage.success('登录成功')
-    router.push(route.query.redirect || '/')
+    await finishLogin(res)
   } catch (e) {
     // 登录失败（验证码错误/过期/账号密码错误）自动刷新验证码
     loadCaptcha()
@@ -87,10 +97,26 @@ async function submit() {
   }
 }
 
-onMounted(loadCaptcha)
+const phoneMode = ref(false)
+const phoneEnabled = ref(false)
+async function finishLogin(result) {
+  userStore.loginSuccess(result.token, result.userInfo)
+  if (result.passwordChangeRequired) {
+    await router.replace({ name: 'TemporaryPasswordChange' })
+    return
+  }
+  ElMessage.success('登录成功')
+  const redirect = route.query.redirect
+  await router.push(typeof redirect === 'string' && /^\/(?!\/)/.test(redirect) ? redirect : '/')
+}
+onMounted(() => {
+  loadCaptcha()
+  phoneOptions().then(result => { phoneEnabled.value = result.enabled }).catch(() => {})
+})
 </script>
 
 <style scoped>
+.login-modes { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 14px; }
 .login-card { width: 100%; max-width: 400px; }
 .auth-form-head { margin-bottom: 27px; }
 .auth-form-head p { color: var(--ink-3); font-size: 13px; }
@@ -131,6 +157,9 @@ onMounted(loadCaptcha)
   user-select: none;
   transition: border-color .18s ease, box-shadow .18s ease;
 }
+.captcha-refresh { padding: 0; overflow: hidden; }
+.captcha-refresh img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.captcha-refresh:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .captcha-math:hover { border-color: var(--brand-line); box-shadow: 0 3px 10px rgba(49, 91, 184, .1), inset 0 1px 0 rgba(255, 255, 255, .8); }
 .submit { width: 100%; height: 44px; margin-top: 8px; border-radius: var(--r-pill); font-weight: 600; }
 .login-foot { text-align: center; margin-top: var(--s-5); font-size: var(--fs-sm); color: var(--ink-3); }

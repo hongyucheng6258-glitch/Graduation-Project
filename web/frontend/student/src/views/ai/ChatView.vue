@@ -48,45 +48,41 @@
         <p class="section-sub">{{ resourceLabel(resource) }}<template v-if="resource.subtitle"> · {{ resource.subtitle }}</template></p>
         <RouterLink :to="resourceRoute(resource)">{{ resource.kind === 'partner' ? '查看发布者主页' : '打开原帖' }}</RouterLink>
       </AssistantCard>
-      <AssistantCard v-for="draft in m.idleDrafts || []" :key="draft.id" class="idle-draft-card">
-        <strong>闲置发布草稿</strong>
-        <p>{{ draft.title }}</p>
-        <p v-if="draft.expectItem" class="section-sub">想换：{{ draft.expectItem }}</p>
-        <p v-if="draft.state === 'SUBMITTED'" role="status">已提交，可在我的闲置查看审核进度。</p>
-        <p v-else-if="draft.state === 'EXPIRED'" role="status">草稿已过期，请重新生成。</p>
-        <RouterLink v-else :to="{ name: 'IdlePublish', query: { draft: draft.id } }">编辑并确认发布</RouterLink>
-      </AssistantCard>
+      <PublishDraftCard v-for="(draft, index) in m.idleDrafts || []" :key="draft.id"
+        :draft="draft" kind="idle" @submitted="m.idleDrafts[index] = $event" />
       <AssistantCard v-for="appointment in m.idleAppointments || []" :key="appointment.id" class="idle-appointment-card">
         <strong>确认预约互换</strong>
         <p>{{ appointment.itemTitle }}</p>
-        <p v-if="appointment.remark" class="section-sub">留言：{{ appointment.remark }}</p>
+        <p v-if="appointment.state === 'SUBMITTED' && appointment.remark" class="section-sub">留言：{{ appointment.remark }}</p>
         <p v-if="appointment.state === 'SUBMITTED'" role="status">{{ appointmentStatus(appointment.appointmentStatus) }}</p>
         <p v-else-if="appointment.state === 'EXPIRED'" role="status">预约确认卡已过期，请重新发起。</p>
         <p v-else-if="appointment.state === 'CHANGED'" role="status">物品信息或状态已变化，请重新查询。</p>
-        <el-button v-else type="primary" :loading="appointment.sending" @click="confirmAppointment(appointment)">
-          确认预约
-        </el-button>
-      </AssistantCard>
-      <AssistantCitations :sources="m.citations" @open="openCitation" />
-      <AssistantCard v-for="draft in m.activityDrafts || []" :key="draft.id" class="activity-draft-card">
-        <strong>活动发布草稿</strong>
-        <p>{{ draft.title }}</p>
-        <p v-if="draft.location" class="section-sub">地点 {{ draft.location }}</p>
-        <template v-if="draft.state === 'SUBMITTED'">
-          <p role="status">{{ activityDraftStatus(draft.auditStatus) }}</p>
-          <p v-if="draft.auditStatus === 2 && draft.auditReason">{{ draft.auditReason }}</p>
-          <RouterLink :to="{ name: 'MySignup', query: { tab: 'published' } }">查看我的活动发布</RouterLink>
+        <template v-else>
+          <label class="action-note">预约留言
+            <el-input :model-value="appointment.editedRemark ?? appointment.remark ?? ''" type="textarea" maxlength="200"
+              :disabled="appointment.sending" @update:model-value="appointment.editedRemark = $event" />
+          </label>
+          <el-button type="primary" :loading="appointment.sending" @click="confirmAppointment(appointment)">
+            确认预约
+          </el-button>
         </template>
-        <p v-else-if="draft.state === 'EXPIRED'" role="status">草稿已过期，请重新生成。</p>
-        <RouterLink v-else :to="{ name: 'ActivityPublish', query: { draft: draft.id } }">编辑并提交活动</RouterLink>
       </AssistantCard>
+      <CampusDraftCard v-for="(draft, index) in m.campusDrafts || []" :key="draft.id"
+        :draft="draft" @submitted="m.campusDrafts[index] = $event" />
+      <AssistantCitations :sources="m.citations" @open="openCitation" />
+      <PublishDraftCard v-for="(draft, index) in m.activityDrafts || []" :key="draft.id"
+        :draft="draft" kind="activity" @submitted="m.activityDrafts[index] = $event" />
       <AssistantCard v-for="action in m.actions || []" :key="action.id">
         <strong>确认活动报名</strong>
         <p>{{ action.activityTitle }}</p>
-        <p v-if="action.remark" class="section-sub">备注：{{ action.remark }}</p>
+        <p v-if="action.result === 'SUBMITTED' && action.remark" class="section-sub">备注：{{ action.remark }}</p>
         <p v-if="action.result === 'SUBMITTED'" role="status">报名已提交，等待审核。</p>
         <p v-else-if="action.result === 'EXPIRED'" role="status">确认卡已过期，请重新发起报名。</p>
         <template v-else>
+          <label class="action-note">报名备注
+            <el-input :model-value="action.editedRemark ?? action.remark ?? ''" type="textarea" maxlength="255"
+              :disabled="action.sending" @update:model-value="action.editedRemark = $event" />
+          </label>
           <SignupConflictNotice :activity-id="action.activityId" @checking="action.checkingConflicts = $event" />
           <el-button type="primary" :loading="action.sending" :disabled="action.checkingConflicts" @click="confirmAction(action)">
             确认提交报名
@@ -98,7 +94,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MoreFilled } from '@element-plus/icons-vue'
@@ -107,6 +103,8 @@ import AssistantBubble from '../../../../shared/assistant/AssistantBubble.vue'
 import AssistantCard from '../../../../shared/assistant/AssistantCard.vue'
 import AssistantCitations from '../../../../shared/assistant/AssistantCitations.vue'
 import { renderMarkdown } from '../../utils/markdown'
+import CampusDraftCard from './CampusDraftCard.vue'
+import PublishDraftCard from './PublishDraftCard.vue'
 import IdleGuideCards from '../../components/IdleGuideCards.vue'
 import SignupConflictNotice from '../activity/components/SignupConflictNotice.vue'
 import WtEmptyState from '../../components/wt/WtEmptyState.vue'
@@ -120,7 +118,7 @@ import { handleAuthExpired } from '../../utils/request-navigation'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const tab = ref('chat')
+const tab = ref(route.query.mode === 'guide' ? 'guide' : 'chat')
 const sessions = ref([])
 const currentSession = ref(null)
 const messages = ref([])
@@ -180,12 +178,13 @@ onMounted(async () => {
   try { capabilities.value = await aiApi.agentCapabilities() } catch { /* 旧版后端继续使用原问答 */ }
   await loadSessions()
   const q = route.query.q
-  if (q) {
-    question.value = String(q)
+  if (typeof q === 'string' && q.trim()) {
+    question.value = q
     await send()
   }
 })
 
+let openingPublishGuide = false
 watch(tab, () => {
   cancelStream()
   viewRequest += 1
@@ -197,7 +196,7 @@ watch(tab, () => {
   messages.value = []
   pdfDoc.value = null
   pdfIndex.value = null
-  loadSessions()
+  if (!openingPublishGuide) loadSessions()
 })
 
 async function loadSessions() {
@@ -266,6 +265,7 @@ async function switchSession(s) {
       idleSearch: m.attachments?.idleSearch,
       idleDrafts: m.attachments?.idleDrafts,
       activityDrafts: m.attachments?.activityDrafts,
+      campusDrafts: m.attachments?.campusDrafts,
       idleAppointments: m.attachments?.idleAppointments,
       resources: m.attachments?.resources,
       actions: m.attachments?.actions,
@@ -331,6 +331,13 @@ function askQuick(q) {
 async function send() {
   const q = question.value.trim()
   if (!q || asking.value || switching.value) return
+  if (tab.value === 'chat' && capabilities.value.enabled
+      && /^(?:请|能不能|可以|能|我想|我要|帮我|我想让你|给我|你能|帮忙|\s)*(?:发布|发起|举办|组织|上架).{0,30}(?:活动|闲置|读书会|分享会|讲座|比赛|二手)/.test(q)) {
+    openingPublishGuide = true
+    tab.value = 'guide'
+    await nextTick()
+    openingPublishGuide = false
+  }
   if (tab.value === 'pdf' && !pdfDoc.value) {
     ElMessage.warning('请先上传PDF课件')
     return
@@ -415,6 +422,7 @@ async function send() {
       msg.idleSearch = answer?.idleSearch
       msg.idleDrafts = answer?.idleDrafts
       msg.activityDrafts = answer?.activityDrafts
+      msg.campusDrafts = answer?.campusDrafts
       msg.idleAppointments = answer?.idleAppointments
       msg.resources = answer?.resources
       msg.actions = answer?.actions
@@ -540,8 +548,9 @@ async function confirmAction(action) {
   if (action.sending || action.checkingConflicts || action.result === 'SUBMITTED') return
   action.sending = true
   try {
-    const result = await aiApi.confirmAgentAction(action.id)
+    const result = await aiApi.confirmAgentAction(action.id, action.editedRemark)
     action.result = result.status
+    action.remark = result.remark ?? action.remark
   } catch (e) {
     ElMessage.error(e.message || '报名未能提交')
   } finally {
@@ -570,7 +579,7 @@ async function confirmAppointment(appointment) {
   if (appointment.sending) return
   appointment.sending = true
   try {
-    Object.assign(appointment, await aiApi.confirmIdleAppointment(appointment.id))
+    Object.assign(appointment, await aiApi.confirmIdleAppointment(appointment.id, appointment.editedRemark))
   } catch (e) {
     ElMessage.error(e.message || '预约未能提交')
   } finally {
@@ -615,9 +624,7 @@ function scrollBottom() {
   assistantShell.value?.scrollToBottom()
 }
 
-function activityDraftStatus(status) {
-  return ['活动已提交，等待审核。', '活动已审核通过。', '活动审核未通过。'][status] || '活动已提交。'
-}
+
 </script>
 
 <style scoped>
@@ -635,4 +642,5 @@ function activityDraftStatus(status) {
 .pdf-tip { font-size: 13px; color: var(--ink-3); }
 .s-more { color: var(--ink-3); cursor: pointer; }
 .s-more:hover { color: var(--ink); }
+.action-note { display: grid; gap: 5px; margin: 10px 0; font-size: 13px; color: var(--ink-2); }
 </style>

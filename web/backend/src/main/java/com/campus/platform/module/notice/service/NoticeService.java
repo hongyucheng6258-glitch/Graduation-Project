@@ -6,6 +6,8 @@ import com.campus.platform.module.notice.entity.Notice;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.platform.common.BizException;
+import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.utils.ListedImages;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.ResultCode;
@@ -73,6 +75,14 @@ public class NoticeService {
                 .eq(LostFound::getStatus, Constants.LF_DOING)
                 .orderByDesc(LostFound::getId)
                 .last("LIMIT 3")));
+        vo.getNotices().forEach(row -> row.setCover(ListedImages.url(row.getCover(),
+                "/api/media/notice/" + row.getId() + "/0")));
+        vo.getActivities().forEach(row -> row.setImages(compact("activity", row.getId(), row.getImages())));
+        vo.getIdleItems().forEach(row -> row.setImages(compact("idle", row.getId(), row.getImages())));
+        vo.getLostFounds().forEach(row -> row.setImages(compact("lostfound", row.getId(), row.getImages())));
         return vo;
+    }
+    private String compact(String resource, long id, String images) {
+        return IdleService.toJson(ListedImages.urls(resource, id, IdleService.parseJson(images)));
     }
 }

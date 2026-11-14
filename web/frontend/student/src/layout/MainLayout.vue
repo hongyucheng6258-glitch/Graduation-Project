@@ -1,13 +1,14 @@
 <template>
   <div class="app">
     <!-- ===================== 移动端抽屉导航 ===================== -->
-    <aside id="student-navigation" class="sidebar student-drawer" :class="{ open: drawerOpen }"
-      :inert="!drawerOpen" :aria-hidden="!drawerOpen" @keydown.esc.stop.prevent="closeNavigation">
+    <aside id="student-navigation" ref="drawer" class="sidebar student-drawer" :class="{ open: drawerOpen }"
+      :role="drawerOpen ? 'dialog' : undefined" :aria-modal="drawerOpen || undefined" aria-label="校园导航"
+      @keydown.tab="cycleNavigationFocus" :inert="!drawerOpen" :aria-hidden="!drawerOpen" @keydown.esc.stop.prevent="closeNavigation">
       <div class="drawer-brand">
-        <a class="brand" @click="go('/')">
+        <RouterLink class="brand" to="/" @click="closeNavigation">
           <span class="brand-symbol" v-html="BRAND_MARK"></span>
           <span><b>梧桐校园</b></span>
-        </a>
+        </RouterLink>
         <button ref="drawerClose" class="icon-btn mobile-menu" aria-label="关闭导航" @click="closeNavigation">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
@@ -21,7 +22,7 @@
             :to="item.to"
             class="nav-link"
             :class="{ active: isActive(item.to) }"
-            @click="drawerOpen = false"
+            @click="closeNavigation"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" v-html="ICONS[item.icon]"></svg>
             {{ item.label }}
@@ -29,7 +30,7 @@
         </template>
       </nav>
       <div class="sidebar-bottom">
-        <router-link class="user-chip" :to="userStore.isLoggedIn ? '/profile' : '/login'">
+        <router-link class="user-chip" @click="closeNavigation" :to="userStore.isLoggedIn ? '/profile' : '/login'">
           <WtAvatar :name="userStore.userInfo?.nickname || '梧'" :src="userStore.userInfo?.avatar" size="sm" />
           <span>
             <b>{{ userStore.isLoggedIn ? (userStore.userInfo?.nickname || '校园用户') : '未登录' }}</b>
@@ -38,10 +39,12 @@
         </router-link>
       </div>
     </aside>
-    <button v-if="drawerOpen" class="drawer-scrim" aria-label="收起导航" @click="closeNavigation"></button>
+    <Transition name="drawer-scrim">
+      <div v-if="drawerOpen" class="drawer-scrim" aria-hidden="true" @click="closeNavigation"></div>
+    </Transition>
 
     <!-- ===================== 主区 ===================== -->
-    <div class="main">
+    <div class="main" :inert="drawerOpen || undefined">
       <header class="campus-header">
         <div class="header-inner">
           <button ref="drawerToggle" class="icon-btn mobile-menu" aria-label="切换导航"
@@ -49,10 +52,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
 
-          <a class="brand" @click="go('/')">
-            <span class="brand-symbol" v-html="BRAND_MARK"></span>
-            <span><b>梧桐校园</b></span>
-          </a>
+          <RouterLink class="brand header-brand" to="/" aria-label="梧桐校园首页">
+            <span class="header-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span><b>梧桐校园</b><small>WUTONG CAMPUS</small></span>
+          </RouterLink>
 
           <nav class="desktop-nav" aria-label="校园导航">
             <router-link
@@ -63,7 +66,6 @@
               :class="{ active: isActive(item.to) }"
             >
               {{ item.label }}
-              <span v-if="item.ai" class="nav-ai-dot" aria-hidden="true"></span>
             </router-link>
           </nav>
 
@@ -144,8 +146,8 @@
         <div class="footer-links">
           <span>AI Campus · 毕业设计项目</span>
           <RouterLink class="text-btn" to="/draw-guess">你画我猜</RouterLink>
-          <a class="text-btn" @click="go('/maintenance')">页面导航</a>
-          <a class="text-btn" @click="go('/maintenance')">帮助与反馈</a>
+          <RouterLink class="text-btn" to="/notice">校园公告</RouterLink>
+          <RouterLink class="text-btn" to="/qa">互助问答</RouterLink>
         </div>
       </footer>
     </div>
@@ -170,6 +172,27 @@ const chatStore = useChatStore()
 const drawerOpen = ref(false)
 const drawerToggle = ref(null)
 const drawerClose = ref(null)
+const drawer = ref(null)
+const drawerViewport = window.matchMedia('(max-width: 900px)')
+
+function cycleNavigationFocus(event) {
+  const items = Array.from(drawer.value?.querySelectorAll('a[href], button:not([disabled])') || [])
+    .filter(item => item.tabIndex >= 0 && item.getClientRects().length)
+  const edge = event.shiftKey ? items[0] : items.at(-1)
+  if (event.target !== edge) return
+  event.preventDefault()
+  const next = event.shiftKey ? items.at(-1) : items[0]
+  next?.focus()
+}
+
+function closeOnDesktop(event) {
+  if (!event.matches && drawerOpen.value) closeNavigation()
+}
+
+watch(() => route.fullPath, () => {
+  if (drawerOpen.value) closeNavigation()
+})
+onMounted(() => drawerViewport.addEventListener('change', closeOnDesktop))
 
 async function openNavigation() {
   drawerOpen.value = true
@@ -178,9 +201,11 @@ async function openNavigation() {
 }
 
 async function closeNavigation() {
+  if (!drawerOpen.value) return
   drawerOpen.value = false
   await nextTick()
-  drawerToggle.value?.focus()
+  if (drawerViewport.matches) drawerToggle.value?.focus()
+  else document.querySelector('.header-brand')?.focus()
 }
 const keyword = ref('')
 const searchType = ref('all')
@@ -223,9 +248,7 @@ const desktopNav = [
   { to: '/lostfound', label: '失物招领' },
   { to: '/partner', label: '学习搭子' },
   { to: '/qa', label: '互助问答' },
-  { to: '/social', label: '动态广场' },
-  { to: '/ai/chat', label: 'AI 学习', ai: true },
-  { to: '/chat', label: '私信' }
+  { to: '/social', label: '动态广场' }
 ]
 
 const navGroups = [
@@ -332,6 +355,7 @@ watch(
 
 window.addEventListener('auth-expired', handleAuthExpired)
 onUnmounted(() => {
+  drawerViewport.removeEventListener('change', closeOnDesktop)
   window.removeEventListener('auth-expired', handleAuthExpired)
   window.removeEventListener('click', onBellDocClick)
   messageStore.stopPolling()
@@ -345,20 +369,22 @@ onUnmounted(() => {
 
 /* ===================== V2 顶部导航 ===================== */
 .campus-header {
-  height: 72px;
-  background: var(--surface);
+  height: 70px;
+  background: color-mix(in srgb, var(--paper) 82%, transparent);
+  backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--line);
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 15;
 }
 .header-inner {
   height: 100%;
-  max-width: 1320px;
-  padding: 0 24px;
+  max-width: 1240px;
+  padding: 0 20px;
   margin: auto;
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 18px;
 }
 .brand {
   display: inline-flex;
@@ -413,15 +439,20 @@ onUnmounted(() => {
   background: var(--brand);
   border-radius: 4px;
 }
-.nav-ai-dot {
+.header-mark {
+  display: grid;
+  grid-template-columns: repeat(2, 8px);
+  gap: 3px;
+  padding: 7px;
+  border-radius: 8px;
   background: var(--brand);
-  width: 5px;
-  height: 5px;
-  position: absolute;
-  right: -8px;
-  top: 23px;
-  border-radius: 50%;
 }
+.header-mark i { width: 8px; height: 8px; background: var(--brand-ink); }
+.header-mark i:nth-child(2) { opacity: .7; }
+.header-mark i:nth-child(3) { opacity: .45; }
+.header-mark i:nth-child(4) { opacity: .85; }
+.header-brand b { display: block; font-size: 17px; line-height: 1.2; letter-spacing: .03em; }
+.header-brand small { display: block; color: var(--ink-3); font-size: 8px; letter-spacing: .08em; }
 .top-actions {
   display: flex;
   align-items: center;
@@ -525,13 +556,13 @@ onUnmounted(() => {
 
 /* ===================== 内容与页脚 ===================== */
 .content {
-  max-width: 1320px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 24px 24px 25px;
+  padding: 24px 20px 44px;
   min-height: calc(100vh - 260px);
 }
 .footer {
-  margin-top: 54px;
+  margin-top: 42px;
   padding-top: 24px;
   border-top: 1px solid var(--line);
   display: flex;
@@ -563,7 +594,7 @@ onUnmounted(() => {
   flex-direction: column;
   z-index: 40;
   transform: translateX(-100%);
-  transition: transform .2s var(--ease-out);
+  transition: transform .24s var(--ease-out);
   box-shadow: 15px 0 50px oklch(25% 0.04 265 / .12);
 }
 .student-drawer { display: flex; }
@@ -612,6 +643,12 @@ onUnmounted(() => {
   z-index: 35;
   backdrop-filter: blur(3px);
 }
+.drawer-scrim-enter-active, .drawer-scrim-leave-active { transition: opacity .24s var(--ease-out); }
+.drawer-scrim-enter-from, .drawer-scrim-leave-to { opacity: 0; }
+.drawer-scrim-leave-active { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .sidebar, .drawer-scrim-enter-active, .drawer-scrim-leave-active { transition: none; }
+}
 .mobile-menu { display: none; }
 
 /* ===================== 响应式 ===================== */
@@ -623,7 +660,11 @@ onUnmounted(() => {
   .header-search { display: none; }
   .search-link { display: inline-grid; }
 }
-@media (max-width: 1100px) {
+@media (min-width: 1600px) {
+  .content { padding-top: 32px; }
+}
+@media (max-width: 900px) {
+  .campus-header { height: 64px; }
   .mobile-menu { display: inline-grid; }
   .desktop-nav { display: none; }
   .brand b { font-size: 20px; }
@@ -638,7 +679,7 @@ onUnmounted(() => {
   .header-inner { padding: 0 17px; gap: 9px; }
   .header-inner > .brand { gap: 7px; }
   .header-inner .brand-symbol { height: 29px; width: 29px; }
-  .header-inner .brand b { font-size: 20px; }
+  .header-inner .brand b { font-size: 16px; }
   .header-inner > .mobile-menu { min-width: 25px; padding: 4px; margin-right: 2px; }
   .top-actions { gap: 6px; }
   .header-publish { width: 34px; min-height: 34px; padding: 0; justify-content: center; }
@@ -646,7 +687,7 @@ onUnmounted(() => {
   .header-publish svg { width: 15px; }
   .header-avatar { padding-left: 0; border-left: 0; }
   .top-actions .icon-btn { min-width: 30px; min-height: 32px; }
-  .content { padding: 16px 20px 24px; }
+  .content { padding: 16px 12px 34px; }
   .footer { flex-direction: column; gap: 21px; }
   .footer-links { font-size: 11px; gap: 14px; width: 100%; }
   .footer-links > span { font-size: 10px; }

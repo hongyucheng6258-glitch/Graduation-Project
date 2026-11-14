@@ -22,6 +22,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
 import com.campus.platform.common.BizException;
+import com.campus.platform.utils.ListedImages;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.ResultCode;
@@ -113,7 +114,7 @@ public class PostService {
             vo.setImageList(images);
             User u = userMap.get(p.getUserId());
             vo.setNickname(u == null ? "" : u.getNickname());
-            vo.setAvatar(u == null ? null : u.getAvatar());
+            vo.setAvatar(u == null ? null : compactImages ? ListedImages.avatar(u.getId(), u.getAvatar()) : u.getAvatar());
             vo.setLiked(likedMap.getOrDefault(p.getId(), false));
             vo.setFavorited(favoritedMap.getOrDefault(p.getId(), false));
             return vo;

@@ -74,6 +74,10 @@ public class DrawGuessSessionRegistry {
         return onlineUserIds(roomId).size();
     }
 
+    public void closeUserSessions(Long userId) {
+        sessionsByRoom.keySet().forEach(roomId -> closeUserSessions(roomId, userId));
+    }
+
     public void closeUserSessions(Long roomId, Long userId) {
         for (WebSocketSession session : sessions(roomId)) {
             if (!userId.equals(userIdOf(session))) continue;

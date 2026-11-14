@@ -57,6 +57,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/auth/register",
                         "/api/auth/login",
                         "/api/auth/captcha",
+                        "/api/auth/phone/**",
+                        "/api/auth/recovery/**",
                         "/api/assets/**",
                         "/error",
                         "/favicon.ico"

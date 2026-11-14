@@ -81,12 +81,16 @@ export function agentCapabilities() {
   return request.get('/ai/agent/capabilities', { silent: true })
 }
 
+export function confirmCampusDraft(id, data) {
+  return request.post(`/ai/agent/campus-drafts/${id}/confirm`, data, { silent: true, timeout: 120000 })
+}
+
 export function agentAsk(question, sessionId, signal) {
   return request.post('/ai/agent/ask', { question, sessionId }, { silent: true, timeout: 40000, signal })
 }
 
-export function confirmAgentAction(id) {
-  return request.post(`/ai/agent/actions/${id}/confirm`, null, { silent: true })
+export function confirmAgentAction(id, remark) {
+  return request.post(`/ai/agent/actions/${id}/confirm`, { remark }, { silent: true })
 }
 
 export function loadActivityDraft(id) {
@@ -105,8 +109,8 @@ export function confirmIdleDraft(id, form) {
   return request.post(`/ai/agent/idle-drafts/${encodeURIComponent(id)}/confirm`, form, { silent: true, timeout: 65000 })
 }
 
-export function confirmIdleAppointment(id) {
-  return request.post(`/ai/agent/idle-appointments/${encodeURIComponent(id)}/confirm`, null, { silent: true })
+export function confirmIdleAppointment(id, remark) {
+  return request.post(`/ai/agent/idle-appointments/${encodeURIComponent(id)}/confirm`, { remark }, { silent: true })
 }
 
 export function indexPdf(pdfId, rebuild = false) {

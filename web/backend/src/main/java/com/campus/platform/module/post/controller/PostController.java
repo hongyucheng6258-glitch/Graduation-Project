@@ -41,7 +41,7 @@ public class PostController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(defaultValue = "false") boolean compactImages) {
+            @RequestParam(defaultValue = "true") boolean compactImages) {
         UserContext.CurrentUser current = UserContext.get();
         Long uid = current == null ? null : current.uid();
         return R.ok(postService.list(uid, keyword, pageNum, pageSize, compactImages));

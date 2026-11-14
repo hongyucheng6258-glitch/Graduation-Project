@@ -1,8 +1,13 @@
 <template>
-  <div class="admin-shell">
+  <div class="admin-shell" :class="{ 'sidebar-collapsed': collapsed }">
+    <div v-if="drawerOpen" class="sidebar-backdrop" aria-hidden="true" @click="closeDrawer()" />
     <!-- ===================== 深色侧栏 ===================== -->
-    <aside class="sidebar">
-      <RouterLink to="/dashboard" class="brand" aria-label="梧桐校园 · 后台">
+    <aside id="admin-sidebar" ref="sidebar" class="sidebar" :class="{ 'drawer-open': drawerOpen }"
+      :role="drawerOpen ? 'dialog' : undefined" :aria-modal="drawerOpen || undefined"
+      :aria-label="drawerOpen ? '管理导航' : undefined">
+      <button v-if="drawerOpen" ref="closeButton" type="button" class="icon-btn drawer-close"
+        aria-label="关闭管理导航" @click="closeDrawer()">×</button>
+      <RouterLink to="/dashboard" class="brand" @click="closeDrawer()" aria-label="梧桐校园 · 后台">
         <span class="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 40 40" fill="currentColor" focusable="false">
             <path d="M4 5h13a3 3 0 0 1 3 3v12H8a4 4 0 0 1-4-4Z" />
@@ -11,7 +16,7 @@
             <path d="M23 23h13v13H23Z" opacity=".3" />
           </svg>
         </span>
-        <b class="brand-name">梧桐校园 · 后台</b>
+        <span class="brand-name"><b>梧桐校园 · 后台</b><small>CAMPUS OPERATIONS</small></span>
       </RouterLink>
 
       <nav class="side-nav" aria-label="管理导航">
@@ -19,18 +24,19 @@
           <h2 class="nav-group-label">{{ group.label }}</h2>
           <RouterLink
             v-for="item in group.items"
-            :key="item.to"
-            :to="item.to"
+            :key="item.name"
+            :to="{ name: item.name }"
             class="nav-item"
-            :class="{ active: isActive(item.to) }"
-            :aria-current="isActive(item.to) ? 'page' : undefined"
-            :aria-label="item.label"
-            :title="item.label"
+            @click="closeDrawer()"
+            :class="{ active: isActive(item.name) }"
+            :aria-current="isActive(item.name) ? 'page' : undefined"
+            :aria-label="item.meta.title"
+            :title="item.meta.title"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              aria-hidden="true" focusable="false" v-html="ICONS[item.icon]"></svg>
-            <span>{{ item.label }}</span>
-            <em v-if="item.countKey && counts[item.countKey] > 0" class="nav-count">{{ counts[item.countKey] }}</em>
+              aria-hidden="true" focusable="false" v-html="ICONS[item.meta.menu.icon]"></svg>
+            <span>{{ item.meta.title }}</span>
+            <em v-if="item.meta.menu.countKey && pending.counts?.[item.meta.menu.countKey] > 0" class="nav-count">{{ pending.counts?.[item.meta.menu.countKey] }}</em>
           </RouterLink>
         </div>
       </nav>
@@ -45,19 +51,15 @@
     </aside>
 
     <!-- ===================== 主区 ===================== -->
-    <div class="main">
+    <div class="main" :inert="drawerOpen || undefined">
       <header class="topbar">
-        <nav class="crumbs" aria-label="面包屑">
-          <ol class="crumb-list" role="list">
-            <li v-for="(crumb, index) in breadcrumbs" :key="crumb.label">
-              <span v-if="index" class="sep" aria-hidden="true">›</span>
-              <RouterLink v-if="crumb.to" class="crumb-label" :to="crumb.to">{{ crumb.label }}</RouterLink>
-              <span v-else class="crumb-label" :aria-current="index === breadcrumbs.length - 1 ? 'page' : undefined">
-                {{ crumb.label }}
-              </span>
-            </li>
-          </ol>
-        </nav>
+        <button ref="toggleButton" type="button" class="icon-btn" aria-label="切换管理导航"
+          aria-controls="admin-sidebar" :aria-expanded="narrow ? drawerOpen : !collapsed" @click="toggleSidebar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <AdminBreadcrumb :breadcrumbs="breadcrumbs" />
         <form class="topbar-search" role="search" aria-label="顶部全局搜索" @submit.prevent="onGlobalSearch">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
           <input ref="searchRef" v-model="keyword" type="search" maxlength="80" aria-label="搜索用户、内容或工单 ID"
@@ -71,11 +73,24 @@
           <button class="icon-btn" title="切换主题" @click="toggleTheme">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
           </button>
-          <button class="icon-btn" title="待办通知" @click="goNotice">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-            <span v-if="countError" class="badge-dot retry" title="待办数加载失败，点击重试" @click.stop="loadCounts">!</span>
-            <span v-else class="badge-dot">{{ totalPending }}</span>
-          </button>
+          <el-dropdown trigger="click" placement="bottom-end" @command="openPendingQueue">
+            <button type="button" class="icon-btn" aria-label="待办通知">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 0 4.6 0"/></svg>
+              <span v-if="pending.failed" class="badge-dot retry" aria-label="待办数更新失败">!</span>
+              <span v-else-if="pending.total !== null" class="badge-dot">{{ pending.total }}</span>
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item v-for="queue in queues" :key="queue.key" :command="queue.to">
+                  <span class="pending-menu-label">{{ queue.label }}</span>
+                  <span class="pending-menu-count">{{ pending.counts ? pending.counts[queue.key] ?? 0 : '—' }}</span>
+                </el-dropdown-item>
+                <el-dropdown-item v-if="pending.failed" divided command="retry" :disabled="pending.loading">
+                  重试更新待办数
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           <button class="icon-btn" title="退出" @click="logout">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
           </button>
@@ -90,11 +105,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '../store/admin'
-import { statsPendingCounts } from '../api/stats'
-import { matchesNavigationPath } from './adminSidebarNavigation.mjs'
+import { useAdminPendingStore } from '../store/adminPending'
+import { adminRoutes } from '../router'
+import AdminBreadcrumb from './AdminBreadcrumb.vue'
+import { adminBreadcrumbs, adminMenu, pendingQueues } from './adminNavigation.mjs'
 import { searchKeyword } from '../utils/searchQuery.mjs'
 
 const router = useRouter()
@@ -102,9 +119,38 @@ const route = useRoute()
 const adminStore = useAdminStore()
 const keyword = ref('')
 const searchRef = ref()
-const counts = ref({})
-const countError = ref(false)
+const pending = useAdminPendingStore()
+const queues = pendingQueues(adminRoutes)
 let countTimer = null
+const media = window.matchMedia('(max-width: 780px)')
+const narrow = ref(media.matches)
+const collapsed = ref(false)
+const drawerOpen = ref(false)
+const sidebar = ref()
+const toggleButton = ref()
+const closeButton = ref()
+
+function toggleSidebar() {
+  if (!narrow.value) {
+    collapsed.value = !collapsed.value
+    return
+  }
+  drawerOpen.value = true
+  nextTick(() => closeButton.value?.focus())
+}
+
+function closeDrawer() {
+  if (!drawerOpen.value) return
+  drawerOpen.value = false
+  nextTick(() => toggleButton.value?.focus())
+}
+
+function updateViewport(event) {
+  narrow.value = event.matches
+  if (!event.matches) closeDrawer()
+}
+
+watch(() => route.fullPath, closeDrawer)
 watch(() => route.query.q, q => {
   if (route.name === 'AdminSearch') keyword.value = searchKeyword(q)
 }, { immediate: true })
@@ -121,92 +167,8 @@ const ICONS = {
   log: '<path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/>'
 }
 
-const auditTypes = [
-  { key: 'activity', icon: 'audit', to: '/audit/activity', label: '活动审核', countKey: 'activity' },
-  { key: 'idle', icon: 'audit', to: '/audit/idle', label: '闲置审核', countKey: 'idle' },
-  { key: 'lostfound', icon: 'audit', to: '/audit/lostfound', label: '失物招领审核', countKey: 'lostfound' },
-  { key: 'post', icon: 'audit', to: '/audit/post', label: '动态审核', countKey: 'post' },
-  { key: 'partner', icon: 'audit', to: '/audit/partner', label: '搭子审核', countKey: 'partner' }
-]
-
-const navGroups = [
-  {
-    label: '概览',
-    items: [
-      { to: '/dashboard', label: '数据看板', icon: 'dashboard' },
-      { to: '/assistant', label: '管理智能助手', icon: 'spark' }
-    ]
-  },
-  {
-    label: '内容审核',
-    items: [
-      ...auditTypes,
-      { to: '/ai/audit', label: 'AI 内容审核', icon: 'spark', countKey: 'ai' }
-    ]
-  },
-  {
-    label: '内容管理',
-    items: [
-      { to: '/content', label: '内容管理', icon: 'log' }
-    ]
-  },
-  {
-    label: '用户与社区',
-    items: [
-      { to: '/user', label: '用户管理', icon: 'users' },
-      { to: '/report', label: '举报处理', icon: 'warn', countKey: 'report' }
-    ]
-  },
-  {
-    label: '系统',
-    items: [
-      { to: '/notice', label: '系统公告', icon: 'bell' },
-      { to: '/ai/config', label: 'AI 配置', icon: 'gear' },
-      { to: '/ai/logs', label: '调用日志', icon: 'log' },
-      { to: '/system/config', label: '系统配置', icon: 'gear', superOnly: true },
-      { to: '/system', label: '管理员账号', icon: 'admin', superOnly: true }
-    ]
-  }
-]
-
-const visibleGroups = computed(() =>
-  navGroups
-    .map((g) => ({ ...g, items: g.items.filter((m) => !m.superOnly || adminStore.isSuper) }))
-    .filter((g) => g.items.length > 0)
-)
-
-const breadcrumbs = computed(() => {
-  const title = route.meta.title || '管理后台'
-  if (route.name === 'Dashboard') return [{ label: title }]
-
-  const trail = [{ label: '首页', to: '/dashboard' }]
-  const searchQ = searchKeyword(route.query.searchQ)
-  if (searchQ && route.query.record) {
-    const target = route.query.searchTarget
-    trail.push({ label: '搜索结果', to: {
-      name: 'AdminSearch',
-      query: { q: searchQ, scope: route.query.searchScope, pages: route.query.searchPages },
-      hash: typeof target === 'string' && /^result-[a-z]+-[1-9]\d*$/.test(target) ? `#${target}` : ''
-    } })
-  }
-  const path = route.path.replace(/\/$/, '')
-  for (const group of visibleGroups.value) {
-    const item = group.items.find((entry) => matchesNavigationPath(entry.to, path))
-    if (!item) continue
-
-    if (group.label !== '概览' && group.label !== item.label) trail.push({ label: group.label })
-    if (path === item.to) return [...trail, { label: item.label }]
-
-    trail.push({ label: item.label, to: item.to })
-    break
-  }
-
-  if (route.name === 'NoticeEdit') {
-    const editing = route.params.id || (typeof route.query.draft === 'string' && route.query.draft)
-    return [...trail, { label: editing ? '编辑公告' : '新建公告' }]
-  }
-  return [...trail, { label: title }]
-})
+const visibleGroups = computed(() => adminMenu(adminRoutes, adminStore.isSuper, adminStore.can))
+const breadcrumbs = computed(() => adminBreadcrumbs(route, adminRoutes))
 
 const adminAccount = computed(() => adminStore.adminInfo?.username || adminStore.adminInfo?.nickname || '')
 
@@ -216,14 +178,8 @@ const roleText = computed(() => {
   return { super: '超级管理员', audit: '审核员' }[role] || role || '管理员'
 })
 
-const totalPending = computed(() => {
-  // 待办角标 = 各审核类型 + 举报（互斥业务项）；ai 复核是待审内容的子集，不累加避免重复计数
-  const keys = ['activity', 'idle', 'lostfound', 'post', 'partner', 'report']
-  return keys.reduce((a, k) => a + (Number(counts.value[k]) || 0), 0)
-})
-
-function isActive(to) {
-  return matchesNavigationPath(to, route.path)
+function isActive(name) {
+  return name === (route.meta.activeMenu || route.name)
 }
 
 function onGlobalSearch() {
@@ -244,6 +200,21 @@ function logout() {
 }
 
 function onKeydown(e) {
+  if (drawerOpen.value) {
+    if (e.key === 'Escape') closeDrawer()
+    if (e.key === 'Tab') {
+      const links = sidebar.value.querySelectorAll('button, a[href]')
+      const first = links[0]
+      const last = links[links.length - 1]
+      const boundary = e.shiftKey ? first : last
+      if (document.activeElement === boundary) {
+        e.preventDefault()
+        const target = e.shiftKey ? last : first
+        target.focus()
+      }
+    }
+    return
+  }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault()
     if (searchRef.value?.offsetParent) searchRef.value.focus()
@@ -252,50 +223,26 @@ function onKeydown(e) {
   }
 }
 
-function goNotice() {
-  // 按待办数排序的跳转优先级（counts 含 report/ai）。
-  // 路由使用 router 内部路径（base=/admin/ 由 createWebHistory 统一处理），不得再拼 /admin 前缀。
-  const order = [
-    { k: 'report', to: '/report' },
-    { k: 'activity', to: '/audit/activity' },
-    { k: 'idle', to: '/audit/idle' },
-    { k: 'lostfound', to: '/audit/lostfound' },
-    { k: 'post', to: '/audit/post' },
-    { k: 'partner', to: '/audit/partner' },
-    { k: 'ai', to: '/ai/audit' },
-  ]
-  const top = order.reduce((best, it) =>
-    (Number(counts.value[it.k]) || 0) > (Number(counts.value[best.k]) || 0) ? it : best, order[0])
-  if (Number(counts.value[top.k]) > 0) {
-    router.push(top.to)
-  } else {
-    // 无待办时进入举报中心（含各分类待办入口）
-    router.push('/report')
-  }
-}
-
-async function loadCounts() {
-  try {
-    const data = await statsPendingCounts()
-    counts.value = data || {}
-    countError.value = ''
-  } catch (e) {
-    // 接口失败：保留上次计数并进入可重试失败态，不能静默显示成 0 条
-    countError.value = true
-  }
+function openPendingQueue(target) {
+  if (target === 'retry') pending.refresh()
+  else router.push(target)
 }
 
 onMounted(() => {
   const saved = localStorage.getItem('admin_theme')
   if (saved) document.documentElement.dataset.theme = saved
-  loadCounts()
+  adminStore.loadSession().catch(() => {})
+  pending.refresh()
+  media.addEventListener('change', updateViewport)
   window.addEventListener('keydown', onKeydown)
-  // 待办数定时刷新（举报/审核处置后红点实时更新）
-  countTimer = window.setInterval(loadCounts, 30000)
+  // 定时同步其他管理员处理的待办。
+  countTimer = window.setInterval(() => pending.refresh(), 30000)
 })
 onUnmounted(() => {
+  media.removeEventListener('change', updateViewport)
   window.removeEventListener('keydown', onKeydown)
   if (countTimer) window.clearInterval(countTimer)
+  pending.clear()
 })
 </script>
 
@@ -323,10 +270,14 @@ onUnmounted(() => {
   flex: none;
   align-items: center;
   gap: 10px;
-  padding: 22px 20px 18px;
+  min-height: 72px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--side-line);
 }
-.brand-mark { width: 32px; height: 32px; flex: none; color: #fff; }
-.brand-name { color: #fff; font-size: 1.15rem; letter-spacing: .5px; white-space: nowrap; }
+.brand-mark { width: 33px; height: 33px; padding: 7px; border-radius: 9px; background: var(--side-active); flex: none; color: #fff; }
+.brand-name { color: #fff; font-size: 16px; letter-spacing: .5px; white-space: nowrap; }
+.brand-name b, .brand-name small { display: block; }
+.brand-name small { color: var(--side-ink-3); font-size: 10px; letter-spacing: .08em; }
 .side-nav { flex: 1; min-height: 0; overflow: auto; padding: 6px 12px; }
 .nav-group { margin: 16px 0 6px; }
 .nav-group-label {
@@ -342,10 +293,11 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   margin: 2px 0;
-  padding: 10px;
+  min-height: 42px;
+  padding: 9px 11px;
   border-radius: var(--r-sm);
   color: var(--side-ink);
-  font-size: .9375rem;
+  font-size: 14px;
   white-space: nowrap;
 }
 .nav-item svg { width: 17px; height: 17px; flex: none; }
@@ -395,17 +347,10 @@ onUnmounted(() => {
   gap: 18px;
   min-height: 64px;
   padding: 8px 28px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--line);
 }
-.crumbs { min-width: 0; font-size: var(--fs-sm); color: var(--ink-3); }
-.crumb-list { display: flex; flex-wrap: wrap; gap: 2px 8px; margin: 0; padding: 0; list-style: none; }
-.crumb-list li { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
-.crumb-label { padding-block: 3px; }
-.crumbs a { color: var(--brand-strong); text-decoration: none; }
-.crumbs a:hover, .crumbs a:focus-visible { text-decoration: underline; }
-.crumbs [aria-current="page"] { color: var(--ink); font-weight: 650; }
-.crumbs .sep { color: var(--ink-3); }
 .topbar-search { display: flex; flex: 1; max-width: 330px; min-width: 0; margin-left: auto; position: relative; }
 .topbar-search svg {
   position: absolute; left: 12px; top: 50%; width: 16px; height: 16px;
@@ -448,18 +393,28 @@ onUnmounted(() => {
   cursor: pointer;
   min-width: 18px;
 }
-.content { padding: 26px 28px; max-width: 1440px; width: 100%; margin: 0 auto; }
+.content { padding: 26px 28px 40px; max-width: 1540px; width: 100%; margin: 0 auto; }
 
 /* —— 响应式 —— */
-@media (max-width: 920px) {
-  .admin-shell { grid-template-columns: 64px minmax(0, 1fr); }
-  .side-nav { padding: 4px 8px; }
-  .brand-name, .nav-group-label, .nav-item span, .nav-count, .side-user-meta { display: none; }
-  .nav-group { margin: 5px 0; }
-  .nav-item { justify-content: center; padding: 10px 0; }
-  .brand, .sidebar-foot { justify-content: center; padding: 12px 0; }
+.pending-menu-label { min-width: 7em; }
+.pending-menu-count { margin-inline-start: auto; padding-inline-start: 14px; font-variant-numeric: tabular-nums; }
+.sidebar-backdrop { position: fixed; inset: 0; z-index: 29; background: rgb(0 0 0 / 45%); }
+.drawer-close { align-self: flex-end; margin: 8px 12px 0; }
+@media (min-width: 1700px) {
+  .content { padding: 32px 36px 46px; }
+}
+@media (min-width: 781px) {
+  .sidebar-collapsed { grid-template-columns: 64px minmax(0, 1fr); }
+  .sidebar-collapsed .side-nav { padding: 4px 8px; }
+  .sidebar-collapsed :is(.brand-name, .nav-group-label, .nav-item span, .nav-count, .side-user-meta) { display: none; }
+  .sidebar-collapsed .nav-group { margin: 5px 0; }
+  .sidebar-collapsed .nav-item { justify-content: center; padding: 10px 0; }
+  .sidebar-collapsed :is(.brand, .sidebar-foot) { justify-content: center; padding: 12px 0; }
 }
 @media (max-width: 780px) {
+  .admin-shell { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { display: none; position: fixed; inset: 0 auto 0 0; width: min(280px, 90vw); }
+  .sidebar.drawer-open { display: flex; }
   .content { padding: var(--s-4); }
   .topbar { padding-inline: var(--s-4); }
   .topbar-search { display: none; }
@@ -468,8 +423,6 @@ onUnmounted(() => {
 }
 @media (max-width: 480px) {
   .topbar { gap: 10px; padding-inline: 12px; }
-  .crumb-list, .crumb-list li { column-gap: 5px; }
-  .crumb-list li { white-space: normal; }
   .top-actions { gap: 6px; }
   .top-actions .icon-btn { width: 30px; height: 32px; }
 }

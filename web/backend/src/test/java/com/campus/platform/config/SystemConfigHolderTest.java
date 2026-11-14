@@ -2,7 +2,12 @@ package com.campus.platform.config;
 
 import com.campus.platform.module.site.entity.SystemConfig;
 import com.campus.platform.module.site.mapper.SystemConfigMapper;
+import com.campus.platform.utils.RedisCache;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import java.util.function.Supplier;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,7 +23,6 @@ import static org.mockito.Mockito.when;
 
 /**
  * 第12项 系统配置缓存一致：DB 值加载、内置默认回退、重复刷新读到最新快照。
- * refresh() 采用“先构建完整快照再整体换引用”，杜绝 clear+put 半空缓存中间态。
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -27,6 +31,14 @@ class SystemConfigHolderTest {
 
     @Mock
     private SystemConfigMapper systemConfigMapper;
+
+    @Mock
+    private RedisCache cache;
+
+    @BeforeEach
+    void useDatabaseLoader() {
+        when(cache.get(anyString(), any(), any(), any())).thenAnswer(call -> call.<Supplier<?>>getArgument(3).get());
+    }
 
     @InjectMocks
     private SystemConfigHolder holder;
@@ -43,6 +55,7 @@ class SystemConfigHolderTest {
     void refresh_shouldLoadDbValue() {
         when(systemConfigMapper.selectList(null)).thenReturn(List.of(cfg("site_name", "测试校园")));
         holder.refresh();
+        verify(cache).invalidate("system-config");
         assertThat(holder.getSiteName()).isEqualTo("测试校园");
     }
 

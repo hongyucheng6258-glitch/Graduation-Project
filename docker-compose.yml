@@ -17,6 +17,7 @@ services:
       - ./web/backend/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./docker/mysql/02-app-extension.sql:/docker-entrypoint-initdb.d/02-app-extension.sql:ro
       - ./web/backend/src/main/resources/db/migrate_v7_system_config.sql:/docker-entrypoint-initdb.d/03-system-config.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-13-account-recovery.sql:/docker-entrypoint-initdb.d/04-account-recovery.sql:ro
       - ./web/backend/src/main/resources/db/reset_and_testdata.sql:/docker-entrypoint-initdb.d/99-testdata.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]

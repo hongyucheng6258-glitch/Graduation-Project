@@ -19,4 +19,5 @@ public class ActivityDetailVO extends ActivityVO {
 
     /** 当前用户是否已签到 */
     private Boolean signedIn;
+    private boolean signinOpen;
 }

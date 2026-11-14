@@ -1,6 +1,10 @@
 package com.campus.platform.module.ai.agent;
 
 import com.campus.platform.module.ai.gateway.AiConfigHolder;
+import com.campus.platform.module.ai.mapper.AiConfigMapper;
+import com.campus.platform.utils.RedisCache;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -19,7 +23,9 @@ class AgentModelLiveTest {
     @Test
     void realModelRequestsJavaToolAndUsesItsResult() throws Exception {
         ObjectMapper json = new ObjectMapper();
-        AiConfigHolder config = new AiConfigHolder(null);
+        var cache = mock(RedisCache.class);
+        when(cache.get(anyString(), any(), any(), any())).thenReturn(java.util.Map.of());
+        AiConfigHolder config = new AiConfigHolder(mock(AiConfigMapper.class), cache);
         ReflectionTestUtils.setField(config, "defaultBaseUrl", requiredEnv("AI_BASE_URL"));
         ReflectionTestUtils.setField(config, "defaultModel", requiredEnv("AI_MODEL"));
         ReflectionTestUtils.setField(config, "defaultMaxTokens", 2048);

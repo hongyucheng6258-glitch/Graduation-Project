@@ -67,6 +67,18 @@ public class ChatSessionRegistry {
         });
     }
 
+    public void closeUserSessions(Long userId) {
+        Set<WebSocketSession> removed = sessions.remove(userId);
+        if (removed == null) return;
+        for (WebSocketSession session : removed) {
+            try {
+                if (session.isOpen()) session.close(org.springframework.web.socket.CloseStatus.POLICY_VIOLATION);
+            } catch (IOException error) {
+                log.debug("关闭私信连接失败, sessionId={}", session.getId(), error);
+            }
+        }
+    }
+
     public void send(Long userId, Object payload) {
         Set<WebSocketSession> userSessions = sessions.get(userId);
         if (userSessions == null || userSessions.isEmpty()) return;

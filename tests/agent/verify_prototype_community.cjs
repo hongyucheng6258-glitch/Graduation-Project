@@ -36,7 +36,7 @@ async function checkLostFound(browser) {
   const card = claimant.getByRole('link', { name: new RegExp(fixture.lostTitle) })
   await card.waitFor()
   await checkWidth(claimant)
-  assert.equal(Math.round((await card.locator('.cover').boundingBox()).height), 140)
+  await card.locator('.content-photo').waitFor()
   await capture(claimant, '失物招领-手机')
   await card.press('Enter')
   const url = base + '/lostfound/detail/' + fixture.lostId
@@ -75,7 +75,7 @@ async function checkPartner(browser) {
   assert.equal(await page.locator('.partner-list .grid').evaluate(el =>
     getComputedStyle(el).gridTemplateColumns.split(' ').length), 2)
   await capture(page, '学习搭子-桌面')
-  await card.getByRole('link', { name: '查看主页' }).click()
+  await card.locator('.p-card__author').click()
   await page.waitForURL(base + '/user/' + fixture.visitorId)
   await page.goto(base + '/partner')
   await page.setViewportSize({ width: 390, height: 900 })
@@ -89,7 +89,7 @@ async function checkPartner(browser) {
 async function checkSocial(browser) {
   const page = await signIn(browser, fixture.studentId, fixture.studentToken, 1440)
   await page.goto(base + '/social')
-  const publish = page.getByRole('button', { name: /发动态/ })
+  const publish = page.locator('.square-head').getByRole('button', { name: '发布动态', exact: true })
   await publish.waitFor()
   assert.equal(await publish.getAttribute('aria-expanded'), 'false')
   const card = page.locator('.post-card').filter({ hasText: fixture.postText })
@@ -106,7 +106,7 @@ async function checkSocial(browser) {
   await card.getByText('图书馆光线真好', { exact: true }).waitFor()
 
   await publish.click()
-  assert.equal(await publish.getAttribute('aria-expanded'), 'true')
+  assert.equal(await page.getByRole('button', { name: '收起发布框' }).getAttribute('aria-expanded'), 'true')
   await page.getByPlaceholder('分享校园生活…').fill('浏览器验收动态 ' + fixture.identifier)
   const [published] = await Promise.all([
     page.waitForResponse(r => r.url() === base + '/api/post' && r.request().method() === 'POST'),

@@ -54,16 +54,11 @@ async function run(browser, request, ctx) {
       });
       const contentType = streamResp.headers()['content-type'] || '';
       const text = await streamResp.text();
-      if (contentType.includes('text/event-stream') || text.includes('event:') || text.includes('data:')) {
-        h.record(C, 'SSE 流式回复', 'PASS', `content-type=${contentType.substring(0, 40)}`);
-      } else {
-        const json = JSON.parse(text);
-        if (json.code === 200) {
-          h.record(C, 'SSE 流式回复', 'PASS', 'JSON 兜底响应');
-        } else {
-          h.record(C, 'SSE 流式回复', 'FAIL', json.message || text.substring(0, 80));
-        }
-      }
+      const success = streamResp.ok() && contentType.includes('text/event-stream')
+        && /^event: ?delta\s*$/m.test(text) && /^event: ?done\s*$/m.test(text)
+        && !/^event: ?error\s*$/m.test(text);
+      h.record(C, 'SSE 流式回复', success ? 'PASS' : 'FAIL',
+        success ? '收到内容增量与完成事件' : `HTTP ${streamResp.status()}，未收到完整 SSE 回复`);
     } catch (e) {
       h.record(C, 'SSE 流式回复', 'FAIL', e.message.substring(0, 80));
     }

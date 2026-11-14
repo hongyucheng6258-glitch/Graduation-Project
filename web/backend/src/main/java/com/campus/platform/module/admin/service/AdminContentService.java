@@ -22,6 +22,7 @@ import com.campus.platform.module.qa.mapper.CampusQuestionMapper;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -142,7 +143,10 @@ public class AdminContentService {
         if (a == null) {
             throw new BizException(ResultCode.NOT_FOUND, "活动不存在");
         }
-        activityMapper.updateStatus(id, status);
+        int expected = status == Constants.ACTIVITY_OFF ? Constants.ACTIVITY_SIGNING : Constants.ACTIVITY_OFF;
+        if (activityMapper.replaceStatus(id, expected, status) != 1) {
+            throw new BizException(ResultCode.BAD_REQUEST, "当前活动状态不支持此操作");
+        }
     }
 
     private void setIdleStatus(Long id, int status) {
@@ -153,7 +157,7 @@ public class AdminContentService {
         if (item.getAuditStatus() != Constants.AUDIT_PASS) {
             throw new BizException(ResultCode.AUDIT_PENDING, "内容未通过审核");
         }
-        if (idleItemMapper.updateAvailability(id, status, null, true) != 1) {
+        if (idleItemMapper.changeListing(id, status == Constants.IDLE_OFF_SHELF ? Constants.IDLE_ON_SHELF : Constants.IDLE_OFF_SHELF, status, true) != 1) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "物品状态已变化，请刷新后重试");
         }
     }
@@ -166,8 +170,10 @@ public class AdminContentService {
         if (lf.getAuditStatus() != Constants.AUDIT_PASS) {
             throw new BizException(ResultCode.AUDIT_PENDING, "内容未通过审核");
         }
-        lf.setStatus(status);
-        lostFoundMapper.updateById(lf);
+        int expected = status == Constants.LF_OFF ? Constants.LF_DOING : Constants.LF_OFF;
+        if (lostFoundMapper.changeListing(id, expected, status) != 1) {
+            throw new BizException(ResultCode.BAD_REQUEST, "当前失物状态或认领记录不支持此操作");
+        }
     }
 
     private void setPartnerStatus(Long id, int status) {
@@ -178,8 +184,12 @@ public class AdminContentService {
         if (p.getAuditStatus() != Constants.AUDIT_PASS) {
             throw new BizException(ResultCode.AUDIT_PENDING, "内容未通过审核");
         }
-        p.setStatus(status);
-        studyPartnerMapper.updateById(p);
+        int expected = status == Constants.PARTNER_OFF ? Constants.PARTNER_MATCHING : Constants.PARTNER_OFF;
+        if (studyPartnerMapper.update(null, new LambdaUpdateWrapper<StudyPartner>()
+                .eq(StudyPartner::getId, id).eq(StudyPartner::getStatus, expected)
+                .set(StudyPartner::getStatus, status)) != 1) {
+            throw new BizException(ResultCode.BAD_REQUEST, "当前学习搭子状态不支持此操作");
+        }
     }
 
     private void setQaStatus(Long id, int status) {
@@ -187,7 +197,12 @@ public class AdminContentService {
         if (q == null) {
             throw new BizException(ResultCode.NOT_FOUND, "问题不存在");
         }
-        q.setStatus(status);
-        campusQuestionMapper.updateById(q);
+        int expected = status == Constants.QA_OFF ? Constants.QA_OPEN : Constants.QA_OFF;
+        int next = status == Constants.QA_OPEN && q.getAcceptedAnswerId() != null ? Constants.QA_SOLVED : status;
+        if (campusQuestionMapper.update(null, new LambdaUpdateWrapper<CampusQuestion>()
+                .eq(CampusQuestion::getId, id).eq(CampusQuestion::getStatus, expected)
+                .set(CampusQuestion::getStatus, next)) != 1) {
+            throw new BizException(ResultCode.BAD_REQUEST, "当前问题状态不支持此操作");
+        }
     }
 }

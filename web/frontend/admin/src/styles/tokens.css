@@ -12,8 +12,8 @@
   --surface-3:    #E9EEF6;
   --ink:          #1B2437;
   --ink-2:        #46536B;
-  --ink-3:        #77839B;
-  --line:         #E5EAF2;
+  --ink-3:        #69768D;
+  --line:         #E2E8F1;
   --line-strong:  #CBD6E4;
 
   /* —— 品牌：校园蓝（与学生端一致） —— */
@@ -63,9 +63,9 @@
   --error-soft:   oklch(95% 0.04 20);
 
   /* —— 深蓝侧栏（管理端特征，双主题恒定） —— */
-  --side-bg:  #16233F;
+  --side-bg:  #142139;
   --side-ink: #B9C4DA;
-  --side-ink-3: #6E7E9E;
+  --side-ink-3: #7D8CA8;
   --side-line: oklch(100% 0 0 / .08);
   --side-active: #2E5BFF;
   --side-hover: oklch(100% 0 0 / .06);
@@ -75,7 +75,7 @@
   --s-6:32px; --s-7:48px; --s-8:64px; --s-9:96px;
 
   /* —— 圆角（与学生端一致） —— */
-  --r-xs:6px; --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:24px; --r-pill:999px;
+  --r-xs:6px; --r-sm:8px; --r-md:12px; --r-lg:20px; --r-xl:24px; --r-pill:999px;
 
   /* —— 字体（V2：中文优先、无衬线） —— */
   --font-sans: "Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;

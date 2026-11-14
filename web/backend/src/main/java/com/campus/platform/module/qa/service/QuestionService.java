@@ -21,6 +21,9 @@ import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -83,7 +86,8 @@ public class QuestionService {
         }
         // 浏览计数
         q.setViewCount(q.getViewCount() == null ? 1 : q.getViewCount() + 1);
-        questionMapper.updateById(q);
+        questionMapper.update(null, new LambdaUpdateWrapper<CampusQuestion>()
+                .eq(CampusQuestion::getId, id).setSql("view_count=COALESCE(view_count,0)+1"));
         QuestionVO qvo = toVO(q, currentUid);
         qvo.setViewCount(q.getViewCount());
 
@@ -93,8 +97,7 @@ public class QuestionService {
                         .orderByDesc(CampusAnswer::getIsAccepted)
                         .orderByAsc(CampusAnswer::getId));
         List<CampusAnswer> answers = answerPage.getRecords();
-        Map<Long, String> nickCache = new HashMap<>();
-        Map<Long, String> avaCache = new HashMap<>();
+        Map<Long, User> authors = userMapper.findPublisherProfiles(answers.stream().map(CampusAnswer::getUserId).distinct().toList());
         List<AnswerVO> answerVOs = answers.stream().map(a -> {
             AnswerVO vo = new AnswerVO();
             vo.setId(a.getId());
@@ -103,7 +106,7 @@ public class QuestionService {
             vo.setContent(a.getContent());
             vo.setIsAccepted(a.getIsAccepted());
             vo.setCreateTime(a.getCreateTime());
-            User u = userMapper.selectById(a.getUserId());
+            User u = authors.get(a.getUserId());
             vo.setAnswererNickname(u == null ? "" : u.getNickname());
             vo.setAnswererAvatar(u == null ? null : u.getAvatar());
             return vo;
@@ -139,8 +142,8 @@ public class QuestionService {
     /** 回答 */
     public CampusAnswer answer(Long userId, Long questionId, AnswerDTO dto) {
         CampusQuestion q = questionMapper.selectById(questionId);
-        if (q == null) {
-            throw new BizException(ResultCode.NOT_FOUND, "问题不存在");
+        if (q == null || q.getStatus() == Constants.QA_OFF) {
+            throw new BizException(ResultCode.NOT_FOUND, "问题不存在或已下架");
         }
         if (q.getUserId().equals(userId)) {
             throw new BizException(ResultCode.BAD_REQUEST, "不能回答自己提的问题");
@@ -158,26 +161,26 @@ public class QuestionService {
     }
 
     /** 采纳最佳回答（仅提问者；采纳后问题标记已解决） */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void accept(Long userId, Long answerId) {
         CampusAnswer a = answerMapper.selectById(answerId);
         if (a == null) {
             throw new BizException(ResultCode.NOT_FOUND, "回答不存在");
         }
-        CampusQuestion q = questionMapper.selectById(a.getQuestionId());
+        CampusQuestion q = questionMapper.lockById(a.getQuestionId());
         if (q == null || !q.getUserId().equals(userId)) {
             throw new BizException(ResultCode.FORBIDDEN, "只有提问者可以采纳回答");
         }
-        if (a.getIsAccepted() == 1) {
+        if (q.getStatus() == Constants.QA_OFF) {
+            throw new BizException(ResultCode.BAD_REQUEST, "问题已下架");
+        }
+        if (Objects.equals(q.getAcceptedAnswerId(), answerId)) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "该回答已被采纳");
         }
-        // 取消旧采纳
-        List<CampusAnswer> accepted = answerMapper.selectList(new LambdaQueryWrapper<CampusAnswer>()
+        answerMapper.update(null, new LambdaUpdateWrapper<CampusAnswer>()
                 .eq(CampusAnswer::getQuestionId, q.getId())
-                .eq(CampusAnswer::getIsAccepted, 1));
-        for (CampusAnswer old : accepted) {
-            old.setIsAccepted(0);
-            answerMapper.updateById(old);
-        }
+                .eq(CampusAnswer::getIsAccepted, 1)
+                .set(CampusAnswer::getIsAccepted, 0));
         a.setIsAccepted(1);
         answerMapper.updateById(a);
         q.setAcceptedAnswerId(answerId);
@@ -188,7 +191,7 @@ public class QuestionService {
                 "qa", q.getId());
     }
 
-    /** AI 参考回答（不占用学生限额） */
+    /** AI 参考回答（使用学生额度） */
     public String aiAnswer(Long userId, Long questionId) {
         CampusQuestion q = questionMapper.selectById(questionId);
         if (q == null) {
@@ -201,21 +204,19 @@ public class QuestionService {
         Map<String, String> params = new HashMap<>();
         params.put("q_title", q.getTitle());
         params.put("q_content", StrUtil.blankToDefault(q.getContent(), ""));
-        return aiGatewayService.internalChat(userId, Constants.SCENE_QA_ANSWER,
-                "请参考回答这个校园互助问题", params).trim();
+        return aiGatewayService.chat(userId, Constants.SCENE_QA_ANSWER,
+                "请参考回答这个校园互助问题", null, params).trim();
     }
 
     private Map<Long, Long> countAnswers(List<Long> questionIds) {
         if (questionIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<CampusAnswer> all = answerMapper.selectList(new LambdaQueryWrapper<CampusAnswer>()
-                .in(CampusAnswer::getQuestionId, questionIds));
-        Map<Long, Long> map = new HashMap<>();
-        for (CampusAnswer a : all) {
-            map.merge(a.getQuestionId(), 1L, Long::sum);
+        Map<Long, Long> counts = new HashMap<>();
+        for (var row : answerMapper.countByQuestionIds(questionIds)) {
+            counts.put(((Number) row.get("question_id")).longValue(), ((Number) row.get("answer_count")).longValue());
         }
-        return map;
+        return counts;
     }
 
     private QuestionVO toVO(CampusQuestion q, Long currentUid) {

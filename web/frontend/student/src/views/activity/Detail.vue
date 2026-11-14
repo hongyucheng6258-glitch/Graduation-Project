@@ -1,63 +1,69 @@
 <template>
   <div class="event-page" v-loading="loading">
     <template v-if="act">
-      <!-- 面包屑 -->
-      <div class="detail-breadcrumb">
-        <RouterLink class="text-btn" to="/activity">返回校园活动</RouterLink>
-        <span>/</span>
-        <span>活动详情</span>
-      </div>
+      <nav class="detail-breadcrumb" aria-label="面包屑">
+        <RouterLink to="/activity">校园活动</RouterLink>
+        <span aria-hidden="true">›</span>
+        <span aria-current="page">活动详情</span>
+      </nav>
 
       <div class="event-detail-layout">
         <article class="event-overview">
-          <div class="event-detail-hero">
-            <div class="detail-cover">
-              <el-image v-if="detailImages.length" :src="detailImages[0]" fit="contain" class="detail-cover-img"
-                :alt="act.title" :preview-src-list="detailImages" preview-teleported />
-              <WtEventArt v-else :item="act" large />
+          <div class="event-detail-heading">
+            <div class="head-tags">
+              <span class="tag" :class="statusTagCls(act.displayStatus)">{{ statusText }}</span>
+              <span v-if="act.category" class="tag tag-category">{{ act.category }}</span>
             </div>
-            <div class="event-detail-heading">
-              <div class="head-tags">
-                <span v-if="act.category" class="tag">{{ act.category }}</span>
-                <span class="tag" :class="statusTagCls(act.displayStatus)">{{ statusText }}</span>
-              </div>
-              <h1>{{ act.title }}</h1>
-              <p>{{ act.subtitle || '和校园里的同伴，一起做喜欢的事。' }}</p>
-              <div class="event-host">
-                <el-avatar :size="36" :src="act.publisherAvatar">{{ act.publisherNickname?.charAt(0) || '梧' }}</el-avatar>
-                <span>
-                  <b>{{ act.publisherNickname || '校园同学' }}</b>
-                  <small>活动发起方</small>
-                </span>
-                <button type="button" class="text-btn" @click="goUser(act.userId)">查看主页</button>
-              </div>
-            </div>
+            <h1>{{ act.title }}</h1>
+            <p v-if="act.subtitle">{{ act.subtitle }}</p>
           </div>
-
+          <div class="detail-cover content-photo">
+            <el-image v-if="detailImages.length" :src="detailImages[0]" fit="contain" class="detail-cover-img"
+              :alt="act.title" :preview-src-list="detailImages" preview-teleported />
+            <WtEventArt v-else :item="act" aria-hidden="true" />
+            <span v-if="detailImages.length" class="cover-preview-label" aria-hidden="true">查看原图</span>
+          </div>
+          <dl class="event-facts">
+            <div class="event-fact">
+              <el-icon aria-hidden="true"><Calendar /></el-icon>
+              <dt>活动时间</dt>
+              <dd>
+                <time v-if="act.startTime" :datetime="act.startTime">{{ eventTime(act.startTime) }}</time>
+                <span v-else>时间待定</span>
+                <span v-if="act.endTime" class="event-end">至 <time :datetime="act.endTime">{{ endTime }}</time></span>
+              </dd>
+            </div>
+            <div class="event-fact">
+              <el-icon aria-hidden="true"><Location /></el-icon>
+              <dt>活动地点</dt>
+              <dd>{{ act.location || '地点待定' }}</dd>
+            </div>
+          </dl>
+          <div class="event-host">
+            <el-avatar :size="36" :src="act.publisherAvatar">{{ act.publisherNickname?.charAt(0) || '梧' }}</el-avatar>
+            <span class="host-identity">
+              <b>{{ act.publisherNickname || '校园同学' }}</b>
+              <small>活动发起方</small>
+            </span>
+            <button type="button" class="text-btn" @click="goUser(act.userId)">查看主页</button>
+          </div>
         </article>
 
-        <!-- 右：活动通行证 -->
-        <aside class="event-registration">
+        <aside class="event-registration" aria-labelledby="registration-title">
           <div class="event-ticket">
-            <div class="ticket-top">
-              <h2>报名参与</h2>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+            <h2 id="registration-title">{{ act.isOwner ? '活动管理' : '报名参与' }}</h2>
+            <div class="registration-count">
+              <span>已通过报名</span>
+              <span><strong>{{ act.memberCount || 0 }}</strong><template v-if="act.maxMembers"> / {{ act.maxMembers }}</template> 人</span>
             </div>
-            <div class="ticket-date">
-              <strong>{{ ticketDay }}</strong>
-              <span>{{ ticketMonth }} / {{ ticketYear }}<small>{{ ticketTime }} 开始</small></span>
+            <div v-if="act.maxMembers" class="progress" aria-hidden="true">
+              <i :style="{ width: capacityPercent + '%' }"></i>
             </div>
-            <div class="ticket-perforation"></div>
-            <div class="ticket-fact">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              <span><small>活动地点</small><b>{{ act.location || '地点待定' }}</b></span>
+            <p v-if="ticketHint" class="ticket-hint">{{ ticketHint }}</p>
+            <div v-if="act.signupDeadline" class="registration-deadline">
+              <span>报名截止</span>
+              <time :datetime="act.signupDeadline">{{ eventTime(act.signupDeadline) }}</time>
             </div>
-            <div class="ticket-fact">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              <span><small>报名名额</small><b>{{ act.memberCount || 0 }}{{ act.maxMembers ? ' / ' + act.maxMembers : '' }} 人</b></span>
-            </div>
-            <div class="progress"><i :style="{ width: capacityPercent + '%' }"></i></div>
-            <p class="ticket-hint">{{ ticketHint }}</p>
 
             <!-- 报名操作区（保留全部原有逻辑） -->
             <div class="stack">
@@ -79,10 +85,12 @@
                 </button>
                 <span v-else-if="act.mySignupStatus === 0" class="ticket-tag warning">报名待审批</span>
                 <span v-else-if="act.mySignupStatus === 1" class="ticket-tag success">
-                  已通过报名{{ act.signedIn ? '（已签到）' : '（活动现场请扫码签到）' }}
+                  已通过报名{{ act.signedIn ? '（已签到）' : act.signinOpen ? '（可在活动现场签到）' : '（签到未开放）' }}
                 </span>
                 <span v-else-if="act.mySignupStatus != null" class="ticket-tag error">报名未通过</span>
-                <ActivityWaitlist v-if="userStore.isLoggedIn" :activity-id="id" :signup-status="act.mySignupStatus"
+                <button v-if="act.mySignupStatus === 1 && !act.signedIn && act.signinOpen" type="button" class="btn primary"
+                  @click="signinVisible = true">活动签到</button>
+                <ActivityWaitlist v-if="userStore.isLoggedIn" :activity-id="id" :signup-status="act.mySignupStatus" :occupied-seats="act.occupiedSeats"
                   @changed="load" @priority="waitlistPriority = $event" />
                 <button
                   v-if="act.mySignupStatus === 0 || act.mySignupStatus === 1"
@@ -100,18 +108,11 @@
                 </button>
               </template>
             </div>
-            <small class="ticket-note">报名通过后，可在「我的报名」完成签到</small>
           </div>
         </aside>
         <section class="event-description">
           <h2>活动介绍</h2>
-          <p>{{ act.description }}</p>
-          <h3>参加前的小提醒</h3>
-          <ul>
-            <li>报名后请关注审核结果，活动前再次确认地点与时间。</li>
-            <li>请携带学生证，提前到达活动现场。</li>
-            <li>若有疑问，可以先联系发起方。</li>
-          </ul>
+          <p>{{ act.description?.trim() || '发起方暂未填写活动介绍。' }}</p>
           <div class="detail-actions">
             <button type="button" class="btn" :class="{ favorited }" @click="toggleFavorite">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 17.3 5.8 21l1.6-6.8L2 9.2l7-.6L12 2l3 6.6 7 .6-5.4 5 1.6 6.8z"/></svg>
@@ -178,12 +179,20 @@
 
       <!-- 签到二维码弹窗 -->
       <el-dialog v-model="qrVisible" title="活动签到" width="min(420px, calc(100vw - 24px))">
-        <el-alert type="success" :closable="false" title="参与者打开小程序「扫一扫」扫描下方二维码即可签到" />
+        <el-alert type="success" :closable="false" title="参与者可扫码，或复制签到内容到活动详情页提交。" />
         <div class="qr-code-wrap">
           <img v-if="qrImage" :src="qrImage" class="qr-code" alt="活动签到二维码" />
         </div>
         <div class="qr-content">{{ qrContent }}</div>
         <p class="qr-tip">如扫码不便，可复制上方签到内容手动录入。</p>
+      </el-dialog>
+
+      <el-dialog v-model="signinVisible" title="提交活动签到" width="min(420px, calc(100vw - 24px))">
+        <form @submit.prevent="submitSignin">
+          <label for="activity-signin-code">签到内容</label>
+          <el-input id="activity-signin-code" v-model.trim="signinCode" placeholder="粘贴发布者提供的签到内容" />
+          <el-button type="primary" native-type="submit" :loading="submittingSignin" style="margin-top: 12px">确认签到</el-button>
+        </form>
       </el-dialog>
 
       <!-- 举报弹窗 -->
@@ -207,17 +216,18 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import QRCode from 'qrcode'
+import dayjs from 'dayjs'
+import { Calendar, Location } from '@element-plus/icons-vue'
 import WtEventArt from '../../components/wt/WtEventArt.vue'
 import SignupConflictNotice from './components/SignupConflictNotice.vue'
 import ActivityWaitlist from './components/ActivityWaitlist.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { activityDetail, signupActivity, cancelActivitySignup, activityMembers, handleMember, signinQrcode } from '../../api/activity'
+import { activityDetail, signupActivity, cancelActivitySignup, activityMembers, handleMember, signinQrcode, signinActivity } from '../../api/activity'
 import { submitReport } from '../../api/report'
 import { favoriteStatus, favorite, unfavorite } from '../../api/favorite'
-import { formatTime } from '../../utils/date'
 import { normalizeImages } from '../../utils/image'
-import { normalizeSigninQrContent } from '../../utils/signinQr.mjs'
+import { normalizeSigninQrContent, parseSigninQrContent } from '../../utils/signinQr.mjs'
 import { useUserStore } from '../../store/user'
 import { startChat } from '../../utils/startChat'
 
@@ -240,6 +250,9 @@ const membersTotal = ref(0)
 const membersPage = ref(1)
 const membersPageSize = 10
 const qrVisible = ref(false)
+const signinVisible = ref(false)
+const signinCode = ref('')
+const submittingSignin = ref(false)
 const qrContent = ref('')
 const qrImage = ref('')
 const reportVisible = ref(false)
@@ -254,30 +267,28 @@ function statusTagCls(s) {
   return ['tag-success', 'tag-warning', 'tag-muted', 'tag-muted', 'tag-muted', 'tag-error'][s ?? 0] || 'tag-muted'
 }
 
-const ticketDay = computed(() => {
-  if (!act.value?.startTime) return '新'
-  return String(act.value.startTime).slice(8, 10).replace(/^0/, '') || '新'
+function eventTime(value) {
+  return dayjs(value).format('YYYY年M月D日 HH:mm')
+}
+
+const endTime = computed(() => {
+  const end = dayjs(act.value.endTime)
+  return act.value.startTime && end.isSame(dayjs(act.value.startTime), 'day')
+    ? end.format('HH:mm')
+    : eventTime(act.value.endTime)
 })
-const ticketMonth = computed(() => {
-  if (!act.value?.startTime) return '校园'
-  return `${Number(String(act.value.startTime).slice(5, 7))} 月`
-})
-const ticketYear = computed(() => (act.value?.startTime ? String(act.value.startTime).slice(0, 4) : '2026'))
-const ticketTime = computed(() => {
-  if (!act.value?.startTime) return '待定'
-  return String(act.value.startTime).slice(11, 16) || '待定'
-})
+const occupiedSeats = computed(() => Number(act.value?.occupiedSeats ?? act.value?.memberCount) || 0)
 const capacityPercent = computed(() => {
   const max = Number(act.value?.maxMembers)
   if (!max) return 0
-  return Math.min(Math.round((Number(act.value.memberCount) || 0) / max * 100), 100)
+  return Math.min(Math.round(occupiedSeats.value / max * 100), 100)
 })
 const ticketHint = computed(() => {
   if (!act.value) return ''
+  const pending = occupiedSeats.value - (Number(act.value.memberCount) || 0)
+  if (!act.value.canSignup) return pending > 0 && act.value.displayStatus === 1 ? `另有 ${pending} 人待审批，名额已占满` : ''
   const max = Number(act.value.maxMembers)
-  if (max && Number(act.value.memberCount) >= max) return '当前活动已满员。'
-  if (Number(act.value.status) === 0) return `还有 ${(max || 99) - (Number(act.value.memberCount) || 0)} 个名额，期待你加入。`
-  return '活动报名通道已关闭。'
+  return max > 0 ? `剩余 ${Math.max(0, max - occupiedSeats.value)} 个名额` : '人数不限'
 })
 
 async function load() {
@@ -319,7 +330,12 @@ async function doSignup() {
     await signupActivity(id, { remark: remark.value })
     ElMessage.success('报名已提交，等待发布者审批')
     signupVisible.value = false
-    load()
+    await load()
+  } catch (error) {
+    if (/人数已满|空位优先/.test(error.message)) {
+      signupVisible.value = false
+      await load()
+    }
   } finally {
     signing.value = false
   }
@@ -360,6 +376,25 @@ async function approve(row, ok) {
   loadMembers(membersPage.value)
   load()
 }
+async function submitSignin() {
+  if (submittingSignin.value) return
+  const code = parseSigninQrContent(signinCode.value)
+  if (!code || code.activityId !== id) {
+    ElMessage.warning('请输入本活动的有效签到内容')
+    return
+  }
+  submittingSignin.value = true
+  try {
+    await signinActivity(id, code.token)
+    signinVisible.value = false
+    signinCode.value = ''
+    ElMessage.success('签到成功')
+    await load()
+  } finally {
+    submittingSignin.value = false
+  }
+}
+
 async function showQrcode() {
   const res = await signinQrcode(id)
   const content = normalizeSigninQrContent(res)
@@ -400,80 +435,85 @@ onMounted(load)
 </script>
 
 <style scoped>
-.event-page { display: flex; flex-direction: column; }
+.event-page { min-width: 0; container-type: inline-size; }
 .detail-breadcrumb {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 9px;
+  margin: 2px 0 16px;
   color: var(--ink-3);
   font-size: 12px;
-  max-width: 1152px;
-  margin: 2px auto 18px;
 }
-.detail-breadcrumb .text-btn { font-size: 12px; color: var(--ink-3); }
-.detail-breadcrumb .text-btn:hover { color: var(--brand); }
+.detail-breadcrumb a { color: var(--brand-strong); text-decoration: none; }
+.detail-breadcrumb a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.detail-breadcrumb [aria-current] { color: var(--ink-2); }
 
 .event-detail-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
   grid-template-areas: 'overview registration' 'description registration';
-  gap: 22px 28px;
+  gap: 16px 22px;
   align-items: start;
-  max-width: 1152px;
-  margin-inline: auto;
 }
-.event-overview { grid-area: overview; min-width: 0; overflow-wrap: anywhere; }
-.event-registration { grid-area: registration; align-self: stretch; min-width: 0; }
-.event-detail-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 36%) minmax(0, 1fr);
-  align-items: center;
-  gap: 19px;
-  padding: 17px;
-  background: var(--surface);
+.event-overview, .event-description, .event-ticket {
+  min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--r-md);
+  background: var(--surface);
 }
-.detail-cover { width: 100%; aspect-ratio: 1; position: relative; overflow: hidden; border-radius: 10px; background: var(--surface-2); }
-.detail-cover-img, .detail-cover :deep(.event-art) { position: absolute; inset: 0; width: 100%; height: 100%; display: block; aspect-ratio: auto; }
-.event-detail-heading { min-width: 0; }
+.event-overview {
+  grid-area: overview;
+  display: grid;
+  grid-template-columns: minmax(0, 31%) minmax(0, 1fr);
+  grid-template-rows: max-content max-content 1fr;
+  grid-template-areas: 'cover heading' 'cover facts' 'cover host';
+  gap: 14px 22px;
+  padding: 20px;
+  overflow-wrap: anywhere;
+}
+.detail-cover { grid-area: cover; align-self: start; }
+.detail-cover-img, .detail-cover :deep(.event-art) { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.detail-cover-img { cursor: zoom-in; }
+.detail-cover :deep(.event-art-copy) { display: none; }
+.detail-cover :deep(.event-graphic) { inset: 50% auto auto 50%; width: 72%; height: 72%; translate: -50% -50%; }
+.cover-preview-label {
+  position: absolute;
+  inset: auto 6px 6px auto;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background: rgb(15 23 42 / 72%);
+  color: #fff;
+  font-size: 10px;
+  pointer-events: none;
+}
+.event-detail-heading { grid-area: heading; min-width: 0; }
 .head-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.tag {
-  display: inline-flex;
-  align-items: center;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.7;
-  padding: 3px 9px;
-  border-radius: 5px;
-  background: var(--brand-soft);
-  color: var(--brand);
-  white-space: nowrap;
-}
+.tag { padding: 3px 9px; border-radius: var(--r-pill); font-size: 11px; font-weight: 650; line-height: 1.55; }
+.tag-category { background: var(--brand-soft); color: var(--brand-strong); }
 .tag-success { background: var(--success-soft); color: var(--success); }
 .tag-warning { background: var(--warning-soft); color: var(--gold-strong); }
 .tag-muted { background: var(--surface-3); color: var(--ink-2); }
 .tag-error { background: var(--error-soft); color: var(--error); }
-.event-detail-heading > h1 { font-size: clamp(21px, 2.2vw, 29px); margin: 9px 0 5px; color: var(--ink); font-weight: 700; line-height: 1.4; }
-.event-detail-heading > p { font-size: 14px; color: var(--ink-3); }
-.event-host {
-  border-top: 1px solid var(--line);
-  padding-top: 11px;
-  margin-top: 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.event-host b { display: block; font-size: 13px; font-weight: 550; color: var(--ink); }
-.event-host small { display: block; font-size: 11px; color: var(--ink-3); }
-.event-host > .text-btn { margin-left: auto; font-size: 12px; }
+.event-detail-heading h1 { margin: 8px 0 0; color: var(--ink); font-size: clamp(24px, 3vw, 34px); font-weight: 700; line-height: 1.24; }
+.event-detail-heading p { margin: 6px 0 0; color: var(--ink-3); font-size: 13px; }
+.event-facts { grid-area: facts; display: grid; gap: 8px; align-content: center; margin: 0; }
+.event-fact { display: grid; grid-template-columns: 16px 4.5em minmax(0, 1fr); align-items: baseline; gap: 7px; font-size: 13px; }
+.event-fact .el-icon { color: var(--brand-strong); align-self: start; margin-top: 3px; }
+.event-fact dt { color: var(--ink-3); white-space: nowrap; }
+.event-fact dd { margin: 0; color: var(--ink); font-weight: 550; line-height: 1.5; }
+.event-end { display: inline-block; margin-inline-start: 5px; }
+.event-host { grid-area: host; align-self: end; display: flex; align-items: center; gap: 9px; padding-top: 10px; border-top: 1px solid var(--line); }
+.event-host .el-avatar { flex: none; }
+.host-identity { min-width: 0; }
+.host-identity b, .host-identity small { display: block; }
+.host-identity b { color: var(--ink); font-size: 13px; }
+.host-identity small { color: var(--ink-3); font-size: 11px; }
+.event-host > .text-btn { flex: none; margin-inline-start: auto; font-size: 12px; }
 
-.event-description { grid-area: description; min-width: 0; padding: 5px; overflow-wrap: anywhere; }
-.event-description h2 { font-size: 23px; font-weight: 650; color: var(--ink); }
-.event-description > p { line-height: 2; font-size: 15px; margin: 18px 0 25px; max-width: 75ch; color: var(--ink-2); white-space: pre-wrap; }
-.event-description h3 { font-size: 17px; color: var(--ink); font-weight: 600; }
-.event-description ul { font-size: 14px; line-height: 2.1; color: var(--ink-2); padding-left: 20px; margin: 12px 0 25px; }
-.detail-actions { border-top: 1px solid var(--line); padding-top: 22px; display: flex; align-items: center; gap: 20px; }
+.event-description { grid-area: description; padding: 20px; overflow-wrap: anywhere; }
+.event-description h2 { margin: 0; color: var(--ink); font-size: 19px; }
+.event-description > p { margin: 10px 0 16px; max-width: 75ch; color: var(--ink-2); font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+.detail-actions { display: flex; align-items: center; gap: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 .btn {
   display: inline-flex;
   justify-content: center;
@@ -513,50 +553,18 @@ onMounted(load)
 }
 .text-btn:hover { text-decoration: underline; text-underline-offset: 4px; }
 
-/* —— 通行证 —— */
-.event-ticket {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 26px;
-  position: sticky;
-  top: 25px;
-  overflow: hidden;
-  box-shadow: 0 10px 32px oklch(25% 0.04 265 / .03);
-}
-.ticket-top { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--ink-3); }
-.ticket-top h2 { margin: 0; font-size: 18px; color: var(--ink); }
-.ticket-top > svg { width: 20px; height: 20px; color: var(--brand); }
-.ticket-date { display: flex; gap: 18px; align-items: center; margin-top: 15px; color: var(--brand); }
-.ticket-date > strong { font: 650 46px/1.3 var(--font-display); letter-spacing: -3px; color: var(--brand); }
-.ticket-date > span { font-size: 16px; font-weight: 550; color: var(--ink); }
-.ticket-date small { display: block; font-size: 12px; color: var(--ink-3); font-weight: 400; margin-top: 7px; }
-.ticket-perforation {
-  margin: 19px -26px 25px;
-  border-top: 1px dashed var(--brand-line);
-  position: relative;
-}
-.ticket-perforation:before, .ticket-perforation:after {
-  content: "";
-  height: 20px;
-  width: 20px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  position: absolute;
-  top: -11px;
-  left: -11px;
-}
-.ticket-perforation:after { right: -11px; left: auto; }
-.ticket-fact { display: flex; align-items: center; gap: 13px; margin-top: 20px; }
-.ticket-fact > svg { color: var(--ink-3); width: 18px; height: 18px; flex: none; }
-.ticket-fact small { color: var(--ink-3); display: block; font-size: 11px; }
-.ticket-fact b { display: block; font-size: 14px; font-weight: 550; margin-top: 2px; color: var(--ink); }
-.progress { background: var(--surface-2); height: 6px; border-radius: 6px; overflow: hidden; margin: 16px 0; }
-.progress > i { height: 100%; display: block; background: var(--brand); }
-.ticket-hint { font-size: 12px; margin-bottom: 22px; color: var(--ink-3); }
-.stack { display: flex; flex-direction: column; gap: 10px; }
-.stack .btn { width: 100%; min-height: 44px; font-size: 14px; }
+.event-registration { grid-area: registration; align-self: stretch; min-width: 0; }
+.event-ticket { position: sticky; top: 18px; padding: 20px; }
+.event-ticket h2 { margin: 0 0 12px; color: var(--ink); font-size: 19px; }
+.registration-count, .registration-deadline { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; color: var(--ink-2); font-size: 13px; }
+.registration-count strong { color: var(--ink); font-size: 20px; font-variant-numeric: tabular-nums; }
+.progress { height: 5px; margin-top: 6px; overflow: hidden; border-radius: var(--r-pill); background: var(--surface-2); }
+.progress > i { display: block; height: 100%; background: var(--brand); }
+.ticket-hint { margin: 6px 0 0; color: var(--ink-3); font-size: 12px; }
+.registration-deadline { margin-top: 12px; }
+.registration-deadline time { color: var(--ink); font-weight: 550; }
+.stack { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.stack .btn { width: 100%; min-height: 44px; font-size: 14px; white-space: normal; }
 .ticket-tag {
   display: inline-flex;
   justify-content: center;
@@ -571,40 +579,31 @@ onMounted(load)
 .ticket-tag.warning { background: var(--warning-soft); color: var(--gold-strong); }
 .ticket-tag.success { background: var(--success-soft); color: var(--success); }
 .ticket-tag.error { background: var(--error-soft); color: var(--error); }
-.ticket-note { display: block; color: var(--ink-3); font-size: 10px; text-align: center; margin-top: 16px; }
 
 .qr-code-wrap { display: flex; justify-content: center; padding: 20px 0 8px; }
 .qr-code { width: 240px; height: 240px; border-radius: 8px; }
 .qr-content { word-break: break-all; background: var(--surface-2); padding: 12px; border-radius: 6px; margin-top: 12px; font-family: monospace; }
 .qr-tip { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
 
-@media (max-width: 1080px) {
-  .event-detail-layout { grid-template-columns: minmax(0, 1fr) 290px; gap: 25px; }
-  .event-ticket { padding: 21px; }
-  .ticket-perforation { margin-left: -21px; margin-right: -21px; }
-  .ticket-date > strong { font-size: 40px; }
+@container (max-width: 850px) {
+  .event-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'overview' 'registration' 'description';
+    gap: 12px;
+  }
+  .event-ticket { position: static; }
 }
-@media (max-width: 820px) {
-  .event-detail-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'overview' 'registration' 'description'; gap: 16px; }
-  .event-detail-hero { grid-template-columns: minmax(0, 34%) minmax(0, 1fr); gap: 11px; padding: 11px; }
-  .event-detail-heading > h1 { font-size: 19px; }
-  .event-detail-heading > p { font-size: 12px; }
-  .event-description > p { font-size: 14px; }
-  .event-description ul { font-size: 13px; }
-  .event-ticket { padding: 24px; position: relative; top: 0; }
-  .ticket-perforation { margin-left: -24px; margin-right: -24px; }
-  .ticket-hint { font-size: 13px; }
-  .ticket-note { font-size: 11px; }
-  .ticket-date > strong { font-size: 40px; }
-  .detail-breadcrumb { font-size: 11px; margin: 2px 0 20px; }
+@container (max-width: 540px) {
+  .event-overview {
+    grid-template-columns: minmax(0, 30%) minmax(0, 1fr);
+    grid-template-areas: 'heading heading' 'cover facts' 'host host';
+    gap: 10px 12px;
+  }
+  .event-overview, .event-description, .event-ticket { padding: 13px; }
+  .event-detail-heading h1 { font-size: 24px; }
+  .event-fact { grid-template-columns: 14px minmax(0, 1fr); gap: 1px 5px; font-size: 12px; }
+  .event-fact dd { grid-column: 2; }
+  .event-end { margin-inline-start: 0; }
 }
-@media (max-width: 420px) {
-  .event-host { gap: 6px; flex-wrap: wrap; }
-  .event-host > .text-btn { margin-inline-start: 0; }
-  .event-detail-heading > h1 { font-size: 17px; }
-}
-</style>
-
-<style scoped>
 .members-pager { display: flex; justify-content: center; margin-top: 12px; }
 </style>

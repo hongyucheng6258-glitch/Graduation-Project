@@ -156,10 +156,13 @@
 </template>
 
 <script setup>
+import { useAdminPendingStore } from '../../store/adminPending'
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { auditAll, auditList, auditPass, auditReject } from '../../api/audit'
 import { formatTime } from '../../utils/date'
+
+const pending = useAdminPendingStore()
 
 const TYPES = ['activity', 'idle', 'lostfound', 'post', 'partner']
 const TYPE_TEXT = { activity: '活动', idle: '闲置', lostfound: '失物', post: '动态', partner: '搭子' }
@@ -247,6 +250,7 @@ async function restore(row) {
   acting.value = true
   try {
     await auditPass(row.type, row.id, row.auditStatus === 0)
+    pending.refresh({ afterMutation: true })
     ElMessage.success('已恢复展示')
     loadAll()
   } finally {
@@ -264,6 +268,7 @@ async function confirmBlock() {
   acting.value = true
   try {
     await auditReject(currentRow.value.type, currentRow.value.id, blockReason.value.trim() || 'AI 预审判定为高风险内容，维持拦截', currentRow.value.auditStatus === 0)
+    pending.refresh({ afterMutation: true })
     ElMessage.success('已维持拦截')
     blockVisible.value = false
     loadAll()

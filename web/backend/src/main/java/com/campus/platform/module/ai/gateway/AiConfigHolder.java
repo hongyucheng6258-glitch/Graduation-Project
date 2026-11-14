@@ -3,14 +3,17 @@ package com.campus.platform.module.ai.gateway;
 import cn.hutool.core.util.StrUtil;
 import com.campus.platform.module.ai.entity.AiConfig;
 import com.campus.platform.module.ai.mapper.AiConfigMapper;
-import jakarta.annotation.PostConstruct;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.campus.platform.utils.RedisCache;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+
 
 /**
  * AI 配置持有者：DB 值优先于环境变量/YAML 默认值，修改后调 refresh() 免重启。
@@ -21,7 +24,11 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class AiConfigHolder {
 
+    private static final String CACHE_KEY = "ai-config";
+    private static final String API_KEY = "api_key";
+    private static final TypeReference<Map<String, String>> CONFIG_TYPE = new TypeReference<>() {};
     private final AiConfigMapper aiConfigMapper;
+    private final RedisCache cache;
 
     @Value("${ai.base-url:https://api.deepseek.com}")
     private String defaultBaseUrl;
@@ -40,29 +47,34 @@ public class AiConfigHolder {
     @Value("${ai.rate-limit-per-day:50}")
     private int defaultRateLimit;
 
-    private final Map<String, String> configCache = new ConcurrentHashMap<>();
-
-    @PostConstruct
-    public void init() {
-        refresh();
+    public void refresh() {
+        cache.invalidate(CACHE_KEY);
     }
 
-    /** 从 DB 重新加载配置到缓存 */
-    public void refresh() {
-        configCache.clear();
-        List<AiConfig> configs = aiConfigMapper.selectList(null);
+    private Map<String, String> load() {
+        Map<String, String> values = new HashMap<>();
+        var configs = aiConfigMapper.selectList(new LambdaQueryWrapper<AiConfig>()
+                .ne(AiConfig::getConfigKey, API_KEY));
         for (AiConfig config : configs) {
             if (StrUtil.isNotBlank(config.getConfigValue())) {
-                configCache.put(config.getConfigKey(), config.getConfigValue());
+                values.put(config.getConfigKey(), config.getConfigValue());
             }
         }
+        return values;
+    }
+
+    private String databaseApiKey() {
+        var config = aiConfigMapper.selectOne(new LambdaQueryWrapper<AiConfig>()
+                .eq(AiConfig::getConfigKey, API_KEY));
+        return config == null ? null : config.getConfigValue();
     }
 
     /**
      * 获取配置值：DB 非空值 → 环境变量 → YAML 默认值。
      */
     public String get(String key) {
-        String dbVal = configCache.get(key);
+        String dbVal = API_KEY.equals(key) ? databaseApiKey()
+                : cache.get(CACHE_KEY, CONFIG_TYPE, Duration.ofMinutes(1), this::load).get(key);
         if (StrUtil.isNotBlank(dbVal)) {
             return dbVal;
         }

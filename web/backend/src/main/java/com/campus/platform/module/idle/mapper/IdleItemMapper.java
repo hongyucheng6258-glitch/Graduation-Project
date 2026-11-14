@@ -21,6 +21,23 @@ public interface IdleItemMapper extends BaseMapper<IdleItem> {
                             @Param("reason") String reason, @Param("source") String source);
 
     @Update("""
+            UPDATE idle_item SET status=#{target}
+            WHERE id=#{id} AND status=#{source}
+              AND (#{approvedOnly}=FALSE OR audit_status=1)
+              AND NOT EXISTS (SELECT 1 FROM idle_appointment a
+                              WHERE a.item_id=#{id} AND a.status IN (0,1,3))
+            """)
+    int changeListing(@Param("id") Long id, @Param("source") int source,
+                      @Param("target") int target, @Param("approvedOnly") boolean approvedOnly);
+
+    @Update("""
+            UPDATE idle_item SET status=0 WHERE id=#{id} AND status=1
+              AND NOT EXISTS (SELECT 1 FROM idle_appointment a
+                              WHERE a.item_id=#{id} AND a.status IN (0,1,3))
+            """)
+    int releaseReservation(@Param("id") Long id);
+
+    @Update("""
             <script>
             UPDATE idle_item SET status=#{status} WHERE id=#{id}
             <if test="expectedStatus != null"> AND status=#{expectedStatus}</if>

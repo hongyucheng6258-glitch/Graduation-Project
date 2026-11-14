@@ -1,5 +1,7 @@
 package com.campus.platform.module.ai.adminassistant;
 
+import com.campus.platform.module.admin.audit.AdminOperationTarget;
+
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.admin.service.AdminNoticeService;
@@ -103,5 +105,8 @@ class AdminAssistantNoticeDrafts {
     }
 
     public record Form(@NotBlank @Size(max = 64) String title, @NotBlank @Size(max = 5000) String content) {}
-    public record Draft(String id, String title, String content, LocalDateTime expiresAt, String noticeId, String state) {}
+    public record Draft(String id, String title, String content, LocalDateTime expiresAt, String noticeId, String state) implements AdminOperationTarget {
+        @Override
+        public String operationTargetId() { return noticeId; }
+    }
 }

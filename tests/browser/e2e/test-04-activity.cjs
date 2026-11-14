@@ -18,13 +18,16 @@ async function run(browser, request, ctx) {
   const admin = h.apiWithToken(request, adminLogin.token);
 
   // 1. 发布活动（人数限制 2）
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().replace('T', ' ').substring(0, 19);
+  const campusTime = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Shanghai', dateStyle: 'short', timeStyle: 'medium'
+  });
+  const tomorrow = campusTime.format(new Date(Date.now() + 86400000));
   const actRes = await seller.post('/activity', {
     title: `${h.PREFIX}E2E测试活动`,
     description: 'E2E 测试活动',
     location: '操场',
     startTime: tomorrow,
-    endTime: tomorrow,
+    endTime: campusTime.format(new Date(Date.now() + 2 * 86400000)),
     maxMembers: 2,
     category: '体育'
   });
@@ -94,37 +97,37 @@ async function run(browser, request, ctx) {
       h.record(C, '活动详情含报名人数', 'PASS', `current=${detail.data.currentMembers || detail.data.memberCount}`);
     }
 
-    // 6. 签到码生成
-    const qrRes = await seller.get(`/activity/${activityId}/signin-qrcode`);
-    let signinToken;
-    if (qrRes.code === 200) {
-      signinToken = qrRes.data.token || qrRes.data.signinToken || qrRes.data.qrcode;
-      h.record(C, '生成签到码', 'PASS');
-    } else {
-      h.record(C, '生成签到码', 'FAIL', qrRes.message);
-    }
+    const qr = await seller.get(`/activity/${activityId}/signin-qrcode`);
+    const content = typeof qr.data === 'string' ? qr.data : '';
+    const match = /^campus:\/\/signin\/([1-9]\d*)\/([A-Za-z0-9_-]+)$/.exec(content);
+    const qrValid = qr.code === 200 && match?.[1] === String(activityId);
+    h.record(C, '生成签到码', qrValid ? 'PASS' : 'FAIL', qrValid ? '' : '签到内容格式或活动编号错误');
 
-    // 7. 买家签到（通过签到码 API）
-    if (signinToken) {
-      const signinRes = await buyer.post(`/activity/${activityId}/signin`, { token: signinToken });
-      if (signinRes.code === 200) {
-        h.record(C, '买家签到成功', 'PASS');
-      } else {
-        // 尝试其他签到端点
-        const signinRes2 = await buyer.post(`/activity/${activityId}/signin`, { qrToken: signinToken });
-        if (signinRes2.code === 200) {
-          h.record(C, '买家签到成功', 'PASS', 'via qrToken');
-        } else {
-          h.record(C, '买家签到成功', 'FAIL', signinRes.message || signinRes2.message);
-        }
+    if (qrValid) {
+      const early = await buyer.post('/activity/signin', { activityId, token: match[2] });
+      if (early.code !== 400) throw new Error('活动开始前应拒绝签到');
+      const edit = await seller.put(`/activity/${activityId}`, {
+        title: `${h.PREFIX}E2E测试活动`, description: 'E2E 测试活动', location: '操场',
+        startTime: campusTime.format(new Date(Date.now() - 60000)), endTime: tomorrow,
+        maxMembers: 2, category: '体育'
+      });
+      if (edit.code !== 200) throw new Error('设置签到时段失败：' + edit.message);
+      const pass = await admin.put(`/admin/audit/activity/${activityId}/pass`);
+      if (pass.code !== 200) throw new Error('签到时段审核失败：' + pass.message);
+      const signinPage = await browser.newPage();
+      try {
+        await h.injectStudentAuth(signinPage, buyerLogin.token, buyerLogin.userInfo);
+        await signinPage.goto(`${h.STUDENT_WEB}/activity/detail/${activityId}`);
+        await signinPage.getByRole('button', { name: '活动签到', exact: true }).click();
+        await signinPage.getByLabel('签到内容', { exact: true }).fill(content);
+        await signinPage.getByRole('button', { name: '确认签到', exact: true }).click();
+        await signinPage.getByText('已通过报名（已签到）', { exact: true }).waitFor();
+        h.record(C, '买家通过网页签到', 'PASS');
+      } finally {
+        await signinPage.close();
       }
-      // 8. 重复签到应被拒绝
-      const dupSignin = await buyer.post(`/activity/${activityId}/signin`, { token: signinToken });
-      if (dupSignin.code !== 200) {
-        h.record(C, '重复签到被拒绝', 'PASS', `code=${dupSignin.code}`);
-      } else {
-        h.record(C, '重复签到被拒绝', 'FAIL', '重复签到未被拒绝');
-      }
+      const duplicate = await buyer.post('/activity/signin', { activityId, token: match[2] });
+      h.record(C, '重复签到被拒绝', duplicate.code === 1009 ? 'PASS' : 'FAIL', `code=${duplicate.code}`);
     }
   }
 

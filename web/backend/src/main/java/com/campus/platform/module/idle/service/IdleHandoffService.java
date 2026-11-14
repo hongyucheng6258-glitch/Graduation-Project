@@ -34,6 +34,7 @@ public class IdleHandoffService {
 
     private final JdbcTemplate jdbc;
     private final IdleAppointmentMapper appointments;
+    private final com.campus.platform.module.idle.mapper.IdleItemMapper idleItems;
     private final MessageService messages;
     private final TransactionTemplate transactions;
 
@@ -86,6 +87,11 @@ public class IdleHandoffService {
         return plan(appointmentId);
     }
 
+    boolean hasCompletionConfirmation(long appointmentId) {
+        Plan current = plan(appointmentId);
+        return current != null && (current.buyerDone() || current.sellerDone());
+    }
+
     /** Called with the appointment locked. A legacy appointment can still use its original completion flow. */
     public boolean markDone(IdleAppointment appointment, long userId) {
         Plan plan = plan(appointment.getId());
@@ -120,6 +126,39 @@ public class IdleHandoffService {
                 log.warn("闲置交接提醒失败，预约 {}", id, error);
             }
         }
+    }
+
+    @Scheduled(fixedDelay = 60_000, initialDelay = 60_000)
+    public void expireMissedHandoffs() {
+        var cutoff = now().minusHours(24);
+        var ids = jdbc.queryForList("""
+                SELECT h.appointment_id FROM idle_handoff h JOIN idle_appointment a ON a.id=h.appointment_id
+                WHERE a.status=1 AND h.confirmed=1 AND h.meeting_at<=? AND h.buyer_done=0 AND h.seller_done=0
+                ORDER BY h.meeting_at,h.appointment_id LIMIT 100
+                """, Long.class, cutoff);
+        for (Long id : ids) {
+            try {
+                transactions.executeWithoutResult(status -> expireOne(id, cutoff));
+            } catch (RuntimeException error) {
+                log.warn("闲置交接超时处理失败，预约 {}", id, error);
+            }
+        }
+    }
+
+    private void expireOne(long id, LocalDateTime cutoff) {
+        IdleAppointment appointment = appointments.selectForUpdate(id);
+        if (appointment == null || !Objects.equals(appointment.getStatus(), Constants.APPOINT_ACCEPTED)) return;
+        Plan current = plan(id);
+        if (current == null || !current.confirmed() || current.meetingAt() == null
+                || current.meetingAt().isAfter(cutoff) || current.buyerDone() || current.sellerDone()) return;
+
+        appointment.setStatus(Constants.APPOINT_CANCELLED);
+        appointments.updateById(appointment);
+        idleItems.releaseReservation(appointment.getItemId());
+        String title = "闲置交接超时，预约已取消";
+        String body = "约定时间已过去 24 小时，双方均未确认完成。系统已取消预约。";
+        notify(appointment, appointment.getBuyerId(), title, body);
+        notify(appointment, appointment.getSellerId(), title, body);
     }
 
     private void remindOne(long id) {

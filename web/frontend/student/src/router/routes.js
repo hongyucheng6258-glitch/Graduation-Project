@@ -6,6 +6,17 @@ export const routes = [
     meta: { public: true }
   },
   {
+    path: '/change-temporary-password',
+    name: 'TemporaryPasswordChange',
+    component: () => import('../views/login/TemporaryPasswordChange.vue')
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('../views/login/ForgotPassword.vue'),
+    meta: { public: true }
+  },
+  {
     path: '/register',
     name: 'Register',
     component: () => import('../views/login/Register.vue'),

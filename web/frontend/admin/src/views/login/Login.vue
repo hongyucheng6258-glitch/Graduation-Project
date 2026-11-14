@@ -13,18 +13,25 @@
           <div class="captcha-row">
             <el-input v-model="form.captchaCode"
                       :placeholder="captchaMode === 'math' ? '输入运算结果' : '4位验证码'"
-                      :maxlength="captchaMode === 'math' ? 3 : 4" @keyup.enter="submit" />
-            <img v-if="captchaMode !== 'math'" class="captcha-img" :src="captchaImage"
-                 title="看不清？点击刷新" @click="loadCaptcha" />
-            <div v-else class="captcha-math" title="换一题" @click="loadCaptcha">{{ captchaExpression }}</div>
+                      :maxlength="captchaMode === 'math' ? 3 : 4" />
+            <button type="button" class="captcha-refresh" :class="captchaMode === 'math' ? 'captcha-math' : 'captcha-img'"
+                    :aria-label="captchaMode === 'math' ? `当前题目：${captchaExpression}。更换验证码` : '刷新图片验证码'"
+                    title="点击刷新验证码" @click="loadCaptcha" @keyup.enter.stop>
+              <span v-if="captchaMode === 'math'">{{ captchaExpression }}</span>
+              <img v-else-if="captchaImage" :src="captchaImage" alt="" />
+            </button>
           </div>
         </el-form-item>
         <el-form-item>
           <div class="login-row">
             <el-checkbox v-model="remember">记住此设备</el-checkbox>
-            <a class="forgot" @click.prevent>忘记密码？</a>
+            <button type="button" class="forgot" @click="showRecovery = !showRecovery" @keyup.enter.stop
+              :aria-expanded="showRecovery" aria-controls="admin-password-recovery">忘记密码？</button>
           </div>
         </el-form-item>
+        <p v-show="showRecovery" id="admin-password-recovery" class="recovery-tip">
+          请联系校园平台运维人员核验身份并重置管理员密码。
+        </p>
         <el-button type="primary" class="submit" :loading="loading" @click="submit">登 录</el-button>
       </el-form>
       <div class="tip">初始账号：admin / admin123（请登录后及时修改）</div>
@@ -34,15 +41,18 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { adminLogin, getCaptcha } from '../../api/auth'
+import { adminRedirect } from '../../utils/adminRedirect.mjs'
 import { useAdminStore } from '../../store/admin'
 
 const router = useRouter()
+const route = useRoute()
 const adminStore = useAdminStore()
 const loading = ref(false)
+const showRecovery = ref(false)
 const captchaImage = ref('')
 const captchaMode = ref('image')
 const captchaExpression = ref('')
@@ -75,7 +85,7 @@ async function submit() {
     const res = await adminLogin(form)
     adminStore.loginSuccess(res.token, res.adminInfo)
     ElMessage.success('登录成功')
-    router.push('/dashboard')
+    router.replace(adminRedirect(router, route.query.redirect))
   } catch (e) {
     // 登录失败（验证码错误/过期/账号密码错误）自动刷新验证码
     loadCaptcha()
@@ -158,6 +168,9 @@ onMounted(() => {
   user-select: none;
   transition: border-color .18s ease, box-shadow .18s ease;
 }
+.captcha-refresh { padding: 0; overflow: hidden; }
+.captcha-refresh img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.captcha-refresh:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .captcha-math:hover { border-color: var(--brand, #0d5c3f); box-shadow: 0 3px 10px rgba(22, 112, 83, .1), inset 0 1px 0 rgba(255, 255, 255, .85); }
 .login-row {
   display: flex;
@@ -166,7 +179,9 @@ onMounted(() => {
   width: 100%;
   font-size: var(--fs-sm);
 }
+.recovery-tip { margin: 0 0 16px; font-size: var(--fs-sm); color: var(--ink-2); }
 .login-row .forgot {
+  background: none; border: 0; padding: 4px; font: inherit;
   color: var(--brand-strong);
   font-weight: 600;
   cursor: pointer;

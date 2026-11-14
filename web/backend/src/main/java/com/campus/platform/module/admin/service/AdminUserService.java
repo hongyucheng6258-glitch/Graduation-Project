@@ -31,6 +31,8 @@ public class AdminUserService {
     private final AuthService authService;
     private final RedisUtils redisUtils;
     private final AdminPermissionService adminPermissionService;
+    private final com.campus.platform.module.chat.websocket.ChatSessionRegistry chatSessions;
+    private final com.campus.platform.module.drawgame.websocket.DrawGuessSessionRegistry drawSessions;
 
     /** 用户列表/搜索（学号/昵称/状态） */
     public PageResult<User> listUsers(String keyword, Integer status, Long record, int pageNum, int pageSize) {
@@ -51,27 +53,48 @@ public class AdminUserService {
         if (user == null) {
             throw new BizException(ResultCode.NOT_FOUND, "用户不存在");
         }
-        user.setStatus(status);
-        userMapper.updateById(user);
+        User statusUpdate = new User();
+        statusUpdate.setId(id);
+        statusUpdate.setStatus(status);
+        userMapper.updateById(statusUpdate);
         // 状态机联动黑名单（key 与 JwtInterceptor 保持一致，按角色区分避免与管理员 id 冲突）：
         // 禁用 -> 写入黑名单；解封 -> 移除黑名单。
         // 角色段统一用 Constants.ROLE_STUDENT，避免将来该常量被改而写入端不同步导致黑名单静默失效
         String blackKey = "auth:blacklist:" + Constants.ROLE_STUDENT + ":" + id;
         if (status != null && status == 1) {
             redisUtils.set(blackKey, "1");
+            revokeStudentSessions(id);
         } else {
             redisUtils.delete(blackKey);
         }
     }
 
-    /** 重置密码（重置为 123456，提示用户尽快修改） */
-    public void resetPassword(Long id) {
+    private void revokeStudentSessions(Long id) {
+        redisUtils.set("auth:revoked-at:" + Constants.ROLE_STUDENT + ":" + id,
+                String.valueOf(System.currentTimeMillis()));
+        chatSessions.closeUserSessions(id);
+        drawSessions.closeUserSessions(id);
+    }
+
+    public void setRecoveredPassword(User user, String password) {
+        if (userMapper.replacePassword(user.getId(), user.getPassword(), authService.encode(password), null) != 1) {
+            throw new BizException(ResultCode.BAD_REQUEST, "密码已变化，请重新验证");
+        }
+        revokeStudentSessions(user.getId());
+    }
+
+    public String resetPassword(Long id) {
         User user = userMapper.selectById(id);
         if (user == null) {
             throw new BizException(ResultCode.NOT_FOUND, "用户不存在");
         }
-        user.setPassword(authService.encode("123456"));
-        userMapper.updateById(user);
+        String temporaryPassword = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 20);
+        var expiresAt = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC).plusHours(24);
+        if (userMapper.replacePassword(id, user.getPassword(), authService.encode(temporaryPassword), expiresAt) != 1) {
+            throw new BizException(ResultCode.BAD_REQUEST, "密码已变化，请重新发起重置");
+        }
+        revokeStudentSessions(id);
+        return temporaryPassword;
     }
 
     // ---------- 子管理员管理（D8，P2） ----------

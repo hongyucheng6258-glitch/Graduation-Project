@@ -2,14 +2,14 @@
   <!-- 通用内容卡片：封面图 + 标题 + 摘要 + 底部信息（闲置/活动/失物列表复用）
        第9项修复：module/category 传入兜底语义；加载失败换兜底图（防递归）；兜底时标注"示意图"；懒加载 -->
   <el-card class="item-card" :class="{ 'item-card--feed': feed }" :shadow="feed ? 'never' : 'hover'" @click="$emit('click')">
-    <div class="cover" v-if="resolvedCover">
-      <el-image :src="resolvedCover" fit="contain" class="cover-img" lazy @error="onError" />
+    <div class="content-photo" v-if="resolvedCover">
+      <el-image :src="resolvedCover" fit="cover" class="content-photo__image" lazy @error="onError" />
       <span v-if="isSchematic" class="schematic-tag">示意图</span>
-      <span v-if="$slots.badge" class="cover-badge"><slot name="badge" /></span>
+      <span v-if="$slots.badge" class="content-photo__badge"><slot name="badge" /></span>
     </div>
-    <div class="cover placeholder" v-else>
+    <div class="content-photo placeholder" v-else>
       <el-icon :size="36" color="var(--ink-3)"><Picture /></el-icon>
-      <span v-if="$slots.badge" class="cover-badge"><slot name="badge" /></span>
+      <span v-if="$slots.badge" class="content-photo__badge"><slot name="badge" /></span>
     </div>
     <div class="body">
       <slot name="labels" />
@@ -67,22 +67,7 @@ function onError(event) {
 .item-card :deep(.el-card__body) {
   padding: 0;
 }
-.cover {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  min-height: 160px;
-  max-height: 230px;
-  background: var(--surface-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-.cover-img {
-  width: 100%;
-  height: 100%;
-}
+.placeholder { display: grid; place-items: center; }
 .schematic-tag {
   position: absolute;
   left: 10px;
@@ -94,12 +79,6 @@ function onError(event) {
   border-radius: 4px;
   color: #fff;
   background: rgba(15, 23, 42, 0.62);
-}
-.cover-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 2;
 }
 .body {
   padding: 12px;
@@ -136,12 +115,6 @@ function onError(event) {
   background: transparent;
   border: 0;
   border-radius: 0;
-}
-.item-card--feed .cover {
-  aspect-ratio: 1;
-  min-height: 0;
-  max-height: none;
-  border-radius: 8px;
 }
 .item-card--feed .body { padding: 9px 0 0; }
 .item-card--feed .desc:empty { display: none; }

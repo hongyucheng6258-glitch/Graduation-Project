@@ -52,6 +52,8 @@ class AdminUserServiceTest {
     @Mock
     private AdminPermissionService adminPermissionService;
 
+    @Mock private com.campus.platform.module.chat.websocket.ChatSessionRegistry chatSessions;
+    @Mock private com.campus.platform.module.drawgame.websocket.DrawGuessSessionRegistry drawSessions;
     @InjectMocks
     private AdminUserService adminUserService;
 
@@ -92,7 +94,7 @@ class AdminUserServiceTest {
             adminUserService.updateStatus(42L, Constants.USER_STATUS_BANNED);
 
             ArgumentCaptor<String> key = ArgumentCaptor.forClass(String.class);
-            verify(redisUtils).set(key.capture(), any());
+            verify(redisUtils).set(key.capture(), eq("1"));
 
             // JwtInterceptor 拼接方式：("auth:blacklist:" + role + ":" + uid)，role 取自 JWT
             String interceptorLookupKey = "auth:blacklist:" + Constants.ROLE_STUDENT + ":" + 42L;

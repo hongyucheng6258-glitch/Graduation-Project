@@ -280,13 +280,11 @@ export default {
   border: 3px solid rgba(255, 255, 255, 0.35);
   flex: none;
 }
-.banner-info { flex: 1; min-width: 0; }
+.banner-info { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .banner-info h3 {
   margin: 0 0 6px;
   font-size: 22px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: block;
 }
 .banner-sub { margin: 0 0 4px; font-size: 13px; opacity: 0.9; }
 .banner-bio { margin: 6px 0; font-size: 14px; opacity: 0.95; }
@@ -333,4 +331,10 @@ export default {
 .review-item-title { color: #7a8b82; font-size: 12px; }
 .review-content { margin-top: 6px; font-size: 14px; color: #1f2d27; }
 .review-time { margin-top: 4px; font-size: 12px; color: #9db5a9; }
+@media (max-width: 600px) {
+  .home-banner { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 12px; padding: 16px; }
+  .banner-avatar { --el-avatar-size: 56px !important; }
+  .banner-ops { grid-column: 1 / -1; flex-wrap: wrap; }
+  .banner-ops :deep(.el-button + .el-button) { margin-left: 0; }
+}
 </style>

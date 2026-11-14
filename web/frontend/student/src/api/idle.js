@@ -37,6 +37,10 @@ export function handleAppoint(id, accept) {
   return request.put(`/idle/appoint/${id}/handle`, { accept })
 }
 
+export function cancelAppoint(id) {
+  return request.put(`/idle/appoint/${id}/cancel`)
+}
+
 export function finishAppoint(id) {
   return request.put(`/idle/appoint/${id}/finish`)
 }

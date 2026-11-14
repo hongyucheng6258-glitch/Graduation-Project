@@ -8,7 +8,7 @@
       </div>
       <div class="page-head-actions">
         <RouterLink v-if="focusedId" class="btn btn-ghost btn-sm" :to="{ path: `/audit/${props.type}`, query: returnQuery }">
-          {{ returnQuery.view ? '返回待审列表' : '返回审核列表' }}
+          {{ returnQuery.view === 'pending' ? '返回待审列表' : '返回审核列表' }}
         </RouterLink>
         <el-radio-group v-else v-model="viewMode" @change="handleViewChange">
           <el-radio-button value="all">全部内容</el-radio-button>
@@ -116,20 +116,28 @@
 </template>
 
 <script setup>
+import { useAdminPendingStore } from '../../store/adminPending'
+import { listPage } from '../../layout/adminNavigation.mjs'
 import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { auditAll, auditList, auditPass, auditReject, auditRecordDetail } from '../../api/audit'
 import { formatTime } from '../../utils/date'
 import { normalizeImages, firstValidImage } from '../../utils/image'
 import { searchRecordId } from '../../utils/searchQuery.mjs'
 
+const pending = useAdminPendingStore()
+
 const props = defineProps({
   type: { type: String, required: true }
 })
 const route = useRoute()
+const router = useRouter()
 const focusedId = computed(() => searchRecordId(route.query.record))
-const returnQuery = computed(() => route.query.view === 'all' ? {} : { view: 'pending' })
+const returnQuery = computed(() => ({
+  view: route.query.view === 'all' ? 'all' : 'pending',
+  page: typeof route.query.page === 'string' ? route.query.page : undefined
+}))
 let requestVersion = 0
 
 const CFG = {
@@ -186,8 +194,9 @@ function displayDesc(row) {
   return row.description || row.content || ''
 }
 
-function handleViewChange() {
-  resetAndLoad()
+function handleViewChange(view) {
+  const query = { ...route.query, view: view === 'pending' ? 'pending' : undefined, page: undefined }
+  router.replace({ query })
 }
 
 async function load() {
@@ -218,6 +227,7 @@ async function pass(row) {
   acting.value = true
   try {
     await auditPass(props.type, row.id, row.auditStatus === 0)
+    pending.refresh({ afterMutation: true })
     ElMessage.success('已通过，作者将收到通知')
     load()
   } finally {
@@ -240,6 +250,7 @@ async function reject() {
   acting.value = true
   try {
     await auditReject(props.type, currentRow.value.id, rejectReason.value.trim(), currentRow.value.auditStatus === 0)
+    pending.refresh({ afterMutation: true })
     ElMessage.success('已驳回，作者将收到通知')
     rejectVisible.value = false
     load()
@@ -248,19 +259,19 @@ async function reject() {
   }
 }
 
-function resetAndLoad() {
+function resetAndLoad(page = 1) {
   list.value = []
   total.value = 0
-  pageNum.value = 1
+  pageNum.value = page
   imageErrors.value = {}
   load()
 }
-watch([() => props.type, () => route.query.view, focusedId], ([, view], [, previousView]) => {
+watch([() => props.type, () => route.query.view, focusedId, () => route.query.page], ([, view]) => {
   rejectVisible.value = false
   currentRow.value = null
   rejectReason.value = ''
-  if (view !== previousView) viewMode.value = view === 'pending' ? 'pending' : 'all'
-  resetAndLoad()
+  viewMode.value = view === 'pending' ? 'pending' : 'all'
+  resetAndLoad(focusedId.value ? 1 : listPage(route.query.page))
 }, { immediate: true })
 </script>
 

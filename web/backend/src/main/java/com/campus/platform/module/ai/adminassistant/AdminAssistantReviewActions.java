@@ -1,5 +1,7 @@
 package com.campus.platform.module.ai.adminassistant;
 
+import com.campus.platform.module.admin.audit.AdminOperationTarget;
+
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
@@ -135,5 +137,14 @@ class AdminAssistantReviewActions {
                           @Pattern(regexp = "idle|activity") String kind,
                           @Pattern(regexp = "[0-9a-f]{64}") String version) {}
     public record Card(String id, String itemId, String title, String excerpt, String decision, String reason,
-                       LocalDateTime expiresAt, LocalDateTime appliedAt, Integer auditStatus, String state, String kind) {}
+                       LocalDateTime expiresAt, LocalDateTime appliedAt, Integer auditStatus, String state, String kind) implements AdminOperationTarget {
+        @Override
+        public String operationTargetId() { return itemId; }
+
+        @Override
+        public String operationTargetType() { return kind; }
+
+        @Override
+        public String operationDecision() { return decision; }
+    }
 }

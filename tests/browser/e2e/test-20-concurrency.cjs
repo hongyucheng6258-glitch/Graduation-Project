@@ -32,23 +32,8 @@ async function run(browser, request, ctx) {
     await buyer.delete(`/post/${postId}/like`);
   }
 
-  // 2. 重复签到（已签到的不能再签）— 已在类别4验证，这里再确认
-  const activityId = ctx.activity?.activityId;
-  if (activityId) {
-    const qrRes = await seller.get(`/activity/${activityId}/signin-qrcode`);
-    if (qrRes.code === 200) {
-      const token = qrRes.data.token || qrRes.data.signinToken;
-      if (token) {
-        // 买家已在类别4签到，这里再签应失败
-        const dup = await buyer.post(`/activity/${activityId}/signin`, { token });
-        if (dup.code !== 200) {
-          h.record(C, '重复签到被拒绝', 'PASS', `code=${dup.code}`);
-        } else {
-          h.record(C, '重复签到被拒绝', 'FAIL');
-        }
-      }
-    }
-  }
+  // 类别 04 用真实签到内容验证重复签到。
+
 
   // 3. 重复审批（已审批的不能再审批）— 通过 API 测试
   // 用已完成的预约再尝试处理
@@ -58,7 +43,7 @@ async function run(browser, request, ctx) {
     if (dupHandle.code !== 200) {
       h.record(C, '重复处理预约被拒绝', 'PASS', `code=${dupHandle.code}`);
     } else {
-      h.record(C, '重复处理预约被拒绝', 'UNCOVERED', '预约可能已完成，接口幂等');
+      h.record(C, '重复处理预约被拒绝', 'FAIL', '预约可能已完成，接口幂等');
     }
   }
 
@@ -93,34 +78,44 @@ async function run(browser, request, ctx) {
   const lfId = ctx.lostfound?.lfId;
   if (lfId) {
     // 失物已完成，再尝试认领
-    const dupClaim = await buyer.post(`/lostfound/${lfId}/claim`, { content: `${h.PREFIX}重复认领` });
+    const dupClaim = await buyer.post(`/lostfound/${lfId}/claim`, { message: `${h.PREFIX}重复认领` });
     if (dupClaim.code !== 200) {
       h.record(C, '对已完成失物重复认领被拒绝', 'PASS', `code=${dupClaim.code}`);
     } else {
-      h.record(C, '对已完成失物重复认领被拒绝', 'UNCOVERED', '允许重复认领');
+      h.record(C, '对已完成失物重复认领被拒绝', 'FAIL', '允许重复认领');
     }
   }
 
-  // 6. 活动最后名额（达到上限后不能报名）
-  if (activityId) {
-    // 活动 maxMembers=2，已有1人通过。再报名应成功（还剩1位）。
-    // 报名后审批通过，再第三人报名应失败
-    const signup3 = await third.post(`/activity/${activityId}/signup`, { remark: `${h.PREFIX}满员测试` });
-    if (signup3.code === 200) {
-      // 审批通过
-      const members = await seller.get(`/activity/${activityId}/members`, { pageNum: 1, pageSize: 10 });
-      const mList = h.unwrapList(members);
-      const pending = (Array.isArray(mList) ? mList : []).find(m => m.status === 0 || m.status === 'pending');
-      if (pending) await seller.put(`/activity/member/${pending.id}/handle`, { approve: true });
-      // 再尝试报名（已达上限2人）
-      const full = await buyer.post(`/activity/${activityId}/signup`, { remark: `${h.PREFIX}应失败` });
-      if (full.code !== 200) {
-        h.record(C, '活动达上限后不能再报名', 'PASS', `code=${full.code}`);
-      } else {
-        h.record(C, '活动达上限后不能再报名', 'FAIL', '满员仍可报名');
-      }
-    }
-  }
+  // 使用独立的未开始活动，避免签到用例改变报名截止时间。
+  const activity = await seller.post('/activity', {
+    title: `${h.PREFIX}并发名额验证`, description: '验证最后一个名额', location: '操场',
+    category: '体育', maxMembers: 1
+  });
+  if (activity.code !== 200) throw new Error('无法创建名额验证活动：' + activity.message);
+  const activityId = activity.data.id;
+  const audit = await admin.put(`/admin/audit/activity/${activityId}/pass`);
+  if (audit.code !== 200) throw new Error('无法审核并发名额验证活动');
+  const [firstSignup, secondSignup] = await Promise.all([
+    buyer.post(`/activity/${activityId}/signup`, { remark: '并发报名一' }),
+    third.post(`/activity/${activityId}/signup`, { remark: '并发报名二' })
+  ]);
+  const responses = [firstSignup, secondSignup];
+  const members = await seller.get(`/activity/${activityId}/members`);
+  const rows = h.unwrapList(members);
+  const detail = await buyer.get(`/activity/${activityId}`);
+  const holdsOneSeat = responses.filter(row => row.code === 200).length === 1
+    && responses.filter(row => row.code === 400 && /满/.test(row.message)).length === 1
+    && rows.length === 1 && rows[0].status === 0 && detail.data?.occupiedSeats === 1
+    && detail.data.memberCount === 0 && detail.data.canSignup === false;
+  h.record(C, '同时报名仅占用一个待审批名额', holdsOneSeat ? 'PASS' : 'FAIL',
+    `responses=${responses.map(row => row.code).join(',')} rows=${rows.length}`);
+  if (!holdsOneSeat) throw new Error('并发报名结果不符合名额限制');
+  const approved = await seller.put(`/activity/member/${rows[0].id}/handle`, { approve: true });
+  const unregistered = firstSignup.code === 200 ? third : buyer;
+  const full = await unregistered.post(`/activity/${activityId}/signup`, { remark: '满员验证' });
+  h.record(C, '活动达上限后不能再报名',
+    approved.code === 200 && full.code === 400 && /满/.test(full.message) ? 'PASS' : 'FAIL',
+    `code=${full.code} ${full.message}`);
 
   h.record(C, '并发/重复操作防护', concurrencyVerified ? 'PASS' : 'BLOCK', concurrencyVerified ? '已完成真实并发请求与最终状态核对' : '未能完成真实并发预约验证');
 }

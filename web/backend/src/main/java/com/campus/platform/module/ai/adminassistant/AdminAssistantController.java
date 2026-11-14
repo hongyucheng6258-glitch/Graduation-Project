@@ -1,5 +1,8 @@
 package com.campus.platform.module.ai.adminassistant;
 
+import com.campus.platform.module.admin.audit.AdminOperation;
+import com.campus.platform.module.admin.audit.AdminPermission;
+
 import com.campus.platform.common.R;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -65,6 +68,7 @@ public class AdminAssistantController {
     }
 
     @PostMapping("/reviews/{id}/confirm")
+    @AdminOperation(permission = AdminPermission.CONTENT_REVIEW, module = "audit", action = "confirm-review", assistant = true)
     public R<AdminAssistantReviewActions.Card> confirmReview(@PathVariable String id) {
         return R.ok(reviews.confirm(adminId(), id));
     }
@@ -85,6 +89,7 @@ public class AdminAssistantController {
     }
 
     @PostMapping("/notice-drafts/{id}/confirm")
+    @AdminOperation(permission = AdminPermission.NOTICE_WRITE, module = "notice", action = "confirm-draft", assistant = true)
     public R<AdminAssistantNoticeDrafts.Draft> confirmNotice(@PathVariable String id, @Valid @RequestBody AdminAssistantNoticeDrafts.Form form) {
         return R.ok(notices.confirm(adminId(), id, form));
     }

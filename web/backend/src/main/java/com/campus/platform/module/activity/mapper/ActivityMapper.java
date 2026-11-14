@@ -29,5 +29,5 @@ public interface ActivityMapper extends BaseMapper<Activity> {
     void updateStatus(@Param("id") Long id, @Param("status") int status);
 
     @Update("UPDATE activity SET status=#{status} WHERE id=#{id} AND status=#{expected}")
-    void replaceStatus(@Param("id") Long id, @Param("expected") int expected, @Param("status") int status);
+    int replaceStatus(@Param("id") Long id, @Param("expected") int expected, @Param("status") int status);
 }

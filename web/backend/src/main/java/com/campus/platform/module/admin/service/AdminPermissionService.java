@@ -3,11 +3,15 @@ package com.campus.platform.module.admin.service;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.common.UserContext;
+import com.campus.platform.module.admin.audit.AdminPermission;
 import com.campus.platform.module.admin.entity.Admin;
 import com.campus.platform.module.admin.mapper.AdminMapper;
 import com.campus.platform.utils.RedisUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * 管理端权限统一校验组件（R2 复查修复：按「撤销时间 vs 令牌签发时间」失效旧令牌）。
@@ -66,6 +70,27 @@ public class AdminPermissionService {
     /** 供已在拦截器完成令牌校验后的内部调用使用（无 iat 比较） */
     public Admin requireActive(Long adminId) {
         return requireActive(adminId, null);
+    }
+
+    public Admin currentAdmin() {
+        return requireActive(UserContext.getUid());
+    }
+
+    public void check(Admin admin, AdminPermission permission) {
+        if (!permission.allows(admin.getRole())) {
+            throw new BizException(ResultCode.FORBIDDEN, "无权限执行此操作");
+        }
+    }
+
+    public void require(AdminPermission permission) {
+        check(currentAdmin(), permission);
+    }
+
+    public List<String> permissionsFor(Admin admin) {
+        return Arrays.stream(AdminPermission.values())
+                .filter(permission -> permission.allows(admin.getRole()))
+                .map(AdminPermission::getCode)
+                .toList();
     }
 
     /** 仅超级管理员可操作（当前登录管理员必须是 super） */

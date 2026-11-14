@@ -752,7 +752,14 @@ public class DrawGuessRoomService {
             runtime.currentRound = null;
             roomMapper.updateById(runtime.entity);
             cancelTimer(runtime);
-            sessionRegistry.broadcast(runtime.entity.getId(), event("room_ended", "room", roomView(runtime, null)));
+            Long roomId = runtime.entity.getId();
+            sessionRegistry.broadcast(roomId, event("room_ended", "room", roomView(runtime, null)));
+            timerExecutor.schedule(() -> {
+                if (liveRooms.remove(roomId, runtime)) {
+                    sessionRegistry.onlineUserIds(roomId)
+                            .forEach(userId -> sessionRegistry.closeUserSessions(roomId, userId));
+                }
+            }, 30, java.util.concurrent.TimeUnit.MINUTES);
             return;
         }
         roomMapper.updateById(runtime.entity);

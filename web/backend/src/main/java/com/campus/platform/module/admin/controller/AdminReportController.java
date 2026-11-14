@@ -1,5 +1,8 @@
 package com.campus.platform.module.admin.controller;
 
+import com.campus.platform.module.admin.audit.AdminOperation;
+import com.campus.platform.module.admin.audit.AdminPermission;
+
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.R;
 import com.campus.platform.common.UserContext;
@@ -31,6 +34,7 @@ public class AdminReportController {
     }
 
     @PutMapping("/{id}/handle")
+    @AdminOperation(permission = AdminPermission.REPORT_HANDLE, module = "report", action = "handle", idArgument = 0)
     public R<Void> handle(@PathVariable Long id, @Valid @RequestBody ReportHandleDTO dto) {
         reportAdminService.handle(UserContext.getUid(), id, dto);
         return R.ok();

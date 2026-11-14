@@ -9,7 +9,7 @@
         <p class="banner-id">学号 {{ user?.studentNo || '未绑定' }} · {{ user?.phone ? '手机 ' + user?.phone : '未绑定手机' }}</p>
         <div class="banner-tags">
           <span v-if="user?.avatar" class="banner-tag tag-brand">已设头像</span>
-          <span v-if="user?.phone" class="banner-tag tag-success">手机已绑定</span>
+          <span v-if="user?.phone" class="banner-tag tag-success">资料手机号已填写</span>
           <span v-if="user?.bio" class="banner-tag tag-info">已写简介</span>
         </div>
       </div>
@@ -20,6 +20,7 @@
       </div>
       <div class="banner-ops">
         <el-button @click="editVisible = true">编辑资料</el-button>
+        <el-button v-if="smsEnabled" @click="phoneVisible = true">{{ verifiedPhone ? '更换登录手机号' : '验证登录手机号' }}</el-button>
         <el-button @click="pwdVisible = true">修改密码</el-button>
       </div>
     </section>
@@ -80,7 +81,7 @@
               <template #default="{ row }">
                 <template v-if="row.status !== 3 && row.status !== 2">
                   <el-button size="small" link type="primary" @click="editIdle(row)">编辑</el-button>
-                  <el-button size="small" link type="danger" @click="offlineIdle(row)">下架</el-button>
+                  <el-button v-if="row.status === 0" size="small" link type="danger" @click="offlineIdle(row)">下架</el-button>
                 </template>
                 <el-button v-if="row.status === 3" size="small" link type="success" @click="relistIdle(row)">重新上架</el-button>
                 <span v-if="row.status === 2" style="color: var(--ink-3); font-size: 12px">已完成</span>
@@ -167,6 +168,9 @@
     </el-dialog>
 
     <!-- 修改密码弹窗 -->
+    <el-dialog v-model="phoneVisible" title="验证登录手机号" destroy-on-close width="min(440px, calc(100vw - 32px))">
+      <PhoneAccountForm purpose="bind" :initial-phone="verifiedPhone || user?.phone" @done="finishBinding" />
+    </el-dialog>
     <el-dialog v-model="pwdVisible" title="修改密码" width="min(440px, calc(100vw - 32px))">
       <el-form :model="pwdForm" label-width="80px">
         <el-form-item label="原密码"><el-input v-model="pwdForm.oldPassword" type="password" show-password /></el-form-item>
@@ -181,6 +185,8 @@
 </template>
 
 <script setup>
+import PhoneAccountForm from '../login/PhoneAccountForm.vue'
+import { phoneOptions, phoneBinding } from '../../api/accountRecovery'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { Calendar, Collection, Goods, Star } from '@element-plus/icons-vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
@@ -229,6 +235,20 @@ const wrongStatsData = ref({ total: 0, pending: 0, mastered: 0, weekReviewCount:
 const conversationCount = ref(0)
 const editVisible = ref(false)
 const pwdVisible = ref(false)
+const phoneVisible = ref(false)
+const smsEnabled = ref(false)
+const verifiedPhone = ref('')
+onMounted(async () => {
+  try {
+    smsEnabled.value = (await phoneOptions()).enabled
+    if (smsEnabled.value) verifiedPhone.value = (await phoneBinding()).phone
+  } catch { /* 密码功能仍可使用 */ }
+})
+function finishBinding(binding) {
+  verifiedPhone.value = binding.phone
+  phoneVisible.value = false
+  ElMessage.success('登录手机号已验证')
+}
 const saving = ref(false)
 const editForm = reactive({ nickname: '', gender: 0, phone: '', bio: '' })
 const avatarList = ref([])
@@ -432,7 +452,10 @@ async function savePassword() {
 .profile-recent h2 { margin: 4px 0; font-size: var(--fs-h2); }
 .profile-recent > p { margin: 0 0 14px; }
 .recent-link { min-width: 0; }
-.recent-link :deep(.cover) { height: 130px; }
+.recent-link :deep(.content-photo) {
+  aspect-ratio: 16 / 9;
+  max-height: 160px;
+}
 .recent-link :deep(.desc:empty) { display: none; }
 .recent-link :deep(.item-card) { height: 100%; border-radius: var(--r-md); border-color: var(--line); }
 .banner-ops :deep(.el-button) { border-radius: var(--r-pill); }

@@ -37,7 +37,7 @@
         <el-button v-if="!plan" size="small" :loading="busy" @click="finish">确认完成</el-button>
         <el-button v-if="plan" text size="small" :disabled="busy" @click="load">刷新交接状态</el-button>
       </div>
-      <p v-if="plan?.confirmed && !myDone" class="handoff-hint">到约定时间并完成互换后，双方分别确认即可评价。</p>
+      <p v-if="plan?.confirmed && !myDone" class="handoff-hint">交接后双方分别确认即可评价。约定时间过去 24 小时后，如双方均未确认，预约将自动取消。</p>
     </template>
   </section>
 </template>

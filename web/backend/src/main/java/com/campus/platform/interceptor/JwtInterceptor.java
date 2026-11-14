@@ -36,6 +36,7 @@ public class JwtInterceptor implements HandlerInterceptor {
     private static final List<String> PUBLIC_READ_PATTERNS = List.of(
             // 公开列表
             "/api/idle/list",
+            "/api/media/{resource}/{id:[0-9]+}/{index:[0-9]+}",
             "/api/activity/list",
             "/api/lostfound/list",
             "/api/notice/list",
@@ -58,6 +59,7 @@ public class JwtInterceptor implements HandlerInterceptor {
 
     private final JwtUtils jwtUtils;
     private final RedisUtils redisUtils;
+    private final com.campus.platform.module.user.mapper.UserMapper userMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
@@ -83,6 +85,27 @@ public class JwtInterceptor implements HandlerInterceptor {
             // 禁用用户黑名单校验：管理员禁用学生后，其存量 token 在下一次请求即失效
             if (redisUtils.hasKey("auth:blacklist:" + role + ":" + uid)) {
                 writeUnauthorized(response, ResultCode.UNAUTHORIZED);
+                return false;
+            }
+            Object revoked = redisUtils.get("auth:revoked-at:" + Constants.ROLE_STUDENT + ":" + uid);
+            if (revoked != null) {
+                Long issuedAt = jwtUtils.getIssuedAtMillis(token);
+                if (issuedAt == null || issuedAt <= Long.parseLong(revoked.toString())) {
+                    writeUnauthorized(response, ResultCode.UNAUTHORIZED);
+                    return false;
+                }
+            }
+            boolean passwordChangeOnly = jwtUtils.isPasswordChangeOnly(token);
+            boolean pendingChange = userMapper.requiresPasswordChange(uid);
+            if (passwordChangeOnly && !pendingChange) {
+                writeUnauthorized(response, ResultCode.UNAUTHORIZED);
+                return false;
+            }
+            if ((passwordChangeOnly || pendingChange)
+                    && !("PUT".equals(request.getMethod())
+                    && "/api/user/password".equals(request.getServletPath().isEmpty()
+                            ? request.getRequestURI() : request.getServletPath()))) {
+                writeUnauthorized(response, ResultCode.FORBIDDEN);
                 return false;
             }
             UserContext.set(uid, role);

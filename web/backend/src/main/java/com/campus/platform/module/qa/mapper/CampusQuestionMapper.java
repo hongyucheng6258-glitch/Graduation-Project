@@ -7,4 +7,6 @@ import org.apache.ibatis.annotations.Mapper;
 /** 问答-问题 Mapper */
 @Mapper
 public interface CampusQuestionMapper extends BaseMapper<CampusQuestion> {
+    @org.apache.ibatis.annotations.Select("SELECT * FROM campus_question WHERE id=#{id} FOR UPDATE")
+    CampusQuestion lockById(@org.apache.ibatis.annotations.Param("id") Long id);
 }

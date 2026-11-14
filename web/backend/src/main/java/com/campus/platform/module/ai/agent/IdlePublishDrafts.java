@@ -100,7 +100,7 @@ public class IdlePublishDrafts implements AgentToolSource {
         return dto;
     }
 
-    private List<String> ownedImages(Long uid, List<Long> ids) {
+    List<String> ownedImages(Long uid, List<Long> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
         var urls = new ArrayList<String>(ids.size());
         long encodedLength = 0;

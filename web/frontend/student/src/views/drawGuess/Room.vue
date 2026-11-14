@@ -8,13 +8,15 @@
         <span class="room-eyebrow">CAMPUS DRAW & GUESS</span>
         <h1>{{ room?.title || '你画我猜房间' }}</h1>
       </div>
-      <div class="connection-state" :class="`state-${socketState}`" role="status" aria-live="polite">
+      <div v-if="room && !loading && !loadError" class="connection-state" :class="`state-${socketState}`" role="status" aria-live="polite">
         <i /> {{ socketLabel }}
       </div>
     </header>
 
     <div v-if="loadError" class="room-error" role="alert">
-      <span>{{ loadError }}</span><button class="text-action" type="button" @click="loadRoom">重新加载</button>
+      <span>{{ loadError }}</span>
+      <RouterLink v-if="roomUnavailable" class="text-action" to="/draw-guess">返回大厅</RouterLink>
+      <button v-else class="text-action" type="button" @click="loadRoom">重新加载</button>
     </div>
 
     <template v-else-if="room">
@@ -164,6 +166,7 @@ const loading = ref(false)
 const starting = ref(false)
 const savingSnapshot = ref(false)
 const loadError = ref('')
+const roomUnavailable = ref(false)
 const socketState = ref('connecting')
 const privateAnswer = ref('')
 const turnNotice = ref('')
@@ -200,6 +203,7 @@ async function loadRoom() {
   savedRoundIds.value = new Set()
   loading.value = true
   loadError.value = ''
+  roomUnavailable.value = false
   try {
     const data = await getDrawGuessRoom(roomId.value)
     if (requestId !== currentLoad) return
@@ -219,7 +223,10 @@ async function loadRoom() {
     attachResizeObserver()
     connectSocket(roomId.value)
   } catch (error) {
-    if (requestId === currentLoad) loadError.value = error.message || '房间加载失败，可能已经关闭。'
+    if (requestId === currentLoad) {
+      roomUnavailable.value = Number(error.code) === 404
+      loadError.value = error.message || '房间加载失败，可能已经关闭。'
+    }
   } finally {
     if (requestId === currentLoad) loading.value = false
   }

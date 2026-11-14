@@ -23,7 +23,7 @@
       <el-form-item class="editor-actions">
         <el-button type="primary" :loading="saving" @click="save(false)">保存草稿</el-button>
         <el-button v-if="!draftId" type="success" :loading="saving" @click="save(true)">保存并发布</el-button>
-        <el-button @click="$router.back()">返回</el-button>
+        <el-button @click="router.push(listLocation)">返回</el-button>
       </el-form-item>
     </el-form>
   </el-card>
@@ -33,6 +33,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import { useRoute, useRouter } from 'vue-router'
+import { noticeListLocation } from '../../layout/adminNavigation.mjs'
 import { ElMessage } from 'element-plus'
 import MarkdownIt from 'markdown-it'
 import { createNotice, updateNotice, publishNotice, noticeDetail } from '../../api/notice'
@@ -40,6 +41,7 @@ import { getNoticeDraft, saveNoticeDraft } from '../../api/assistant'
 
 const route = useRoute()
 const router = useRouter()
+const listLocation = computed(() => noticeListLocation(route.query.page, route.query.status))
 const id = route.params.id || null
 const draftId = !id && typeof route.query.draft === 'string' ? route.query.draft : ''
 const md = new MarkdownIt({ breaks: true })
@@ -96,15 +98,16 @@ async function save(andPublish) {
     if (draftId) {
       await saveNoticeDraft(draftId, { title: form.title, content: form.content })
       ElMessage.success('草稿已保存')
-      await router.push('/notice')
+      await router.push(listLocation.value)
       return
     }
-    let noticeId = id
-    if (id) {
-      await updateNotice(id, form)
+    let noticeId = id || savedNoticeId.value
+    if (noticeId) {
+      await updateNotice(noticeId, form)
     } else {
       const n = await createNotice(form)
       noticeId = n.id
+      savedNoticeId.value = noticeId
     }
     if (andPublish) {
       await publishNotice(noticeId)
@@ -112,7 +115,7 @@ async function save(andPublish) {
     } else {
       ElMessage.success('草稿已保存')
     }
-    router.push('/notice')
+    router.push(listLocation.value)
   } finally {
     saving.value = false
   }

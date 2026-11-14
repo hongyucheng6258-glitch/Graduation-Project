@@ -44,6 +44,9 @@ public class ReportAdminService {
     private final PostMapper postMapper;
     private final PostCommentMapper postCommentMapper;
     private final UserMapper userMapper;
+    private final com.campus.platform.module.chat.mapper.ChatMessageMapper chatMessageMapper;
+    private final com.campus.platform.module.admin.service.AdminUserService adminUserService;
+    private final com.campus.platform.module.admin.service.AdminContentService adminContentService;
     private final MessageService messageService;
 
     /** 举报列表（状态筛选） */
@@ -68,7 +71,8 @@ public class ReportAdminService {
      */
     @Transactional
     public void handle(Long adminId, Long reportId, ReportHandleDTO dto) {
-        Report report = detail(reportId);
+        Report report = reportMapper.lockById(reportId);
+        if (report == null) throw new BizException(ResultCode.NOT_FOUND, "举报不存在");
         if (report.getStatus() == Constants.REPORT_HANDLED) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "该举报已处理");
         }
@@ -100,17 +104,8 @@ public class ReportAdminService {
     /** 按类型下架目标内容 */
     private void offlineTarget(String type, Long targetId) {
         switch (type) {
-            case Constants.BIZ_IDLE -> {
-                idleItemMapper.updateAvailability(targetId, Constants.IDLE_OFF_SHELF, null, false);
-            }
-            case Constants.BIZ_ACTIVITY -> activityMapper.updateStatus(targetId, Constants.ACTIVITY_OFF);
-            case Constants.BIZ_LOSTFOUND -> {
-                LostFound lf = lostFoundMapper.selectById(targetId);
-                if (lf != null) {
-                    lf.setStatus(Constants.LF_OFF);
-                    lostFoundMapper.updateById(lf);
-                }
-            }
+            case Constants.BIZ_IDLE, Constants.BIZ_ACTIVITY, Constants.BIZ_LOSTFOUND ->
+                    adminContentService.offline(type, targetId);
             case Constants.BIZ_POST -> {
                 Post post = postMapper.selectById(targetId);
                 if (post != null) {
@@ -130,21 +125,22 @@ public class ReportAdminService {
         }
     }
 
-    /** 警告被举报方（内容举报=仅记录；用户举报=给该用户发警告通知） */
     private void warnTarget(String type, Long targetId, String handleResult) {
-        if (!Constants.BIZ_USER.equals(type)) {
-            return;
-        }
-        User user = userMapper.selectById(targetId);
-        if (user != null) {
-            messageService.send(targetId, Constants.MSG_SYSTEM, "账号警告通知",
-                    "你因违反校园平台规范被举报并核实，本次予以警告：" + handleResult + " 请规范言行，多次违规将面临封禁。",
-                    null, null);
-        }
+        Long authorId = requireAuthor(type, targetId);
+        messageService.send(authorId, Constants.MSG_SYSTEM, "账号警告通知",
+                "你因违反校园平台规范被举报并核实，本次予以警告：" + handleResult,
+                null, null);
     }
 
-    /** 封禁目标内容的发布者 */
     private void banAuthor(String type, Long targetId) {
+        Long authorId = requireAuthor(type, targetId);
+        adminUserService.updateStatus(authorId, Constants.USER_STATUS_BANNED);
+        messageService.send(authorId, Constants.MSG_SYSTEM, "账号处罚通知",
+                "因违规行为被举报核实，你的账号已被封禁，如有异议请联系管理员。",
+                null, null);
+    }
+
+    private Long requireAuthor(String type, Long targetId) {
         Long authorId = switch (type) {
             case Constants.BIZ_IDLE -> {
                 IdleItem item = idleItemMapper.selectById(targetId);
@@ -166,18 +162,16 @@ public class ReportAdminService {
                 PostComment comment = postCommentMapper.selectById(targetId);
                 yield comment == null ? null : comment.getUserId();
             }
+            case "chat_message" -> {
+                var message = chatMessageMapper.selectById(targetId);
+                yield message == null ? null : message.getSenderId();
+            }
             case Constants.BIZ_USER -> targetId;
             default -> null;
         };
-        if (authorId != null) {
-            User user = userMapper.selectById(authorId);
-            if (user != null) {
-                user.setStatus(Constants.USER_STATUS_BANNED);
-                userMapper.updateById(user);
-                messageService.send(authorId, Constants.MSG_SYSTEM, "账号处罚通知",
-                        "因发布违规内容被举报核实，你的账号已被封禁，如有异议请联系管理员。",
-                        null, null);
-            }
+        if (authorId == null || userMapper.selectById(authorId) == null) {
+            throw new BizException(ResultCode.NOT_FOUND, "举报对象或发布者不存在");
         }
+        return authorId;
     }
 }

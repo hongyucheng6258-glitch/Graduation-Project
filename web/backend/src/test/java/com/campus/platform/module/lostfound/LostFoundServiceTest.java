@@ -81,7 +81,9 @@ class LostFoundServiceTest {
             when(lostFoundMapper.selectByIdForUpdate(10L)).thenReturn(claimableLf(10L, 1L));
             when(claimMapper.countActiveForUpdate(10L)).thenReturn(0L);
 
-            LostFoundClaim result = lostFoundService.claim(9L, 10L, new ClaimDTO());
+            ClaimDTO proof = new ClaimDTO();
+            proof.setMessage("物品特征");
+            LostFoundClaim result = lostFoundService.claim(9L, 10L, proof);
 
             verify(lostFoundMapper).selectByIdForUpdate(10L);
             verify(claimMapper).countActiveForUpdate(10L);

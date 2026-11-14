@@ -69,13 +69,12 @@ async function run(browser, request, ctx) {
     const fullscreenButton = page.getByRole('button', { name: /全屏$/ }).first();
     if (await fullscreenButton.count() === 0) throw new Error('未找到全屏按钮');
     await fullscreenButton.click();
-    await page.waitForTimeout(500);
-    const expanded = await page.locator('.campus3d-frame.scene-expanded').count();
+    const fullscreenFrame = page.locator('.campus3d-frame.scene-expanded');
     const exitButton = page.locator('.campus3d-frame .scene-bottomline').getByRole('button', { name: /退出全屏/ });
-    if (expanded === 0 || await exitButton.count() === 0) throw new Error('点击后未进入应用全屏状态');
+    await fullscreenFrame.waitFor({ state: 'visible', timeout: 10000 });
     await exitButton.click();
-    await page.waitForTimeout(500);
-    h.record(C, '全屏 / 退出全屏操作', await page.locator('.campus3d-frame.scene-expanded').count() === 0 ? 'PASS' : 'FAIL');
+    await fullscreenFrame.waitFor({ state: 'hidden', timeout: 10000 });
+    h.record(C, '全屏 / 退出全屏操作', 'PASS');
   } catch (e) {
     h.record(C, '全屏 / 退出全屏操作', 'FAIL', e.message);
   }

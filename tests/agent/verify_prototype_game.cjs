@@ -73,7 +73,7 @@ async function main() {
     await host.getByRole('button', { name: /开始探索/ }).waitFor({ timeout: 35000 })
     await host.getByRole('button', { name: /开始探索/ }).click()
     await host.locator('.scene-canvas canvas').waitFor()
-    await host.getByRole('button', { name: /校园导览/ }).first().click()
+    await host.getByRole('button', { name: '校园导览', exact: true }).click({ timeout: 35000 })
     await host.locator('.map-zone').first().waitFor()
     console.log('PASS game lobby, two-player live room, synchronized drawing and chat, 390px layout and 3D campus guide')
   } finally {

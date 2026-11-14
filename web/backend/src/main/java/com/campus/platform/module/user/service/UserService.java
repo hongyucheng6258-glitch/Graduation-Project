@@ -48,7 +48,14 @@ public class UserService {
         if (dto.getPhone() != null) {
             user.setPhone(dto.getPhone());
         }
-        userMapper.updateById(user);
+        User profile = new User();
+        profile.setId(uid);
+        profile.setNickname(user.getNickname());
+        profile.setAvatar(user.getAvatar());
+        profile.setBio(user.getBio());
+        profile.setGender(user.getGender());
+        profile.setPhone(user.getPhone());
+        userMapper.updateById(profile);
         return user;
     }
 
@@ -58,10 +65,18 @@ public class UserService {
         if (user.getPassword() == null) {
             throw new BizException(ResultCode.BAD_REQUEST, "小程序账号未设置密码，请先绑定账号");
         }
+        if (user.getTemporaryPasswordExpiresAt() != null
+                && !java.time.LocalDateTime.now(java.time.ZoneOffset.UTC).isBefore(user.getTemporaryPasswordExpiresAt())) {
+            throw new BizException(ResultCode.BAD_REQUEST, "临时密码已过期，请联系管理员重新重置");
+        }
         if (!authService.matches(dto.getOldPassword(), user.getPassword())) {
             throw new BizException(ResultCode.BAD_REQUEST, "原密码错误");
         }
-        user.setPassword(authService.encode(dto.getNewPassword()));
-        userMapper.updateById(user);
+        if (user.getTemporaryPasswordExpiresAt() != null && dto.getOldPassword().equals(dto.getNewPassword())) {
+            throw new BizException(ResultCode.BAD_REQUEST, "新密码不能与临时密码相同");
+        }
+        if (userMapper.replacePassword(uid, user.getPassword(), authService.encode(dto.getNewPassword()), null) != 1) {
+            throw new BizException(ResultCode.BAD_REQUEST, "密码已变化，请重新登录");
+        }
     }
 }

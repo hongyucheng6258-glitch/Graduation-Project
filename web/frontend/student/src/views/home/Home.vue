@@ -1,5 +1,5 @@
 <template>
-  <div class="portal">
+  <div ref="portal" class="portal">
     <WtHero
       :hello="helloLine"
       title="课表之外，<br>还有整个校园。"
@@ -9,235 +9,181 @@
       photo-to="/campus-3d"
       :primary="{ label: '发现校园活动', to: '/activity' }"
       :secondary="{ label: '找 AI 帮忙', to: '/ai/chat' }"
-      :event="heroEvent"
     />
 
-    <RouterLink class="message-entry game-entry" to="/draw-guess">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="m14 6 4 4M4 20l4.5-1L20 7.5a2.8 2.8 0 0 0-4-4L4.5 15 4 20Z"/>
-      </svg>
-      <span><b>你画我猜</b><small>和同学一起画画、猜词</small></span>
-      <svg class="msg-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M5 12h14M13 6l6 6-6 6"/>
-      </svg>
-    </RouterLink>
 
-    <nav class="quick-strip" aria-label="校园服务快捷入口">
-      <RouterLink v-for="e in entries" :key="e.to" :to="e.to" class="quick-service">
-        <span class="quick-icon" :class="e.color">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" v-html="ICONS[e.icon]"></svg>
-        </span>
-        <b>{{ e.title }}</b>
-        <small>{{ e.desc }}</small>
-      </RouterLink>
-    </nav>
-
-    <!-- ===== 双栏 ===== -->
-    <div class="home-columns">
-      <section>
-        <!-- 活动区 -->
-        <div class="section-title">
-          <div>
-            <h2>把课余时间，留给热爱</h2>
-            <p>校园里的相遇，总有一场适合你。</p>
-          </div>
-          <RouterLink class="text-btn" to="/activity">查看全部 <span aria-hidden="true">→</span></RouterLink>
-        </div>
-        <div class="tabs home-tabs">
-          <button
-            v-for="t in tabs"
-            :key="t.value"
-            type="button"
-            class="tab"
-            :class="{ active: tab === t.value }"
-            :aria-pressed="tab === t.value"
-            @click="tab = t.value"
-          >{{ t.label }}</button>
-        </div>
-        <div v-if="loading" class="cards home-cards">
-          <div v-for="i in 3" :key="i" class="item event-card skeleton-card">
-            <div class="skeleton-block skeleton-cover"></div>
-            <div class="item-body"><div class="skeleton-block" style="height:14px;width:70%"></div></div>
-          </div>
-        </div>
-        <div v-else-if="feedList.length" class="cards home-cards">
-          <RouterLink
-            v-for="a in feedList"
-            :key="a.key"
-            class="item event-card"
-            :to="a.to"
-          >
-            <div class="event-cover">
-              <template v-if="firstContentImage(a, a.moduleId)">
-                <img :src="firstContentImage(a, a.moduleId)" alt="" aria-hidden="true" class="event-cover-backdrop" loading="lazy" />
-                <img :src="firstContentImage(a, a.moduleId)" alt="" class="event-cover-img" loading="lazy" />
-              </template>
-              <WtEventArt v-else :item="a" />
-            </div>
-            <div class="item-body">
-              <h3>{{ a.title }}</h3>
-              <div class="card-meta-row">
-                <span class="card-category">{{ a.category }}</span>
-                <span class="card-status" :class="{ open: a.statusText === '报名中' }">{{ a.statusText }}</span>
-              </div>
-              <div class="item-meta">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                {{ a.location || '地点待定' }}
-                <span class="meta-divider"></span>
-                {{ a.timeText }}
-              </div>
-              <div class="item-bottom">
-                <span v-if="a.memberCount != null">
-                  {{ a.memberCount }}{{ a.moduleId === 'activity' ? ' 人同行' : ' 次浏览' }}
-                </span>
-                <span class="card-arrow" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                </span>
-              </div>
-            </div>
-          </RouterLink>
-        </div>
-        <div v-else class="empty">该分类下还没有内容，换个分类看看～</div>
-
-        <!-- 好物不闲置 -->
-        <div class="section-title spaced section-gap">
-          <div>
-            <h2>好物不闲置</h2>
-            <p>换一件物品，也分享一段校园记忆。</p>
-          </div>
-          <RouterLink class="text-btn" to="/idle">逛逛互换区 <span aria-hidden="true">→</span></RouterLink>
-        </div>
-        <div v-if="data.idleItems.length" class="cards home-cards">
-          <RouterLink
-            v-for="i in data.idleItems.slice(0, 3)"
-            :key="'i' + i.id"
-            class="item object-card"
-            :to="`/idle/detail/${i.id}`"
-          >
-            <div class="cover">
-              <img v-if="firstContentImage(i, 'idle', i.category)" :src="firstContentImage(i, 'idle', i.category)" alt="" loading="lazy" />
-              <div v-else class="cover-fallback">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18l-2 13H5z"/><path d="M8 11v6M12 11v6M16 11v6"/></svg>
-              </div>
-            </div>
-            <div class="item-body">
-              <h3>{{ i.title }}</h3>
-              <div class="card-meta-row">
-                <span class="card-category">{{ i.category || '二手' }}</span>
-                <span v-if="i.location" class="card-location">{{ i.location }}</span>
-              </div>
-              <p class="exchange-line">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 17l4-4M4 7v10M20 7l-4 4M20 17V7"/></svg>
-                {{ i.expectItem ? '期望换：' + i.expectItem : '面议' }}
-              </p>
-              <div class="item-bottom">
-                <span v-if="i.nickname">
-                  <span class="mini-avatar">{{ i.nickname.charAt(0) }}</span>
-                  {{ i.nickname }}
-                </span>
-                <span>看看怎么换 <span aria-hidden="true">→</span></span>
-              </div>
-            </div>
-          </RouterLink>
-        </div>
-        <div v-else-if="!loading" class="empty">暂无闲置物品</div>
-
-        <!-- 校园动态横幅 -->
-        <RouterLink class="community-banner" to="/social">
-          <div>
-            <span>校园动态</span>
-            <h3>有些小美好，<br>值得一起看见。</h3>
-            <p>记录今天，也认识身边有趣的人。</p>
-          </div>
-          <img src="/images/05-校园晚霞.png" alt="校园晚霞" loading="lazy" />
-          <span class="round-arrow" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    <section class="quick-section">
+      <div class="quick-heading"><h2>快捷校园</h2><span>常用服务，一步抵达</span></div>
+      <nav class="quick-strip" aria-label="校园服务快捷入口">
+        <RouterLink v-for="entry in entries" :key="entry.to" :to="entry.to" class="quick-service">
+          <span class="quick-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true" v-html="ICONS[entry.icon]" />
           </span>
+          <b>{{ entry.title }}</b>
+          <small>{{ entry.desc }}</small>
         </RouterLink>
-      </section>
+      </nav>
+    </section>
 
-      <!-- 右栏 -->
-      <aside class="home-aside">
-        <!-- 学习卡 -->
-        <section class="study-note">
-          <div class="study-note-top">
-            <span class="service-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3"/></svg>
-            </span>
-            <span>一点点进步，也值得</span>
+    <section class="home-section">
+      <header class="section-title">
+        <div>
+          <h2>把课余时间，留给热爱</h2>
+          <p>校园里的活动，总有一场适合你。</p>
+          <div class="chips" aria-label="首页推荐筛选">
+            <button v-for="filter in filters" :key="filter.label" class="chip" type="button"
+              :aria-pressed="activeFilter.label === filter.label" @click="activeFilter = filter">{{ filter.label }}</button>
           </div>
-          <h3>今天的难题，<br>我们一起解。</h3>
-          <p>从一个问题开始，让思路慢慢清晰。</p>
-          <button type="button" class="btn primary" @click="go({ to: '/ai/chat', needLogin: true })">
-            开始学习 <span aria-hidden="true">→</span>
-          </button>
-          <div class="study-todo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM17 3v16"/></svg>
-            <span v-if="wrongCount != null">你有 <b>{{ wrongCount }}</b> 道错题待复习</span>
-            <span v-else>{{ userStore.isLoggedIn ? '查看待复习错题' : '登录后查看错题' }}</span>
-            <button type="button" class="text-btn" @click="go({ to: '/ai/wrong', needLogin: true })">去复习</button>
-          </div>
-        </section>
-
-        <!-- 校园公告 -->
-        <section class="bulletin">
-          <div class="section-title">
-            <h3>校园公告</h3>
-            <RouterLink class="text-btn" to="/notice">全部</RouterLink>
-          </div>
-          <RouterLink v-for="n in notices" :key="n.id" class="bulletin-item" :to="`/notice/detail/${n.id}`">
-            <span><span>{{ n.type || '公告' }}</span><time>{{ formatNoticeDate(n.createTime || n.publishTime) }}</time></span>
-            <h4>{{ n.title }}</h4>
+        </div>
+        <RouterLink class="text-link" to="/activity">查看全部活动 →</RouterLink>
+      </header>
+      <div v-if="loadingActivities" class="home-cards" aria-busy="true" aria-label="加载活动">
+        <div v-for="i in 3" :key="i" class="home-card">
+          <div class="cover skeleton-block"></div>
+          <div class="card-body">加载中…</div>
+        </div>
+      </div>
+      <div v-else-if="activityError" class="home-state">
+        <p>活动加载失败</p><button class="btn" type="button" @click="loadActivities">重试</button>
+      </div>
+      <div v-else-if="activities.length" class="home-cards">
+        <article v-for="item in activities" :key="item.id" class="home-card">
+          <RouterLink :to="`/activity/detail/${item.id}`" class="card-link">
+            <div class="cover">
+              <img :src="firstContentImage(item, 'activity')" alt="" loading="lazy" @error="onImageError($event, 'activity')" />
+              <span class="badge">{{ item.displayStatusText || activityStatuses[item.status] || '活动' }}</span>
+            </div>
+            <div class="card-body">
+              <h3>{{ item.title }}</h3>
+              <p>{{ shortDate(item.startTime) }} · {{ item.location || '地点待定' }}</p>
+              <div class="card-meta"><span>{{ item.category || '校园活动' }}</span><span>{{ item.memberCount ?? 0 }} 人同行</span></div>
+            </div>
           </RouterLink>
-          <div v-if="!notices.length" class="muted">暂无公告</div>
-        </section>
+          <button class="save-button" type="button" :aria-label="`收藏 ${item.title}`" :aria-pressed="saved[item.id] === true"
+            :disabled="saving.has(item.id)" :class="{ 'save-feedback': favoriteFeedback.has(item.id) }"
+            @animationend="favoriteFeedback.delete(item.id)" @click="toggleFavorite(item)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M6 4h12v16l-6-4-6 4z" />
+            </svg>
+          </button>
+        </article>
+      </div>
+      <div v-else class="home-state">该分类暂无活动</div>
+    </section>
 
-        <!-- 校园日程 -->
-        <section class="calendar-panel">
-          <div class="section-title">
-            <h3>我的校园日程</h3>
-            <span class="muted">{{ monthLabel }}</span>
-          </div>
-          <div class="weekly">
-            <span v-for="(d, i) in weekDays" :key="i">
-              <span>{{ d.week }}</span>
-              <b :class="{ today: i === todayIdx }">{{ d.day }}</b>
-            </span>
-          </div>
-          <div class="calendar-empty">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-            <p>把下一次期待，安排进日程</p>
-            <button type="button" class="text-btn" @click="go({ to: '/activity/my-signup', needLogin: true })">查看我的报名 <span aria-hidden="true">→</span></button>
-          </div>
-        </section>
+    <section class="home-section feature">
+      <div class="feature-media">
+        <img src="/images/generated-social-campus.webp" alt="同学们在校园中交流分享" loading="lazy" />
+      </div>
+      <div class="feature-copy">
+        <h2>有些小美好，<br />值得一起分享。</h2>
+        <p>记录校园生活，参与评论与点赞。你画我猜也在这里，用灵感连接彼此。</p>
+        <div class="feature-actions">
+          <RouterLink class="btn primary" to="/social">去动态广场</RouterLink>
+          <RouterLink class="text-link" to="/draw-guess">你画我猜 →</RouterLink>
+        </div>
+      </div>
+    </section>
 
-        <!-- 消息入口 -->
-        <RouterLink class="message-entry" to="/chat">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>
-          <span><b>聊聊共同的兴趣</b><small>看看同学给你的留言</small></span>
-          <svg class="msg-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    <section class="home-section">
+      <header class="section-title">
+        <div><h2>好物不闲置</h2><p>让闲置遇见新主人。</p></div>
+        <RouterLink class="text-link" to="/idle">进入闲置互换 →</RouterLink>
+      </header>
+      <div v-if="idleItems.length" class="home-cards">
+        <RouterLink v-for="item in idleItems" :key="item.id" :to="`/idle/detail/${item.id}`" class="home-card card-link">
+          <div class="cover">
+            <img v-if="firstContentImage(item, 'idle', item.category)" :src="firstContentImage(item, 'idle', item.category)"
+              alt="" loading="lazy" @error="onImageError($event, 'idle', item.category)" />
+            <span class="badge">{{ idleStatuses[item.status] || '闲置' }}</span>
+          </div>
+          <div class="card-body">
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.category || '闲置' }} · {{ item.location || '地点待定' }}</p>
+            <div class="card-meta">
+              <span>{{ item.expectItem ? '期望换 ' + item.expectItem : '查看交换说明' }}</span>
+              <span class="text-link">{{ item.status === 0 ? '预约' : '查看详情' }}</span>
+            </div>
+          </div>
         </RouterLink>
-      </aside>
-    </div>
+      </div>
+      <div v-else class="home-state">{{ aggregateLoading ? '加载中…' : aggregateError ? '闲置加载失败' : '暂无闲置物品' }}</div>
+    </section>
+
+    <section class="home-section feature reverse">
+      <div class="feature-copy">
+        <h2>今天的难题，<br />一起解。</h2>
+        <p>学习搭子、互助问答、代码纠错与错题复习，形成完整的学习闭环。</p>
+        <RouterLink class="review-link" to="/ai/wrong">
+          <template v-if="wrongCount != null"><b>{{ wrongCount }}</b> 道错题待复习</template>
+          <template v-else>{{ userStore.isLoggedIn ? '查看待复习错题' : '登录后查看错题' }}</template>
+        </RouterLink>
+        <div class="feature-actions">
+          <RouterLink class="btn primary" to="/partner">找到学习搭子</RouterLink>
+          <RouterLink class="text-link" to="/qa">互助问答 →</RouterLink>
+        </div>
+      </div>
+      <div class="feature-media">
+        <img src="/images/generated-study-partner.webp" alt="学习伙伴共同讨论" loading="lazy" />
+      </div>
+    </section>
+
+    <section class="home-section">
+      <header class="section-title">
+        <div><h2>每一份遗失，都有回应</h2><p>登记、匹配、核实与认领，让寻找更有方向。</p></div>
+        <RouterLink class="text-link" to="/lostfound">查看全部 →</RouterLink>
+      </header>
+      <div v-if="lostItems.length" class="lost-list">
+        <div v-for="item in lostItems" :key="item.id" class="lost-row">
+          <img :src="firstContentImage(item, 'lost')" alt="" loading="lazy" @error="onImageError($event, 'lost')" />
+          <div>
+            <RouterLink :to="`/lostfound/detail/${item.id}`"><b>{{ item.title }}</b></RouterLink>
+            <small>{{ item.type === 0 ? '寻物' : '拾到' }} · {{ shortDate(item.happenTime || item.createTime) }} · {{ item.location || '地点待定' }}</small>
+          </div>
+          <RouterLink class="btn" :to="`/lostfound/detail/${item.id}`">{{ item.type === 0 ? '我有线索' : '申请认领' }}</RouterLink>
+        </div>
+      </div>
+      <div v-else class="home-state">{{ aggregateLoading ? '加载中…' : aggregateError ? '失物加载失败' : '暂无失物信息' }}</div>
+      <button v-if="aggregateError" class="btn aggregate-retry" type="button" @click="loadAggregate">重新加载闲置与失物</button>
+    </section>
+
+    <section id="ai-section" class="home-section feature">
+      <div class="feature-media">
+        <img src="/images/generated-ai-study.webp" alt="AI 学习场景" loading="lazy" />
+      </div>
+      <div class="ai-panel">
+        <header class="ai-title">
+          <span class="ai-symbol">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" v-html="ICONS.spark" />
+          </span>
+          <div><h2>AI 学习</h2><small>随时获得学习回应</small></div>
+          <RouterLink class="text-link" to="/ai/chat">进入助手 →</RouterLink>
+        </header>
+        <div class="chat-preview"><p>你想了解哪些校园活动或学习资源？</p></div>
+        <div class="chips">
+          <button v-for="prompt in prompts" :key="prompt" class="chip" type="button" @click="usePrompt(prompt)">{{ prompt }}</button>
+        </div>
+        <form class="ai-form" @submit.prevent="ask">
+          <input ref="questionInput" v-model.trim="question" maxlength="2000" placeholder="输入你的问题…" aria-label="向 AI 学习助手提问" />
+          <button class="btn primary" type="submit" aria-label="发送问题" :disabled="!question">发送</button>
+        </form>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { homeAggregate, listNotice } from '../../api/notice'
+import { listActivity } from '../../api/activity'
+import { favorite, favoriteStatus, unfavorite } from '../../api/favorite'
+import { homeAggregate } from '../../api/notice'
 import { wrongStats } from '../../api/wrong'
-import { formatTime } from '../../utils/date'
-import { firstContentImage } from '../../utils/content-assets.mjs'
-import { useUserStore } from '../../store/user'
 import WtHero from '../../components/wt/WtHero.vue'
-import WtEventArt from '../../components/wt/WtEventArt.vue'
-
-const router = useRouter()
-const userStore = useUserStore()
-const loading = ref(true)
-const tab = ref('activity')
+import { useUserStore } from '../../store/user'
+import { firstContentImage, onImageError } from '../../utils/content-assets.mjs'
+import { formatTime } from '../../utils/date'
 
 const ICONS = {
   spark: '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3"/>',
@@ -249,356 +195,365 @@ const ICONS = {
 }
 
 const entries = [
-  { title: '校园活动', desc: '社团、讲座、运动', to: '/activity', color: 'blue', icon: 'calendar' },
-  { title: '闲置互换', desc: '好物转让与交换', to: '/idle', color: 'peach', icon: 'bag' },
-  { title: '失物招领', desc: '寻物、拾到登记', to: '/lostfound', color: 'sage', icon: 'lost' },
-  { title: '学习搭子', desc: '找人一起自习', to: '/partner', color: 'lavender', icon: 'spark' },
-  { title: '互助问答', desc: '校园问题解答', to: '/qa', color: 'blue', icon: 'chat' },
-  { title: 'AI 学习', desc: '答疑、错题、纠错', to: '/ai/chat', color: 'peach', icon: 'book' }
+  { title: '校园活动', desc: '社团、讲座、运动', to: '/activity', icon: 'calendar' },
+  { title: '闲置互换', desc: '好物转让与交换', to: '/idle', icon: 'bag' },
+  { title: '失物招领', desc: '寻物、拾到登记', to: '/lostfound', icon: 'lost' },
+  { title: '学习搭子', desc: '找人一起自习', to: '/partner', icon: 'spark' },
+  { title: '互助问答', desc: '校园问题解答', to: '/qa', icon: 'chat' },
+  { title: 'AI 学习', desc: '答疑、错题、纠错', to: '/ai/chat', icon: 'book' }
 ]
 
-const tabs = [
-  { value: 'activity', label: '校园活动' },
-  { value: 'idle', label: '闲置互换' },
-  { value: 'lost', label: '失物招领' }
+const router = useRouter()
+const userStore = useUserStore()
+const filters = [
+  { label: '精选推荐', categories: [] },
+  { label: '文化艺术', categories: ['文艺娱乐', '文化艺术'] },
+  { label: '体育运动', categories: ['体育运动'] }
 ]
-
-const data = ref({ activities: [], idleItems: [], lostFounds: [] })
-const notices = ref([])
+const activityStatuses = ['报名中', '已满', '已结束', '已下架']
+const idleStatuses = ['可预约', '交接中', '已完成', '已下架']
+const activeFilter = ref(filters[0])
+const activities = ref([])
+const idleItems = ref([])
+const lostItems = ref([])
 const wrongCount = ref(null)
+const loadingActivities = ref(true)
+const activityError = ref(false)
+const aggregateLoading = ref(true)
+const aggregateError = ref(false)
+const saved = reactive({})
+const saving = reactive(new Set())
+const favoriteFeedback = reactive(new Set())
+const portal = ref(null)
+let revealObserver
+const revealAnimations = new Set()
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 
-const nickname = computed(() => userStore.userInfo?.nickname || '同学')
+function cancelReveals() {
+  favoriteFeedback.clear()
+  for (const animation of revealAnimations) animation.cancel()
+  revealAnimations.clear()
+}
+
+function observeSections() {
+  if (!('IntersectionObserver' in window) || !Element.prototype.animate) return
+  revealObserver = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue
+      revealObserver.unobserve(entry.target)
+      if (reducedMotion.matches) continue
+      const cards = [...entry.target.querySelectorAll('.quick-service, .home-card')]
+      const elements = cards.length && !entry.target.querySelector('[aria-busy="true"]') ? cards : [entry.target]
+      elements.forEach((element, index) => {
+        const animation = element.animate(
+          [{ opacity: .72, translate: '0 8px' }, { opacity: 1, translate: '0 0' }],
+          { duration: 180, delay: index * 50, easing: 'ease-out', fill: 'backwards' }
+        )
+        revealAnimations.add(animation)
+        animation.onfinish = () => revealAnimations.delete(animation)
+      })
+    }
+  }, { threshold: .08 })
+  portal.value.querySelectorAll('.quick-section, .home-section').forEach(section => {
+    if (section.getBoundingClientRect().top >= window.innerHeight) revealObserver.observe(section)
+  })
+}
+
+onBeforeUnmount(() => {
+  revealObserver?.disconnect()
+  reducedMotion.removeEventListener('change', cancelReveals)
+  cancelReveals()
+})
+const prompts = ['推荐本周活动', '查找学习搭子']
+const question = ref('')
+const questionInput = ref(null)
+let activityRequest = 0
+
 const helloLine = computed(() => {
-  const h = new Date().getHours()
-  const word = h < 11 ? '早上好' : h < 14 ? '中午好' : h < 18 ? '下午好' : '晚上好'
-  return `${word}，${nickname.value}。今天也有新发现。`
+  const hour = new Date().getHours()
+  const greeting = hour < 11 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好'
+  return `${greeting}，${userStore.userInfo?.nickname || '同学'}。今天也有新发现。`
 })
 
-const heroEvent = computed(() => {
-  const a = data.value.activities?.[0]
-  if (!a) return null
-  const date = formatTime(a.startTime)
-  const hasDate = /^\d{4}-\d{2}-\d{2}/.test(date)
-  const count = a.memberCount != null ? ` · ${a.memberCount} 人同行` : ''
-  return {
-    day: hasDate ? date.slice(8, 10) : '待定',
-    month: hasDate ? `${Number(date.slice(5, 7))} 月` : '',
-    title: a.title,
-    sub: `${a.location || '地点待定'} · ${hasDate ? date.slice(11, 16) + ' 开始' : '时间待定'}${count}`,
-    to: `/activity/detail/${a.id}`
-  }
-})
-
-const STATUS_TEXT = ['报名中', '已满', '已结束', '已下架']
-function statusText(a) {
-  return a.displayStatusText || STATUS_TEXT[a.status] || '报名中'
-}
-function timeText(t) {
-  return formatTime(t).slice(5) || '待定'
+function shortDate(value) {
+  return value ? formatTime(value).slice(5, 16) || '时间待定' : '时间待定'
 }
 
-const feedList = computed(() => {
-  const d = data.value
-  if (tab.value === 'idle') {
-    return (d.idleItems || []).slice(0, 3).map((i) => ({
-      key: 'i' + i.id,
-      id: i.id,
-      category: i.category || '闲置',
-      statusText: '二手',
-      title: i.title,
-      location: i.location,
-      timeText: i.price ? '¥' + i.price : '面议',
-      memberCount: i.viewCount,
-      images: i.images,
-      imageList: i.imageList,
-      moduleId: 'idle',
-      to: `/idle/detail/${i.id}`
-    }))
+async function loadAggregate() {
+  aggregateLoading.value = true
+  aggregateError.value = false
+  try {
+    const data = await homeAggregate()
+    idleItems.value = (data.idleItems || []).slice(0, 3)
+    lostItems.value = (data.lostFounds || []).slice(0, 2)
+  } catch {
+    aggregateError.value = true
+  } finally {
+    aggregateLoading.value = false
   }
-  if (tab.value === 'lost') {
-    return (d.lostFounds || []).slice(0, 3).map((l) => ({
-      key: 'l' + l.id,
-      id: l.id,
-      category: l.type === 0 ? '寻物启事' : '失物招领',
-      statusText: l.type === 0 ? '寻物' : '待认领',
-      title: l.title,
-      location: l.location,
-      timeText: l.type === 0 ? '发布寻物' : '等待认领',
-      memberCount: l.viewCount,
-      images: l.images,
-      imageList: l.imageList,
-      moduleId: 'lost',
-      to: `/lostfound/detail/${l.id}`
-    }))
-  }
-  return (d.activities || []).slice(0, 3).map((a) => ({
-    key: 'a' + a.id,
-    id: a.id,
-    category: a.category || '校园活动',
-    statusText: statusText(a),
-    title: a.title,
-    location: a.location,
-    timeText: timeText(a.startTime),
-    memberCount: a.memberCount,
-    images: a.images,
-    imageList: a.imageList,
-    moduleId: 'activity',
-    to: `/activity/detail/${a.id}`
-  }))
-})
+}
 
-function go(entry) {
-  if (entry.needLogin && !userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
-    router.push('/login')
+async function loadActivities() {
+  const requestId = ++activityRequest
+  loadingActivities.value = true
+  activityError.value = false
+  try {
+    const categories = activeFilter.value.categories
+    const pages = await Promise.all((categories.length ? categories : [undefined])
+      .map(category => listActivity({ category, pageNum: 1, pageSize: 3 })))
+    if (requestId !== activityRequest) return
+    activities.value = pages.flatMap(page => page.list || [])
+      .sort((left, right) => Number(right.id) - Number(left.id)).slice(0, 3)
+    if (userStore.isLoggedIn) {
+      for (const item of activities.value) refreshFavorite(item.id)
+    }
+  } catch {
+    if (requestId === activityRequest) activityError.value = true
+  } finally {
+    if (requestId === activityRequest) loadingActivities.value = false
+  }
+}
+
+async function refreshFavorite(id) {
+  if (saving.has(id)) return
+  saving.add(id)
+  try {
+    saved[id] = await favoriteStatus('activity', id)
+  } catch {
+    delete saved[id]
+  } finally {
+    saving.delete(id)
+  }
+}
+
+async function toggleFavorite(item) {
+  if (!userStore.isLoggedIn) {
+    router.push({ path: '/login', query: { redirect: '/' } })
     return
   }
-  router.push(entry.to)
-}
-
-// 本周日历
-const now = new Date()
-const todayDow = now.getDay() // 0 周日
-const mondayOffset = todayDow === 0 ? -6 : 1 - todayDow
-const monday = new Date(now)
-monday.setDate(now.getDate() + mondayOffset)
-const weekDays = [0, 1, 2, 3, 4, 5, 6].map((i) => {
-  const d = new Date(monday)
-  d.setDate(monday.getDate() + i)
-  return { week: '一二三四五六日'[i], day: d.getDate() }
-})
-const todayIdx = todayDow === 0 ? 6 : todayDow - 1
-const monthLabel = computed(() => `${now.getMonth() + 1} 月`)
-
-function formatNoticeDate(t) {
-  if (!t) return ''
-  return formatTime(t).slice(5, 10).replace('-', '/')
-}
-
-onMounted(async () => {
+  if (saving.has(item.id)) return
+  saving.add(item.id)
+  favoriteFeedback.delete(item.id)
   try {
-    const agg = await homeAggregate()
-    data.value.activities = agg.activities || []
-    data.value.idleItems = agg.idleItems || []
-    data.value.lostFounds = agg.lostFounds || []
-  } catch (e) {
-    // 聚合接口异常不影响页面骨架
+    const current = saved[item.id] ?? await favoriteStatus('activity', item.id)
+    await (current ? unfavorite : favorite)('activity', item.id)
+    saved[item.id] = !current
+    if (!reducedMotion.matches) favoriteFeedback.add(item.id)
+  } catch {
+    // 请求层显示失败原因，保持原收藏状态。
+  } finally {
+    saving.delete(item.id)
   }
-  try {
-    const nr = await listNotice({ pageNum: 1, pageSize: 3 })
-    const arr = Array.isArray(nr) ? nr : (nr.list || [])
-    notices.value = arr.slice(0, 3)
-  } catch (e) {}
+}
+
+function usePrompt(prompt) {
+  question.value = prompt
+  questionInput.value?.focus()
+}
+
+function ask() {
+  if (question.value) router.push({ path: '/ai/chat', query: { q: question.value, mode: 'guide' } })
+}
+
+watch(activeFilter, loadActivities, { immediate: true })
+onMounted(async () => {
+  observeSections()
+  reducedMotion.addEventListener('change', cancelReveals)
+  loadAggregate()
   if (userStore.isLoggedIn) {
     try {
-      const st = await wrongStats()
-      wrongCount.value = (st && (st.pendingReview ?? st.reviewing ?? st.total ?? 0)) || 0
-    } catch (e) {}
+      const stats = await wrongStats()
+      wrongCount.value = stats.pendingReview ?? stats.reviewing ?? stats.total ?? 0
+    } catch {
+      // 保留错题本入口。
+    }
   }
-  loading.value = false
 })
 </script>
 
 <style scoped>
-.portal { padding-bottom: var(--s-5); }
-
-.quick-strip {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 14px;
-  margin: 12px 0 26px;
+.quick-section { margin-top: 24px; }
+.quick-heading, .section-title, .card-meta, .ai-title, .lost-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
-.quick-service {
-  display: block;
+.quick-heading { margin: 0 2px 12px; }
+.quick-heading h2 { font-size: 14px; }
+.quick-heading span, .quick-service small { color: var(--ink-3); font-size: 11px; }
+.quick-strip, .home-cards { display: grid; gap: 16px; }
+.quick-strip { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.home-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.quick-service, .home-card, .feature, .lost-list, .home-state {
   min-width: 0;
-  padding: 18px 16px;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--surface);
-  color: var(--ink);
-  text-decoration: none;
-  overflow-wrap: anywhere;
-  transition: border-color .18s, box-shadow .18s;
+  box-shadow: var(--shadow-sm);
 }
-.quick-service:hover { border-color: var(--brand-line); box-shadow: var(--shadow-md); }
-.quick-service b { display: block; font-size: var(--fs-body); font-weight: 650; }
-.quick-service small { display: block; margin-top: 3px; color: var(--ink-3); font-size: var(--fs-xs); }
-.quick-icon { display: grid; place-items: center; width: 38px; height: 38px; margin-bottom: 12px; border-radius: var(--r-sm); }
-.quick-icon svg { width: 20px; height: 20px; }
-.quick-icon.blue { background: var(--brand-soft); color: var(--brand); }
-.quick-icon.peach { background: var(--accent-soft); color: var(--accent-ink); }
-.quick-icon.sage { background: var(--sage); color: var(--success); }
-.quick-icon.lavender { background: var(--purple-soft); color: var(--purple); }
-
-.home-columns { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; }
-.home-aside { display: flex; flex-direction: column; gap: 18px; }
-.section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-.section-title h2 { color: var(--ink); font-size: var(--fs-h2); font-weight: 700; letter-spacing: .2px; }
-.section-title h3 { color: var(--ink); font-size: var(--fs-body); font-weight: 650; }
-.section-title p { margin-top: 2px; color: var(--ink-3); font-size: var(--fs-sm); }
-.section-title .muted { font-size: var(--fs-sm); }
-.section-gap { margin-top: 32px; }
-.text-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  padding: 3px 0;
-  background: none;
+.quick-service { min-height: 116px; padding: 16px; }
+.quick-service b, .quick-service small { display: block; }
+.quick-service b { color: var(--ink); margin-top: 12px; font-size: 13px; }
+.quick-icon, .ai-symbol {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   color: var(--brand);
-  font-size: var(--fs-sm);
-  white-space: nowrap;
-  cursor: pointer;
-  text-decoration: none;
+  background: var(--brand-soft);
 }
-.text-btn:hover { text-decoration: underline; text-underline-offset: 4px; }
-.home-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
-.tab {
-  min-height: 32px;
-  padding: 4px 11px;
+.quick-icon svg, .ai-symbol svg { width: 20px; height: 20px; }
+.home-section { margin-top: 38px; }
+.section-title { align-items: flex-end; margin-bottom: 17px; }
+.section-title h2 { font-size: 24px; line-height: 1.3; letter-spacing: -.015em; }
+.section-title p { margin-top: 6px; color: var(--ink-3); font-size: 12px; }
+.section-title .chips { margin-top: 12px; }
+.text-link { color: var(--brand); font-size: 12px; }
+a.text-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.chips, .feature-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.chip, .badge {
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   background: var(--surface);
+  color: var(--ink-3);
+  font-size: 11px;
+}
+.chip { min-height: 32px; padding: 4px 12px; cursor: pointer; }
+.chip:hover, .chip[aria-pressed="true"] { border-color: var(--brand-line); background: var(--brand-soft); color: var(--brand); }
+.home-card { position: relative; overflow: hidden; }
+.card-link { display: block; }
+.quick-service, .home-card { transition: transform .16s var(--ease-out), border-color .16s; }
+.quick-service:focus-visible, .home-card:focus-within { border-color: var(--brand-line); }
+.home-card .card-link:focus-visible { outline-offset: -3px; }
+@media (hover: hover) and (pointer: fine) {
+  .quick-service:hover, .home-card:hover { transform: translateY(-3px); border-color: var(--brand-line); }
+}
+.cover { position: relative; aspect-ratio: 16 / 9; background: var(--surface-3); }
+.cover img, .feature-media img { width: 100%; height: 100%; object-fit: cover; }
+.badge { position: absolute; top: 10px; left: 10px; padding: 3px 8px; color: var(--brand); }
+.save-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--surface);
   color: var(--ink-2);
-  font-size: var(--fs-xs);
   cursor: pointer;
 }
-.tab.active, .tab:hover { border-color: var(--brand-line); background: var(--brand-soft); color: var(--brand-strong); }
-.tab.active { font-weight: 650; }
-
-.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-.item {
-  display: block;
-  min-width: 0;
-  text-decoration: none;
-  border-radius: 8px;
+.save-button[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); }
+.save-button svg { width: 16px; height: 16px; }
+.save-feedback { animation: favorite-feedback .18s var(--ease-out); }
+@keyframes favorite-feedback {
+  45% { transform: scale(1.14); }
 }
-.item:hover h3 { color: var(--brand-strong); }
-.item:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
-.item-body { padding: 8px 0 0; overflow-wrap: anywhere; }
-.item-body h3 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+.card-body { padding: 15px; overflow-wrap: anywhere; }
+.card-body h3 { font-size: 14px; }
+.card-body p, .card-meta { color: var(--ink-3); font-size: 11px; }
+.card-body p { margin-top: 7px; }
+.card-meta { margin-top: 12px; }
+.card-meta .text-link { flex: none; }
+.home-state { padding: 24px; text-align: center; color: var(--ink-3); }
+.home-state .btn, .aggregate-retry { margin-top: 10px; }
+.feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1.04fr) minmax(0, .96fr);
+  min-height: 310px;
   overflow: hidden;
-  margin: 0;
-  color: var(--ink);
-  font-size: var(--fs-body);
-  font-weight: 650;
-  line-height: 1.45;
 }
-.card-meta-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 5px; }
-.card-category, .card-status { padding: 2px 8px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 600; }
-.card-category { background: var(--brand-soft); color: var(--brand-strong); }
-.card-status { background: var(--surface-2); color: var(--ink-2); }
-.card-status.open { background: var(--success-soft); color: var(--success); }
-.object-card .card-category { background: var(--peach); color: var(--accent-ink); }
-.card-location { color: var(--ink-3); font-size: var(--fs-xs); }
-.item-meta, .exchange-line { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; color: var(--ink-3); font-size: var(--fs-xs); }
-.item-meta svg, .exchange-line svg { width: 14px; height: 14px; flex: none; }
-.meta-divider { width: 1px; height: 10px; background: var(--line-strong); margin: 0 2px; }
-.item-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 5px; color: var(--ink-3); font-size: var(--fs-xs); }
-.item-bottom > span { display: inline-flex; align-items: center; gap: 6px; }
-.card-arrow { margin-left: auto; color: var(--brand); }
-.card-arrow svg { width: 14px; height: 14px; }
-.event-cover, .cover { position: relative; overflow: hidden; border-radius: 8px; background: var(--surface-2); }
-.event-cover { aspect-ratio: 16 / 9; }
-.event-cover-img, .event-cover-backdrop, .event-cover :deep(.event-art) { position: absolute; inset: 0; width: 100%; height: 100%; }
-.event-cover-img { object-fit: contain; }
-.event-cover-backdrop { object-fit: cover; filter: blur(16px) brightness(.75); transform: scale(1.14); }
-.cover { aspect-ratio: 1; }
-.cover img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.cover-fallback { height: 100%; display: grid; place-items: center; color: var(--ink-3); }
-.cover-fallback svg { width: 40px; height: 40px; }
-.mini-avatar { width: 24px; height: 24px; display: inline-grid; place-items: center; border-radius: 50%; background: var(--peach); color: var(--accent-ink); font-size: var(--fs-cap); font-weight: 600; flex: none; }
-.empty { padding: 32px 16px; border: 1px dashed var(--line-strong); border-radius: var(--r-md); color: var(--ink-3); text-align: center; font-size: var(--fs-sm); }
-.skeleton-block { border-radius: 6px; background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2)); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
-.skeleton-cover { aspect-ratio: 16 / 9; }
-@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-
-.community-banner {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  margin-top: 32px;
-  padding: 22px 24px;
+.feature.reverse { grid-template-columns: minmax(0, .96fr) minmax(0, 1.04fr); }
+.feature-media { position: relative; min-height: 300px; }
+.feature-media img { position: absolute; inset: 0; }
+.feature-copy, .ai-panel { display: flex; flex-direction: column; justify-content: center; }
+.feature-copy { align-items: flex-start; padding: 38px; }
+.feature-copy h2 { font-size: 28px; line-height: 1.35; letter-spacing: -.02em; }
+.feature-copy p { margin: 14px 0 22px; font-size: 13px; line-height: 1.9; color: var(--ink-3); }
+.feature-actions { gap: 16px; }
+.review-link { margin-bottom: 16px; color: var(--ink-2); font-size: 12px; }
+.review-link b { display: block; color: var(--ink); font-size: 20px; }
+.lost-list { padding: 4px 20px; }
+.lost-row { justify-content: flex-start; padding: 15px 0; }
+.lost-row + .lost-row { border-top: 1px solid var(--line); }
+.lost-row img { flex: none; width: 64px; height: 64px; object-fit: cover; border-radius: var(--r-sm); }
+.lost-row div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.lost-row small { display: block; color: var(--ink-3); }
+.lost-row .btn { flex: none; min-height: 34px; font-size: 12px; padding: 0 12px; }
+.ai-panel { padding: 30px; }
+.ai-title { justify-content: flex-start; }
+.ai-title h2 { font-size: 18px; }
+.ai-title small { color: var(--ink-3); font-size: 11px; }
+.ai-title .text-link { margin-left: auto; }
+.ai-symbol { width: 38px; height: 38px; background: var(--brand); color: var(--brand-ink); }
+.chat-preview { margin: 18px 0 12px; }
+.chat-preview p {
+  width: fit-content;
+  padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  text-decoration: none;
+  border-radius: 4px 10px 10px 10px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 12px;
 }
-.community-banner:hover { border-color: var(--brand-line); }
-.community-banner > div > span { color: var(--accent-ink); font-size: var(--fs-xs); font-weight: 600; }
-.community-banner h3 { margin: 6px 0; color: var(--ink); font-size: var(--fs-h3); }
-.community-banner p { color: var(--ink-3); font-size: var(--fs-sm); }
-.community-banner > img { display: block; width: 180px; max-width: 37%; height: 96px; border-radius: var(--r-sm); object-fit: cover; }
-.round-arrow { display: grid; place-items: center; width: 38px; height: 38px; margin-left: auto; border-radius: 50%; background: var(--brand-soft); color: var(--brand); flex: none; }
-.round-arrow svg { width: 16px; height: 16px; }
-
-.study-note { padding: 22px; border-radius: var(--r-md); background: linear-gradient(150deg, #1e3a8a, #2e5bff); color: #fff; }
-.study-note-top { display: flex; align-items: center; gap: 8px; color: #edf1ff; font-size: var(--fs-sm); }
-.study-note-top .service-icon { display: flex; }
-.study-note-top svg { width: 16px; height: 16px; }
-.study-note h3 { margin: 12px 0 6px; color: inherit; font-size: var(--fs-h3); font-weight: 700; }
-.study-note p { color: #edf1ff; font-size: var(--fs-sm); }
-.study-note > .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; margin-top: 16px; padding: 0 16px; border: 1px solid #fff; border-radius: var(--r-sm); background: #fff; color: #1e47d6; font-size: var(--fs-body); font-weight: 600; cursor: pointer; }
-.study-note > .btn:hover { background: #edf1ff; }
-.study-todo { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding: 8px 12px; border-radius: var(--r-sm); background: rgba(255, 255, 255, .14); font-size: var(--fs-xs); }
-.study-todo > svg { width: 15px; height: 15px; flex: none; }
-.study-todo b, .study-todo .text-btn { color: #ffe3b3; }
-.study-todo .text-btn { margin-left: auto; font-size: var(--fs-xs); }
-
-.bulletin, .calendar-panel, .message-entry { padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
-.bulletin .section-title, .calendar-panel .section-title { margin-bottom: 12px; }
-.bulletin-item { display: block; padding: 10px 0; border-bottom: 1px solid var(--line); text-decoration: none; }
-.bulletin-item:last-child { padding-bottom: 0; border-bottom: 0; }
-.bulletin-item > span { display: flex; align-items: center; justify-content: space-between; color: var(--ink-3); font-size: var(--fs-cap); }
-.bulletin-item > span > span { padding: 2px 8px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--ink-2); }
-.bulletin-item h4 { margin-top: 4px; color: var(--ink); font-size: var(--fs-sm); font-weight: 500; }
-.bulletin-item:hover h4 { color: var(--brand); }
-.muted { color: var(--ink-3); font-size: var(--fs-xs); }
-.weekly { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; }
-.weekly > span { display: grid; justify-items: center; gap: 4px; color: var(--ink-3); font-size: var(--fs-cap); }
-.weekly b { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: var(--ink-2); font-size: var(--fs-xs); }
-.weekly .today { background: var(--brand); color: var(--brand-ink); }
-.calendar-empty { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink-3); text-align: center; }
-.calendar-empty > svg { width: 20px; height: 20px; margin: 0 auto; color: var(--brand); }
-.calendar-empty p { margin: 5px 0 2px; font-size: var(--fs-xs); }
-.calendar-empty .text-btn { font-size: var(--fs-xs); }
-.message-entry { display: flex; align-items: center; gap: 12px; padding: 16px 18px; text-decoration: none; }
-.message-entry:hover { border-color: var(--brand-line); }
-.message-entry > svg:first-child { width: 38px; height: 38px; padding: 9px; border-radius: var(--r-sm); background: var(--brand-soft); color: var(--brand); flex: none; }
-.message-entry > span { flex: 1; }
-.message-entry b { display: block; color: var(--ink); font-size: var(--fs-sm); }
-.message-entry small { display: block; margin-top: 2px; color: var(--ink-3); font-size: var(--fs-xs); }
-.msg-arrow { width: 16px; height: 16px; color: var(--ink-3); flex: none; }
-.game-entry { margin-top: 20px; }
+.ai-form { display: flex; gap: 8px; margin-top: 12px; }
+.ai-form input {
+  min-width: 0;
+  flex: 1;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--brand-line); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.btn.primary:hover { background: var(--brand-strong); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
 
 @media (max-width: 1120px) {
-  .home-columns { grid-template-columns: minmax(0, 1fr) 270px; gap: 20px; }
-  .cards { gap: 12px; }
-}
-@media (max-width: 950px) {
   .quick-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .home-columns { grid-template-columns: minmax(0, 1fr); }
-  .home-aside { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .feature-copy { padding: 30px; }
 }
-@media (max-width: 700px) {
-  .quick-strip { gap: 8px; }
-  .quick-service { padding: 11px 8px; }
-  .quick-service b { font-size: var(--fs-sm); }
-  .quick-service small { font-size: var(--fs-cap); }
-  .quick-icon { width: 32px; height: 32px; margin-bottom: 7px; }
-  .quick-icon svg { width: 18px; height: 18px; }
-  .section-title h2 { font-size: var(--fs-h3); }
-  .section-title p { font-size: var(--fs-xs); }
-  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 17px; }
-  .home-aside { grid-template-columns: minmax(0, 1fr); }
-  .community-banner { gap: 12px; padding: 16px; }
-  .community-banner > img { max-width: 32%; }
-  .round-arrow { width: 27px; height: 27px; }
+@media (max-width: 900px) {
+  .home-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .feature, .feature.reverse { grid-template-columns: minmax(0, 1fr); }
+  .feature.reverse .feature-media { order: -1; }
+  .feature-media { min-height: 280px; }
+}
+@media (max-width: 600px) {
+  .quick-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .quick-service { min-height: 106px; padding: 14px; }
+  .home-section { margin-top: 30px; }
+  .section-title { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .section-title h2 { font-size: 22px; }
+  .home-cards { grid-template-columns: minmax(0, 1fr); }
+  .feature-copy, .ai-panel { padding: 22px; }
+  .feature-copy h2 { font-size: 24px; }
+  .feature-media { min-height: 220px; }
+  .lost-list { padding-inline: 12px; }
+  .lost-row img { width: 44px; height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .skeleton-block { animation: none; }
+  .quick-service, .home-card { transition: none; }
+  .save-feedback { animation: none; }
+  .quick-service:hover, .home-card:hover { transform: none; }
 }
 </style>

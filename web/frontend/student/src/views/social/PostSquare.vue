@@ -1,10 +1,21 @@
 <template>
   <div class="square">
     <header class="square-head">
-      <h1>校园动态</h1>
+      <div>
+        <h1>动态广场</h1>
+        <p>记录今天，也认识身边有趣的人。</p>
+      </div>
+      <button v-if="!composerOpen" type="button" class="btn primary" aria-controls="post-composer"
+        aria-expanded="false" @click="toggleComposer">发布动态</button>
       <button v-if="composerOpen" type="button" class="square-button" aria-controls="post-composer"
         aria-expanded="true" @click="toggleComposer">收起发布框</button>
     </header>
+
+    <WtFeature class="square-feature" image="/images/generated-social-campus.webp" title="有些小美好，值得一起看见。"
+      description="分享校园生活，参与评论与点赞，也可以把喜欢的内容收藏起来。">
+      <button class="btn primary" type="button" @click="toggleComposer">分享此刻</button>
+      <RouterLink class="btn" to="/draw-guess">你画我猜</RouterLink>
+    </WtFeature>
 
     <div class="square-rail">
       <form class="post-search" role="search" aria-label="搜索校园动态" @submit.prevent="search">
@@ -95,7 +106,7 @@
             </header>
             <p class="post-content">{{ p.content }}</p>
             <div v-if="postImages(p).length" class="post-images" :class="{ 'post-images--single': postImages(p).length === 1 }">
-              <el-image v-for="(img, index) in postImages(p)" :key="index" :src="img" fit="contain" class="post-img"
+              <el-image v-for="(img, index) in postImages(p)" :key="index" :src="img" fit="cover" class="post-img content-photo"
                 :alt="'动态图片 ' + (index + 1)" :preview-src-list="postImages(p)" :initial-index="index" preview-teleported
                 loading="lazy" @error="onImgError" />
             </div>
@@ -145,6 +156,7 @@
 </template>
 
 <script setup>
+import WtFeature from '../../components/wt/WtFeature.vue'
 import { useListState } from '../../utils/list-state'
 import { computed, nextTick, ref, watch } from 'vue'
 import { ArrowDown, ChatRound, MoreFilled, Search, Share, Star, StarFilled } from '@element-plus/icons-vue'
@@ -403,15 +415,17 @@ function closeShare() {
 </script>
 
 <style scoped>
+.square-head p { margin-top: 6px; color: var(--ink-3); font-size: 13px; }
 .square {
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(235px, 28vw, 286px);
-  grid-template-areas: 'head rail' 'timeline rail';
+  grid-template-areas: 'head head' 'feature feature' 'timeline rail';
   column-gap: 24px;
   align-items: start;
-  max-width: 1020px;
+  max-width: 1200px;
   margin-inline: auto;
 }
+.square-feature { grid-area: feature; }
 .square-head, .timeline {
   min-width: 0;
   background: var(--surface);
@@ -423,13 +437,12 @@ function closeShare() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 58px;
-  padding: 10px 18px;
-  border-block: 1px solid var(--line);
-  border-radius: 12px 12px 0 0;
+  margin-bottom: 24px;
+  background: transparent;
+  border: 0;
 }
-.square-head h1 { margin: 0; font-size: 22px; line-height: 1.25; color: var(--ink); }
-.timeline { grid-area: timeline; min-height: 70vh; border-bottom: 1px solid var(--line); border-radius: 0 0 12px 12px; }
+.square-head h1 { margin: 0; font-size: 34px; line-height: 1.25; color: var(--ink); }
+.timeline { grid-area: timeline; width: min(100%, 720px); min-height: 70vh; border-bottom: 1px solid var(--line); border-radius: 0 0 12px 12px; }
 .square-rail { grid-area: rail; min-width: 0; }
 .post-search { padding-block: 6px 10px; min-width: 0; }
 .post-search :deep(.el-input__wrapper) { border-radius: 999px 0 0 999px; background: var(--surface); }
@@ -519,19 +532,13 @@ function closeShare() {
 .post-images {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2px;
+  gap: 6px;
   margin-top: 9px;
   width: min(100%, 440px);
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 13px;
-  background: var(--surface-2);
 }
 .post-images--single { grid-template-columns: minmax(0, 1fr); }
-.post-img { display: block; min-width: 0; width: 100%; cursor: zoom-in; aspect-ratio: 4 / 3; }
-.post-img :deep(.el-image__inner) { display: block; width: 100%; height: 100%; }
-.post-images--single .post-img { aspect-ratio: auto; }
-.post-images--single .post-img :deep(.el-image__inner) { height: auto; max-height: 440px; }
+.post-img { cursor: zoom-in; }
+.post-img :deep(.el-image__inner) { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .post-ops { display: flex; justify-content: space-between; align-items: center; max-width: 440px; margin: 5px 0 -3px; }
 .op { display: inline-flex; align-items: center; gap: 4px; min-width: 42px; min-height: 38px; color: var(--ink-3); font-size: 12px; }
 .op > :is(svg, .el-icon) { width: 18px; height: 18px; font-size: 18px; }
@@ -568,8 +575,8 @@ function closeShare() {
   .square-discover .discover-row:focus-visible { outline-offset: -2px; }
 }
 @media (width < 850px) {
-  .square { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'head' 'rail' 'timeline'; }
-  .square-head, .post-search, .square-discover, .timeline { border-inline: 1px solid var(--line); background: var(--surface); }
+  .square { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'head' 'feature' 'rail' 'timeline'; }
+  .post-search, .square-discover, .timeline { border-inline: 1px solid var(--line); background: var(--surface); }
   .post-search { padding: 8px 12px; }
   .discover-toggle {
     display: flex;
@@ -590,8 +597,8 @@ function closeShare() {
   .discover-panels.is-expanded { display: grid; padding: 8px 12px; }
 }
 @media (max-width: 480px) {
-  .square-head { min-height: 48px; padding-inline: 11px; }
-  .square-head h1 { font-size: 19px; }
+  .square-head { align-items: flex-start; }
+  .square-head h1 { font-size: 27px; }
   .compose-row, .post-card { grid-template-columns: 34px minmax(0, 1fr); gap: 8px; padding: 10px 9px; }
   .timeline-avatar { --el-avatar-size: 34px; }
   .post-byline { column-gap: 4px; }

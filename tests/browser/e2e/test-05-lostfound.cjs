@@ -35,7 +35,7 @@ async function run(browser, request, ctx) {
 
   // 2. 另一用户发起认领
   if (lfId) {
-    const claimRes = await buyer.post(`/lostfound/${lfId}/claim`, { content: `${h.PREFIX}我捡到了，特征匹配` });
+    const claimRes = await buyer.post(`/lostfound/${lfId}/claim`, { message: `${h.PREFIX}我捡到了，特征匹配` });
     let claimId;
     if (claimRes.code === 200) {
       // POST /claim intentionally returns R<Void>; query the authenticated user's
@@ -67,6 +67,8 @@ async function run(browser, request, ctx) {
           && String(m.bizId) === String(lfId) && String(m.title || '').includes('通过')
         );
         h.record(C, '认领者收到处理结果通知', resultMessage ? 'PASS' : 'FAIL', resultMessage ? `messageId=${resultMessage.id}` : `未找到 lostfoundId=${lfId} 的处理通知`);
+      } else {
+        h.record(C, '认领者收到处理结果通知', 'FAIL', buyerMsgs.message);
       }
       // 5. 归还确认
       const confirmRes = await buyer.put(`/lostfound/claim/${claimId}/confirm`);

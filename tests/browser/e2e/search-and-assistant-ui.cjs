@@ -44,7 +44,7 @@ function adminSearch(browser, width) {
     const id = new URL(await result.getAttribute('href'), admin).searchParams.get('record')
     await result.click()
     await page.waitForURL(/\/admin\/audit\/post/)
-    await page.getByRole('navigation', { name: '面包屑' }).getByRole('link', { name: '搜索结果' }).click()
+    await page.getByRole('navigation', { name: '面包屑' }).getByRole('link', { name: '全局搜索', exact: true }).click()
     await page.waitForURL(/\/admin\/search/)
     await group.getByText('第 2 页', { exact: true }).waitFor()
     await page.waitForFunction(id => document.activeElement?.id === 'result-post-' + id, id)
@@ -86,7 +86,9 @@ function assistantFallback(browser, isAdmin) {
     await authenticate(context, isAdmin)
     const endpoint = isAdmin ? '**/api/admin/assistant/ask' : '**/api/ai/agent/ask'
     await page.route(endpoint, route => route.fulfill({ json: { code: 1002, message: '测试：模型超时' } }))
+    const capabilities = isAdmin ? null : page.waitForResponse(response => response.url().endsWith('/api/ai/agent/capabilities'))
     await page.goto(isAdmin ? admin + '/admin/assistant' : student + '/ai/chat')
+    if (capabilities) await capabilities
     if (!isAdmin) await page.getByRole('tab', { name: '校园向导' }).click()
     const input = page.locator('textarea')
     const question = isAdmin ? '目前有多少待审活动？' : '帮我发布一个校园读书会'
@@ -121,7 +123,7 @@ function campusFallback(browser) {
 
 function timelineImages(browser) {
   return withPage(browser, 390, 844, async (context, page) => {
-    const legacy = await (await context.request.get(student + '/api/post/list?pageSize=10')).text()
+    const legacy = await (await context.request.get(student + '/api/post/list?pageSize=10&compactImages=false')).text()
     const compact = await (await context.request.get(student + '/api/post/list?pageSize=10&compactImages=true')).text()
     assert.ok(compact.length < legacy.length * 0.2, '列表仍携带完整图片')
     const post = JSON.parse(compact).data.list.find(row => row.imageList.some(url => url.startsWith('/api/post/')))

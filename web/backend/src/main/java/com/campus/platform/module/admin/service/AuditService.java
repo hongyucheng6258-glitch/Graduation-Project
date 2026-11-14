@@ -135,30 +135,40 @@ public class AuditService {
     /** 审核通过 → 通知作者 */
     @Transactional
     public void pass(String type, Long id) {
+        pass(type, id, false);
+    }
+
+    @Transactional
+    public void pass(String type, Long id, boolean pendingOnly) {
         if (Constants.BIZ_IDLE.equals(type)) {
-            reviewIdle(id, Constants.AUDIT_PASS, null, false);
+            reviewIdle(id, Constants.AUDIT_PASS, null, pendingOnly);
             return;
         }
         if (Constants.BIZ_ACTIVITY.equals(type)) {
-            reviewActivity(id, Constants.AUDIT_PASS, null, false);
+            reviewActivity(id, Constants.AUDIT_PASS, null, pendingOnly);
             return;
         }
-        AuditedTarget target = doAudit(type, id, Constants.AUDIT_PASS, null);
+        AuditedTarget target = doAudit(type, id, Constants.AUDIT_PASS, null, pendingOnly);
         notifyAuthor(target, true, null);
     }
 
     /** 审核驳回（必填理由）→ 通知作者 */
     @Transactional
     public void reject(String type, Long id, String reason) {
+        reject(type, id, reason, false);
+    }
+
+    @Transactional
+    public void reject(String type, Long id, String reason, boolean pendingOnly) {
         if (Constants.BIZ_IDLE.equals(type)) {
-            reviewIdle(id, Constants.AUDIT_REJECT, reason, false);
+            reviewIdle(id, Constants.AUDIT_REJECT, reason, pendingOnly);
             return;
         }
         if (Constants.BIZ_ACTIVITY.equals(type)) {
-            reviewActivity(id, Constants.AUDIT_REJECT, reason, false);
+            reviewActivity(id, Constants.AUDIT_REJECT, reason, pendingOnly);
             return;
         }
-        AuditedTarget target = doAudit(type, id, Constants.AUDIT_REJECT, reason);
+        AuditedTarget target = doAudit(type, id, Constants.AUDIT_REJECT, reason, pendingOnly);
         notifyAuthor(target, false, reason);
     }
 
@@ -203,13 +213,16 @@ public class AuditService {
     }
 
     /** 各类型统一更新审核状态，返回作者与可回跳的业务目标 */
-    private AuditedTarget doAudit(String type, Long id, int auditStatus, String reason) {
+    private AuditedTarget doAudit(String type, Long id, int auditStatus, String reason, boolean pendingOnly) {
         switch (type) {
             case Constants.BIZ_LOSTFOUND -> {
-                LostFound lf = lostFoundMapper.selectById(id);
+                LostFound lf = pendingOnly
+                        ? lostFoundMapper.selectOne(new LambdaQueryWrapper<LostFound>().eq(LostFound::getId, id).last("FOR UPDATE"))
+                        : lostFoundMapper.selectById(id);
                 if (lf == null) {
                     throw new BizException(ResultCode.NOT_FOUND, "内容不存在");
                 }
+                requirePending(lf.getAuditStatus(), pendingOnly);
                 lf.setAuditStatus(auditStatus);
                 lf.setAuditReason(reason);
                 lf.setAuditSource(lf.getAiRiskLevel() == null ? "manual" : "ai_manual");
@@ -217,10 +230,13 @@ public class AuditService {
                 return new AuditedTarget(lf.getUserId(), "失物招领「" + lf.getTitle() + "」", Constants.BIZ_LOSTFOUND, lf.getId());
             }
             case Constants.BIZ_POST -> {
-                Post post = postMapper.selectById(id);
+                Post post = pendingOnly
+                        ? postMapper.selectOne(new LambdaQueryWrapper<Post>().eq(Post::getId, id).last("FOR UPDATE"))
+                        : postMapper.selectById(id);
                 if (post == null) {
                     throw new BizException(ResultCode.NOT_FOUND, "内容不存在");
                 }
+                requirePending(post.getAuditStatus(), pendingOnly);
                 post.setAuditStatus(auditStatus);
                 post.setAuditReason(reason);
                 post.setAuditSource(post.getAiRiskLevel() == null ? "manual" : "ai_manual");
@@ -230,10 +246,13 @@ public class AuditService {
                 return new AuditedTarget(post.getUserId(), "动态「" + preview + "」", Constants.BIZ_POST, post.getId());
             }
             case Constants.BIZ_PARTNER -> {
-                StudyPartner p = studyPartnerMapper.selectById(id);
+                StudyPartner p = pendingOnly
+                        ? studyPartnerMapper.selectOne(new LambdaQueryWrapper<StudyPartner>().eq(StudyPartner::getId, id).last("FOR UPDATE"))
+                        : studyPartnerMapper.selectById(id);
                 if (p == null) {
                     throw new BizException(ResultCode.NOT_FOUND, "内容不存在");
                 }
+                requirePending(p.getAuditStatus(), pendingOnly);
                 p.setAuditStatus(auditStatus);
                 p.setAuditReason(reason);
                 p.setAuditSource(p.getAiRiskLevel() == null ? "manual" : "ai_manual");
@@ -241,6 +260,12 @@ public class AuditService {
                 return new AuditedTarget(p.getUserId(), "学习搭子「" + p.getSubject() + "」", Constants.BIZ_PARTNER, p.getId());
             }
             default -> throw new BizException(ResultCode.BAD_REQUEST, "不支持的审核类型: " + type);
+        }
+    }
+
+    private void requirePending(Integer status, boolean pendingOnly) {
+        if (pendingOnly && !Objects.equals(status, Constants.AUDIT_PENDING)) {
+            throw new BizException(ResultCode.DUPLICATE_OPERATION, "该内容已处理，请刷新");
         }
     }
 

@@ -2,7 +2,7 @@
   <WtPageHeader title="AI 配置" subtitle="服务地址、密钥、模型参数与提示词模板。" />
 
   <div>
-    <el-form v-loading="loading" class="model-form" label-position="top">
+    <el-form v-if="admin.permissions !== null" v-loading="loading" :disabled="!canEditConfig" class="model-form" label-position="top">
       <el-form-item label="服务地址">
         <el-input v-model="configs.base_url" placeholder="https://api.deepseek.com" />
       </el-form-item>
@@ -10,7 +10,7 @@
         <el-input v-model="newApiKey" type="password" autocomplete="new-password"
                   :disabled="loading || saving"
                   :placeholder="apiKeyConfigured ? '********' : '未配置'" />
-        <small class="api-key-hint">输入新密钥后保存，留空则保留当前配置。</small>
+        <small v-if="canEditConfig" class="api-key-hint">输入新密钥后保存，留空则保留当前配置。</small>
       </el-form-item>
       <el-form-item label="模型名称">
         <el-input v-model="configs.model_name" placeholder="deepseek-chat" />
@@ -31,11 +31,12 @@
         <el-input-number v-model="rateLimitNum" :min="1" :max="1000" />
       </el-form-item>
     </el-form>
+    <p v-else role="status">正在读取管理员权限…</p>
 
     <el-card class="prompt-panel" shadow="never">
       <div class="head">
         <h2>提示词模板</h2>
-        <el-button size="small" @click="openEdit()">＋ 新建模板</el-button>
+        <el-button v-if="canEditPrompt" size="small" @click="openEdit()">新建模板</el-button>
       </div>
       <el-table class="admin-list-table" :data="prompts">
         <el-table-column prop="scene" label="场景" width="110">
@@ -50,7 +51,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="90">
+        <el-table-column v-if="canEditPrompt" label="操作" width="90">
           <template #default="{ row }">
             <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
           </template>
@@ -58,11 +59,11 @@
       </el-table>
     </el-card>
 
-    <div class="config-actions">
+    <div v-if="canEditConfig" class="config-actions">
       <el-button type="primary" :disabled="loading || !configReady" :loading="saving" @click="save">保存配置</el-button>
     </div>
 
-    <el-dialog v-model="editVisible" :title="editForm.id ? '编辑模板' : '新建模板'" width="min(560px, calc(100vw - 32px))">
+    <el-dialog v-if="canEditPrompt" v-model="editVisible" :title="editForm.id ? '编辑模板' : '新建模板'" width="min(560px, calc(100vw - 32px))">
       <el-form label-position="top">
         <el-form-item label="场景">
           <el-select v-model="editForm.scene">
@@ -96,9 +97,13 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import AgentWorkspace from './AgentWorkspace.vue'
 import request from '../../api/request'
+import { useAdminStore } from '../../store/admin'
 import { ElMessage } from 'element-plus'
 import { getAiConfig, updateAiConfig, listPrompts, createPrompt, updatePrompt } from '../../api/aiConfig'
 
+const admin = useAdminStore()
+const canEditConfig = computed(() => admin.can('ai:config:edit'))
+const canEditPrompt = computed(() => admin.can('ai:prompt:edit'))
 const loading = ref(false)
 const configReady = ref(false)
 const agentEnabled = ref(false)

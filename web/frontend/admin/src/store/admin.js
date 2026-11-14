@@ -1,39 +1,62 @@
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
+import { getAdminSession } from '../api/auth'
 
-/** 容错解析本地 JSON（admin_info 损坏时回退 null，避免登录态初始化崩溃） */
-function safeParseAdminInfo() {
+function readAdminInfo() {
   try {
     return JSON.parse(localStorage.getItem('admin_info') || 'null')
-  } catch (e) {
+  } catch {
     localStorage.removeItem('admin_info')
     return null
   }
 }
 
-/**
- * 管理员登录态（Pinia）。
- */
-export const useAdminStore = defineStore('admin', {
-  state: () => ({
-    token: localStorage.getItem('admin_token'),
-    adminInfo: safeParseAdminInfo()
-  }),
-  getters: {
-    isLoggedIn: (state) => !!state.token,
-    isSuper: (state) => state.adminInfo?.role === 'super'
-  },
-  actions: {
-    loginSuccess(token, adminInfo) {
-      this.token = token
-      this.adminInfo = adminInfo
-      localStorage.setItem('admin_token', token)
-      localStorage.setItem('admin_info', JSON.stringify(adminInfo))
-    },
-    logout() {
-      this.token = null
-      this.adminInfo = null
-      localStorage.removeItem('admin_token')
-      localStorage.removeItem('admin_info')
-    }
+export const useAdminStore = defineStore('admin', () => {
+  const token = ref(localStorage.getItem('admin_token'))
+  const adminInfo = ref(readAdminInfo())
+  const permissions = ref(null)
+  const isLoggedIn = computed(() => !!token.value)
+  const isSuper = computed(() => adminInfo.value?.role === 'super')
+  let sessionRequest
+
+  function can(permission) {
+    return permissions.value?.includes(permission) === true
   }
+
+  function loginSuccess(value, info) {
+    token.value = value
+    adminInfo.value = info
+    permissions.value = null
+    localStorage.setItem('admin_token', value)
+    localStorage.setItem('admin_info', JSON.stringify(info))
+  }
+
+  function logout() {
+    token.value = null
+    adminInfo.value = null
+    permissions.value = null
+    sessionRequest = undefined
+    localStorage.removeItem('admin_token')
+    localStorage.removeItem('admin_info')
+  }
+
+  async function loadSession(returnPath) {
+    const currentToken = token.value
+    if (!currentToken || permissions.value) return
+    if (sessionRequest?.token === currentToken) return sessionRequest.promise
+
+    const request = { token: currentToken }
+    request.promise = getAdminSession(returnPath).then(({ permissions: grants, ...profile }) => {
+      if (sessionRequest !== request || token.value !== currentToken) return
+      adminInfo.value = profile
+      permissions.value = Array.isArray(grants) ? grants : []
+      localStorage.setItem('admin_info', JSON.stringify(profile))
+    }).finally(() => {
+      if (sessionRequest === request) sessionRequest = undefined
+    })
+    sessionRequest = request
+    return request.promise
+  }
+
+  return { token, adminInfo, permissions, isLoggedIn, isSuper, can, loginSuccess, logout, loadSession }
 })

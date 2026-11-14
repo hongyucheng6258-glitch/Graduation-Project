@@ -1,5 +1,8 @@
 package com.campus.platform.module.admin.controller;
 
+import com.campus.platform.module.admin.audit.AdminOperation;
+import com.campus.platform.module.admin.audit.AdminPermission;
+
 import com.campus.platform.module.admin.service.AdminUserService;
 
 import com.campus.platform.common.PageResult;
@@ -27,14 +30,15 @@ public class AdminUserController {
     }
 
     @PutMapping("/{id}/status")
+    @AdminOperation(permission = AdminPermission.USER_STATUS, module = "user", action = "update-status", idArgument = 0)
     public R<Void> updateStatus(@PathVariable Long id, @Valid @RequestBody UserStatusDTO dto) {
         adminUserService.updateStatus(id, dto.getStatus());
         return R.ok();
     }
 
     @PutMapping("/{id}/reset-password")
-    public R<Void> resetPassword(@PathVariable Long id) {
-        adminUserService.resetPassword(id);
-        return R.ok();
+    @AdminOperation(permission = AdminPermission.USER_PASSWORD_RESET, module = "user", action = "reset-password", idArgument = 0)
+    public R<java.util.Map<String, String>> resetPassword(@PathVariable Long id) {
+        return R.ok(java.util.Map.of("temporaryPassword", adminUserService.resetPassword(id)));
     }
 }

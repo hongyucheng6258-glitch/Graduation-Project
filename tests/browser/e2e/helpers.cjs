@@ -80,7 +80,7 @@ async function studentLogin(page, studentNo, password) {
   if (await captchaInput.count() > 0) {
     await captchaInput.fill('e2e');
   }
-  await page.locator('button.submit, button:has-text("登 录"), button:has-text("登录")').first().click();
+  await page.locator('.el-form button.submit').click();
   await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
   await page.waitForTimeout(2000);
 }

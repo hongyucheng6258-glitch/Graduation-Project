@@ -78,8 +78,8 @@ async function checkManagement(page, browser) {
 }
 
 async function checkOperations(page) {
-  await page.goto(admin + '/user')
-  const studentRow = page.getByRole('row', { name: /Browser Student/ })
+  await page.goto(admin + '/user?q=' + fixture.studentNo)
+  const studentRow = page.getByRole('row', { name: new RegExp(fixture.studentNo) })
   await studentRow.getByRole('button', { name: '禁用', exact: true }).click()
   await page.getByRole('button', { name: '确定', exact: true }).click()
   await studentRow.getByText('已禁用', { exact: true }).waitFor()

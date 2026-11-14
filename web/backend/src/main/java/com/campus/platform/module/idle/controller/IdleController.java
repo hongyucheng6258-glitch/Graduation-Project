@@ -124,6 +124,12 @@ public class IdleController {
         return R.ok(handoffs.confirm(UserContext.getUid(), id, dto.version()));
     }
 
+    @PutMapping("/appoint/{id}/cancel")
+    public R<Void> cancelAppoint(@PathVariable Long id) {
+        idleService.cancelAppoint(UserContext.getUid(), id);
+        return R.ok();
+    }
+
     @PutMapping("/appoint/{id}/finish")
     public R<Void> finishAppoint(@PathVariable Long id) {
         idleService.finishAppoint(UserContext.getUid(), id);

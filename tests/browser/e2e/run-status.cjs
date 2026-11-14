@@ -22,7 +22,7 @@ function resolveOnlyCategories(args) {
 
 function getExitCode(results, hasRuntimeError = false) {
   if (hasRuntimeError) return 1;
-  return results.some(result => result?.status === 'FAIL' || result?.status === 'BLOCK') ? 1 : 0;
+  return results.length > 0 && results.every(result => result?.status === 'PASS') ? 0 : 1;
 }
 
 module.exports = { getExitCode, parseOnlyCategories, resolveOnlyCategories };

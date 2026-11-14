@@ -112,10 +112,10 @@ async function appoint(buyer, seller, admin, title) {
   const search = await post('/ai/agent/ask', buyer, { question: `帮我查找闲置“${title}”` })
   assert.ok(search.idleItems.some(hit => String(hit.id ?? hit.itemId) === String(item.id)), '未定位到指定闲置')
   const proposal = await post('/ai/agent/ask', buyer, {
-    sessionId: search.sessionId, question: `帮我预约闲置编号 ${item.id} 的${title}，备注：希望在图书馆门口交接。`
+    sessionId: search.sessionId, question: `帮我预约物品 ID 为 ${item.id} 的闲置「${title}」，备注：希望在图书馆门口交接。`
   })
   const card = proposal.idleAppointments.find(value => String(value.itemId) === String(item.id))
-  assert.ok(card?.id && card.state === 'PENDING')
+  assert.ok(card?.id && card.state === 'PENDING', '助手未为指定物品 ID 生成待确认预约卡')
   const path = `/ai/agent/idle-appointments/${card.id}/confirm`
   const responses = await Promise.all([post(path, buyer), post(path, buyer)])
   const id = responses[0].appointmentId

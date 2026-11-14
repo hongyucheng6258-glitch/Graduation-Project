@@ -35,8 +35,8 @@
           <span class="time">{{ String(a.createTime).slice(0, 16) }}</span>
         </div>
         <p class="answer__content">{{ a.content }}</p>
-        <div v-if="question.isOwner && question.status === 0 && a.isAccepted !== 1" class="answer__ops">
-          <el-button size="small" type="success" plain @click="accept(a.id)">采纳为最佳回答</el-button>
+        <div v-if="question.isOwner && a.isAccepted !== 1" class="answer__ops">
+          <el-button size="small" type="success" plain @click="accept(a.id)">{{ question.status === 1 ? '改选为最佳回答' : '采纳为最佳回答' }}</el-button>
         </div>
       </div>
       <div v-if="answerTotal > answerPageSize" class="answer-pager">

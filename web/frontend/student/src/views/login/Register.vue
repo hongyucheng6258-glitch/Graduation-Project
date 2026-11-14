@@ -30,9 +30,12 @@
             <el-input v-model="form.captchaCode"
                       :placeholder="captchaMode === 'math' ? '输入运算结果' : '4位验证码'"
                       :maxlength="captchaMode === 'math' ? 3 : 4" @keyup.enter="submit" />
-            <img v-if="captchaMode !== 'math'" class="captcha-img" :src="captchaImage"
-                 title="看不清？点击刷新" @click="loadCaptcha" />
-            <div v-else class="captcha-math" title="换一题" @click="loadCaptcha">{{ captchaExpression }}</div>
+            <button type="button" class="captcha-refresh" :class="captchaMode === 'math' ? 'captcha-math' : 'captcha-img'"
+                    :aria-label="captchaMode === 'math' ? `当前题目：${captchaExpression}。更换验证码` : '刷新图片验证码'"
+                    title="点击刷新验证码" @click="loadCaptcha" @keyup.enter.stop>
+              <span v-if="captchaMode === 'math'">{{ captchaExpression }}</span>
+              <img v-else-if="captchaImage" :src="captchaImage" alt="" />
+            </button>
           </div>
         </el-form-item>
         <el-button type="primary" class="submit" :loading="loading" @click="submit">注 册</el-button>
@@ -94,9 +97,10 @@ async function loadCaptcha() {
 }
 
 async function submit() {
-  await formRef.value.validate()
+  if (loading.value) return
   loading.value = true
   try {
+    if (!await formRef.value.validate().catch(() => false)) return
     const res = await register({
       studentNo: form.studentNo,
       nickname: form.nickname,
@@ -159,6 +163,9 @@ onMounted(loadCaptcha)
   user-select: none;
   transition: border-color .18s ease, box-shadow .18s ease;
 }
+.captcha-refresh { padding: 0; overflow: hidden; }
+.captcha-refresh img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.captcha-refresh:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .captcha-math:hover { border-color: var(--brand-line); box-shadow: 0 3px 10px rgba(49, 91, 184, .1), inset 0 1px 0 rgba(255, 255, 255, .8); }
 .submit { width: 100%; height: 44px; margin-top: 8px; border-radius: var(--r-pill); font-weight: 600; }
 .links { margin-top: var(--s-5); text-align: center; font-size: var(--fs-sm); color: var(--ink-3); }

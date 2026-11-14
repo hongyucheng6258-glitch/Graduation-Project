@@ -27,6 +27,9 @@ public class User {
     @JsonIgnore
     private String password;
 
+    @JsonIgnore
+    private LocalDateTime temporaryPasswordExpiresAt;
+
     /** 手机号 */
     private String phone;
 

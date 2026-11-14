@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 
 /**
  * 数据大屏统计服务（D7）。
- * "今日活跃"口径（共享约定 #11）：当日登录 + AI调用 + 发布行为任一并集去重。
+ * 活跃口径：最近登录、注册、AI 调用与内容发布按日合并去重。
  */
 @Service
 @RequiredArgsConstructor
@@ -95,23 +95,9 @@ public class StatsService {
         vo.setTotalUsers(userMapper.selectCount(null));
 
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        // 今日活跃：当日登录用户 并集 当日有AI调用的用户 并集 当日发布内容的用户
-        java.util.Set<Long> active = new java.util.HashSet<>();
-        userMapper.selectList(new LambdaQueryWrapper<User>()
-                        .ge(User::getLastLoginTime, todayStart)
-                        .select(User::getId))
-                .forEach(u -> active.add(u.getId()));
-        aiCallLogMapper.selectList(new LambdaQueryWrapper<AiCallLog>()
-                        .ge(AiCallLog::getCreateTime, todayStart)
-                        .select(AiCallLog::getUserId)
-                        .groupBy(AiCallLog::getUserId))
-                .forEach(l -> active.add(l.getUserId()));
-        idleItemMapper.selectList(new LambdaQueryWrapper<IdleItem>()
-                        .ge(IdleItem::getCreateTime, todayStart)
-                        .select(IdleItem::getUserId)
-                        .groupBy(IdleItem::getUserId))
-                .forEach(i -> active.add(i.getUserId()));
-        vo.setTodayActiveUsers((long) active.size());
+        long active = userMapper.countObservedActiveByDay(todayStart, todayStart.plusDays(1)).stream()
+                .mapToLong(DailyCount::total).sum();
+        vo.setTodayActiveUsers(active);
 
         vo.setTodayAiCalls(aiCallLogMapper.selectCount(new LambdaQueryWrapper<AiCallLog>()
                 .ge(AiCallLog::getCreateTime, todayStart)));
@@ -129,13 +115,14 @@ public class StatsService {
     }
 
     /**
-     * 近30天趋势：用户增长 + AI调用 双折线。
-     * 返回 {dates:[], userGrowth:[], aiCalls:[]}
+     * 近30天趋势：每日可观测活跃用户、累计用户和 AI 调用数。
+     * 返回 {dates:[], dailyActiveUsers:[], userGrowth:[], aiCalls:[]}
      */
     public Map<String, Object> trend() {
         List<String> dates = new ArrayList<>();
         List<Long> userGrowth = new ArrayList<>();
         List<Long> aiCalls = new ArrayList<>();
+        List<Long> dailyActiveUsers = new ArrayList<>();
         LocalDate today = LocalDate.now();
         LocalDate firstDay = today.minusDays(29);
         LocalDateTime start = firstDay.atStartOfDay();
@@ -146,14 +133,18 @@ public class StatsService {
                 .collect(Collectors.toMap(DailyCount::day, DailyCount::total));
         Map<LocalDate, Long> callsByDay = aiCallLogMapper.countByDay(start, end).stream()
                 .collect(Collectors.toMap(DailyCount::day, DailyCount::total));
+        Map<LocalDate, Long> activeByDay = userMapper.countObservedActiveByDay(start, end).stream()
+                .collect(Collectors.toMap(DailyCount::day, DailyCount::total));
         for (LocalDate day = firstDay; !day.isAfter(today); day = day.plusDays(1)) {
             dates.add(day.toString());
             cumulativeUsers += registrationsByDay.getOrDefault(day, 0L);
             userGrowth.add(cumulativeUsers);
             aiCalls.add(callsByDay.getOrDefault(day, 0L));
+            dailyActiveUsers.add(activeByDay.getOrDefault(day, 0L));
         }
         Map<String, Object> result = new HashMap<>();
         result.put("dates", dates);
+        result.put("dailyActiveUsers", dailyActiveUsers);
         result.put("userGrowth", userGrowth);
         result.put("aiCalls", aiCalls);
         return result;

@@ -6,8 +6,9 @@ test('returns zero when all executed checks pass', () => {
   assert.equal(getExitCode([{ status: 'PASS' }]), 0);
 });
 
-test('returns zero for documented uncovered checks without failures', () => {
-  assert.equal(getExitCode([{ status: 'UNCOVERED' }]), 0);
+test('fails when a check is uncovered or no checks ran', () => {
+  assert.equal(getExitCode([{ status: 'UNCOVERED' }]), 1);
+  assert.equal(getExitCode([]), 1);
 });
 
 test('returns non-zero when any check fails or is blocked', () => {

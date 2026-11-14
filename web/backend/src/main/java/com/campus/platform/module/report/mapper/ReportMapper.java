@@ -10,4 +10,6 @@ import org.apache.ibatis.annotations.Mapper;
  */
 @Mapper
 public interface ReportMapper extends BaseMapper<Report> {
+    @org.apache.ibatis.annotations.Select("SELECT * FROM report WHERE id=#{id} FOR UPDATE")
+    Report lockById(@org.apache.ibatis.annotations.Param("id") Long id);
 }

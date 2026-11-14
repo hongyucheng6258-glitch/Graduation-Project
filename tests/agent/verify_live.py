@@ -455,7 +455,7 @@ def verify_browser(base, cfg, db, script):
                 "studentToken": token(cfg["JWT_SECRET"], student),
                 "visitorToken": token(cfg["JWT_SECRET"], visitor),
                 "adminToken": token(cfg["JWT_SECRET"], admin, "admin"),
-                "studentId": student, "visitorId": visitor, "activityId": activity, "activityTitle": title, "identifier": identifier,
+                "studentId": student, "studentNo": "BS" + suffix, "visitorId": visitor, "activityId": activity, "activityTitle": title, "identifier": identifier,
                 "pdf": base64.b64encode(pdf_bytes(identifier)).decode(),
             }
             if idle:

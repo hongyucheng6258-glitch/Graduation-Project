@@ -24,6 +24,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.platform.common.BizException;
+import com.campus.platform.utils.ListedImages;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.ResultCode;
@@ -100,7 +101,7 @@ public class IdleService {
                                 .or().like(IdleItem::getDescription, keyword))
                         .eq(StrUtil.isNotBlank(category), IdleItem::getCategory, category)
                         .orderByDesc(IdleItem::getId));
-        return toPage(page);
+        return toPage(page, true);
     }
 
     public List<IdleGuideCard> guideSearch(Long uid, String keyword, String category, String exchange, int limit) {
@@ -260,7 +261,9 @@ public class IdleService {
     /** 下架（仅本人） */
     public void offline(Long userId, Long id) {
         checkOwner(userId, id);
-        idleItemMapper.updateAvailability(id, Constants.IDLE_OFF_SHELF, null, false);
+        if (idleItemMapper.changeListing(id, Constants.IDLE_ON_SHELF, Constants.IDLE_OFF_SHELF, false) != 1) {
+            throw new BizException(ResultCode.BAD_REQUEST, "仅可下架没有有效预约或成交记录的在架物品");
+        }
     }
 
     /** 重新上架（仅本人；需审核通过且非已成交） */
@@ -275,7 +278,7 @@ public class IdleService {
         if (item.getStatus() == Constants.IDLE_ON_SHELF) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "物品已在架上");
         }
-        if (idleItemMapper.updateAvailability(id, Constants.IDLE_ON_SHELF, item.getStatus(), true) != 1) {
+        if (idleItemMapper.changeListing(id, Constants.IDLE_OFF_SHELF, Constants.IDLE_ON_SHELF, true) != 1) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "物品状态已变化，请刷新后重试");
         }
     }
@@ -286,7 +289,7 @@ public class IdleService {
                 new LambdaQueryWrapper<IdleItem>()
                         .eq(IdleItem::getUserId, userId)
                         .orderByDesc(IdleItem::getId));
-        return toPage(page);
+        return toPage(page, false);
     }
 
     /**
@@ -308,6 +311,7 @@ public class IdleService {
                 .eq("id", itemId)
                 .eq("audit_status", Constants.AUDIT_PASS)
                 .eq("status", Constants.IDLE_ON_SHELF)
+                .notExists("SELECT 1 FROM idle_appointment a WHERE a.item_id=idle_item.id AND a.status IN (0,1,3)")
                 .set("status", Constants.IDLE_RESERVED));
         if (claimed != 1) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "该物品已被其他同学预约，请刷新后重试");
@@ -357,6 +361,27 @@ public class IdleService {
                 String.format("你对「%s」的预约%s。",
                         item == null ? "物品" : item.getTitle(), accept ? "已被接受，请线下完成互换" : "已被拒绝"),
                 Constants.BIZ_IDLE, appointment.getItemId());
+    }
+
+    @Transactional
+    public void cancelAppoint(Long userId, Long appointId) {
+        IdleAppointment appointment = lockAppointment(appointId);
+        boolean buyer = appointment.getBuyerId().equals(userId);
+        if (!buyer && !appointment.getSellerId().equals(userId)) {
+            throw new BizException(ResultCode.FORBIDDEN, "无权操作该预约");
+        }
+        int status = appointment.getStatus();
+        if (status == Constants.APPOINT_CANCELLED) return;
+        if ((status != Constants.APPOINT_PENDING && status != Constants.APPOINT_ACCEPTED)
+                || (status == Constants.APPOINT_ACCEPTED && handoffs.hasCompletionConfirmation(appointId))) {
+            throw new BizException(ResultCode.BAD_REQUEST, "当前预约不可取消");
+        }
+        appointment.setStatus(Constants.APPOINT_CANCELLED);
+        appointmentMapper.updateById(appointment);
+        idleItemMapper.releaseReservation(appointment.getItemId());
+        Long other = buyer ? appointment.getSellerId() : appointment.getBuyerId();
+        messageService.send(other, Constants.MSG_INTERACT, "闲置预约已取消",
+                "对方取消了预约，原交接安排已失效。", Constants.BIZ_IDLE, appointment.getItemId());
     }
 
     /** 完成交接。新增预约在双方确认后才完成，旧预约保持原流程。 */
@@ -484,10 +509,18 @@ public class IdleService {
         return item;
     }
 
-    private PageResult<IdleItemVO> toPage(Page<IdleItem> page) {
+    private PageResult<IdleItemVO> toPage(Page<IdleItem> page, boolean compactImages) {
         Map<Long, User> publishers = userMapper.findPublisherProfiles(
                 page.getRecords().stream().map(IdleItem::getUserId).distinct().toList());
-        return PageResult.of(page, item -> toVO(item, publishers.get(item.getUserId())));
+        return PageResult.of(page, item -> {
+            var card = toVO(item, publishers.get(item.getUserId()));
+            if (compactImages) {
+                card.setImageList(ListedImages.urls("idle", item.getId(), card.getImageList()));
+                card.setImages(toJson(card.getImageList()));
+                card.setPublisherAvatar(ListedImages.avatar(item.getUserId(), card.getPublisherAvatar()));
+            }
+            return card;
+        });
     }
 
     private IdleItemVO toVO(IdleItem item) {

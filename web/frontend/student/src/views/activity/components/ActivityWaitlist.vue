@@ -25,7 +25,7 @@ import { formatTime } from '../../../utils/date'
 import SignupConflictNotice from './SignupConflictNotice.vue'
 import { waitlistLabel, waitlistState } from './waitlist-state'
 
-const props = defineProps({ activityId: { type: Number, required: true }, signupStatus: Number })
+const props = defineProps({ activityId: { type: Number, required: true }, signupStatus: Number, occupiedSeats: Number })
 const emit = defineEmits(['changed', 'priority'])
 const view = ref(null)
 const busy = ref(false)
@@ -74,7 +74,7 @@ function accept() {
   }, '递补报名已提交，等待发布者审批')
 }
 
-watch(() => [props.activityId, props.signupStatus], load, { immediate: true })
+watch(() => [props.activityId, props.signupStatus, props.occupiedSeats], load, { immediate: true })
 </script>
 
 <style scoped>

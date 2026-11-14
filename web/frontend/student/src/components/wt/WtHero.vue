@@ -9,8 +9,7 @@ defineProps({
   photoTo: { type: String, default: '' },
   photoNote: { type: String, default: '' },
   primary: { type: Object, default: null },
-  secondary: { type: Object, default: null },
-  event: { type: Object, default: null }
+  secondary: { type: Object, default: null }
 })
 </script>
 
@@ -27,16 +26,6 @@ defineProps({
         <RouterLink v-if="primary" class="btn primary" :to="primary.to">{{ primary.label }}</RouterLink>
         <RouterLink v-if="secondary" class="btn" :to="secondary.to">{{ secondary.label }}</RouterLink>
       </div>
-      <RouterLink v-if="event" class="hero-event" :to="event.to">
-        <span class="hero-event-date">
-          <b>{{ event.day }}</b>
-          <small>{{ event.month }}</small>
-        </span>
-        <span>
-          <strong>{{ event.title }}</strong>
-          <small>{{ event.sub }}</small>
-        </span>
-      </RouterLink>
     </div>
 
     <component :is="photoTo ? RouterLink : 'div'" v-if="photo" class="hero-photo" :to="photoTo || undefined">
@@ -51,104 +40,72 @@ defineProps({
 <style scoped>
 .campus-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
-  gap: 32px;
-  align-items: center;
-  padding: 28px;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, .98fr);
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
-.hello-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
-  color: var(--brand-strong);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
+.hero-copy { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 42px; }
+.hello-line { display: flex; align-items: center; gap: 7px; margin-bottom: 17px; color: var(--brand); font-size: 12px; overflow-wrap: anywhere; }
 .hello-line svg { width: 16px; height: 16px; flex: none; }
-.hero-copy h1 { margin: 0; color: var(--ink); font-size: var(--fs-display); line-height: 1.25; font-weight: 750; letter-spacing: .3px; }
-.hero-description { margin: 16px 0 26px; color: var(--ink-2); font-size: 1.05rem; }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.hero-copy h1 { margin: 0; font-size: clamp(34px, 3.3vw, 48px); line-height: 1.18; letter-spacing: -.025em; }
+.hero-description { margin: 16px 0 24px; color: var(--ink-3); font-size: 14px; line-height: 1.85; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .btn {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  min-height: 44px;
-  padding: 0 22px;
+  min-height: 42px;
+  padding: 0 16px;
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--ink);
-  font-size: 1rem;
+  font-size: 14px;
   font-weight: 550;
-  text-decoration: none;
 }
-.btn:hover { border-color: var(--brand-line); background: var(--brand-soft); color: var(--brand-strong); }
+.btn:hover { border-color: var(--brand-line); }
 .btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
-.btn.primary:hover { background: var(--brand-strong); border-color: var(--brand-strong); }
-.hero-event {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  max-width: 380px;
-  margin-top: 26px;
-  padding: 12px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: var(--shadow-sm);
-  text-decoration: none;
-  overflow-wrap: anywhere;
+.btn.primary:hover { background: var(--brand-strong); }
+.hero-photo {
+  position: relative;
+  min-height: 360px;
+  margin: 12px 12px 12px 0;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface-3);
 }
-.hero-event:hover { border-color: var(--brand-line); }
-.hero-event-date {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  flex: 0 0 44px;
-  min-height: 44px;
-  border-radius: var(--r-sm);
-  background: var(--brand-soft);
-  color: var(--brand-strong);
-  line-height: 1.2;
-}
-.hero-event-date b { font-size: 1.05rem; }
-.hero-event-date small { font-size: var(--fs-cap); }
-.hero-event strong { display: block; font-size: var(--fs-sm); }
-.hero-event > span:last-child small { display: block; color: var(--ink-2); font-size: var(--fs-xs); }
-.hero-photo { display: block; position: relative; border-radius: 10px; overflow: hidden; background: var(--surface-2); }
-.hero-photo > img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
-.hero-photo:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
+.hero-photo > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.hero-photo:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; }
 .photo-note {
   position: absolute;
-  inset: auto 0 0;
+  inset: auto 16px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 26px 14px 12px;
-  background: linear-gradient(transparent, rgba(15, 23, 42, .83));
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, .32);
+  border-radius: var(--r-sm);
+  background: rgba(20, 36, 48, .48);
+  backdrop-filter: blur(12px);
   color: #fff;
-  font-size: var(--fs-sm);
-  font-weight: 650;
+  font-size: 12px;
 }
-.hero-photo:hover .photo-note { text-decoration: underline; }
-@media (max-width: 950px) {
-  .campus-hero { padding: 28px; gap: 24px; }
-  .hero-copy h1 { font-size: 32px; }
-  .hero-description { font-size: var(--fs-body); }
-  .btn { padding: 0 16px; font-size: var(--fs-body); }
+.hero-photo:hover .photo-note { background: rgba(20, 36, 48, .64); }
+@media (min-width: 1600px) { .hero-photo { min-height: 390px; } }
+@media (max-width: 1120px) { .hero-copy { padding: 32px; } }
+@media (max-width: 900px) {
+  .hero-copy { padding: 28px; }
+  .hero-copy h1 { font-size: 36px; }
 }
-@media (max-width: 700px) {
-  .campus-hero { grid-template-columns: minmax(0, 1fr); padding: 20px; gap: 20px; }
-  .hero-copy h1 { font-size: 30px; }
-  .hero-description { margin: 12px 0 20px; }
-  .hero-event { margin-top: 18px; }
+@media (max-width: 600px) {
+  .campus-hero { grid-template-columns: minmax(0, 1fr); }
+  .hero-copy { padding: 28px 24px; }
+  .hero-copy h1 { font-size: 34px; }
+  .hero-description { margin: 14px 0 20px; }
+  .hero-photo { min-height: 240px; margin: 0 12px 12px; }
 }
 </style>

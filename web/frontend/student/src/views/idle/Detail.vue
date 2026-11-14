@@ -46,7 +46,7 @@
             <el-button size="large" @click="contactPublisher">私信卖家</el-button>
           </template>
           <template v-else>
-            <el-button type="danger" plain @click="offline">下架</el-button>
+            <el-button v-if="item.status === 0" type="danger" plain @click="offline">下架</el-button>
             <el-button v-if="item.reviewAppointmentId && !item.reviewed" type="warning" size="large" @click="openReview">
               评价
             </el-button>

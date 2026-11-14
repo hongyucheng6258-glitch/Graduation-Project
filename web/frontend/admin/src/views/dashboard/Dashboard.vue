@@ -17,6 +17,26 @@
       <span>未能加载：{{ errors.join('、') }}。空白区域不代表没有数据。</span>
       <button class="text-btn" :disabled="loading" @click="loadDashboard">重新加载</button>
     </div>
+    <section class="chart-panel pending-panel" aria-labelledby="pending-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="pending-title">待办工作台</h2>
+          <span>按优先级处理今日审核与社区事务</span>
+        </div>
+        <button type="button" class="text-btn" :disabled="loading || pending.loading"
+          @click="loadDashboard">{{ pending.failed ? '重试更新' : '刷新数据' }} ↻</button>
+      </div>
+      <p v-if="pending.failed" class="pending-message" role="status">
+        {{ pending.counts ? '待办数更新失败，以下为上次结果。' : '暂时无法读取待办数，仍可进入各队列。' }}
+      </p>
+      <div class="pending-grid">
+        <RouterLink v-for="queue in queues" :key="queue.key" class="pending-link" :to="queue.to">
+          <span>{{ queue.label }}</span>
+          <DashboardCount class="pending-count" :value="pending.counts ? pending.counts[queue.key] ?? 0 : '—'" />
+        </RouterLink>
+      </div>
+    </section>
+
     <!-- 统计卡 -->
     <section class="stat-grid">
       <div v-for="c in cards" :key="c.label" class="stat-card">
@@ -24,7 +44,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" v-html="c.icon"></svg>
         </span>
         <div>
-          <b>{{ c.value }}</b>
+          <DashboardCount :value="c.value" />
           <small>{{ c.label }}</small>
         </div>
       </div>
@@ -34,10 +54,11 @@
     <section class="admin-charts">
       <div class="chart-panel trend-panel">
         <div class="panel-head">
-          <h3>近 30 天趋势</h3>
-          <span>累计用户 / AI 调用量</span>
+          <h3>近 30 天活跃趋势</h3>
+          <span>每日活跃用户（人）</span>
         </div>
         <div ref="trendRef" class="chart" />
+        <p class="trend-note">按注册、最近一次登录、AI 调用及发布记录去重；过去仅登录且后来再次登录的用户可能漏计。</p>
       </div>
       <div class="chart-panel donut-panel">
         <div class="panel-head">
@@ -52,8 +73,14 @@
     <section class="admin-panels">
       <div class="chart-panel">
         <div class="panel-head">
-          <h3>待审核内容</h3>
-          <span>闲置审核队列</span>
+          <h3>各模块发布量</h3>
+          <span>内容生态一览</span>
+        </div>
+        <div ref="moduleRef" class="chart bar-chart" />
+      </div>
+      <div class="chart-panel">
+        <div class="panel-head">
+          <h3>待审闲置快捷处理</h3>
         </div>
         <div class="audit-table">
           <div v-for="a in pendingList" :key="a.id" class="audit-row">
@@ -69,13 +96,6 @@
           <div v-else-if="errors.includes('待审核内容')" class="audit-empty">读取失败，请重试。</div>
           <div v-else-if="!pendingList.length" class="audit-empty">暂无待审核内容</div>
         </div>
-      </div>
-      <div class="chart-panel">
-        <div class="panel-head">
-          <h3>各模块发布量</h3>
-          <span>内容生态一览</span>
-        </div>
-        <div ref="moduleRef" class="chart bar-chart" />
       </div>
     </section>
   </div>
@@ -97,10 +117,17 @@ echarts.use([
   TooltipComponent,
   CanvasRenderer
 ])
+import DashboardCount from './DashboardCount.vue'
 import { statsOverview, statsTrend, statsModule, statsPie } from '../../api/stats'
 import { auditList } from '../../api/audit'
 import { chartPalette, seriesColors, chartBase } from '../../utils/chartTheme'
 import { formatTime } from '../../utils/date'
+import { adminRoutes } from '../../router'
+import { pendingQueues } from '../../layout/adminNavigation.mjs'
+import { useAdminPendingStore } from '../../store/adminPending'
+
+const pending = useAdminPendingStore()
+const queues = pendingQueues(adminRoutes)
 
 const overview = ref({})
 const trendRef = ref()
@@ -135,14 +162,14 @@ const cards = computed(() => [
 ])
 
 async function loadDashboard() {
+  pending.refresh()
   loading.value = true
   errors.value = []
-  overview.value = {}
   pendingList.value = []
   disposeCharts()
   await Promise.all([ (async () => {
   // 数字卡片
-  try { overview.value = await statsOverview() } catch (e) { errors.value.push('数字概览') }
+  try { overview.value = await statsOverview() } catch (e) { overview.value = {}; errors.value.push('数字概览') }
   })(), (async () => {
   // 待审核（前5条）
   try {
@@ -150,22 +177,19 @@ async function loadDashboard() {
     pendingList.value = Array.isArray(res) ? res : (res.list || [])
   } catch (e) { errors.value.push('待审核内容') }
   })(), (async () => {
-  // 双折线
   try {
     const trend = await statsTrend()
+    if (!Array.isArray(trend.dailyActiveUsers) || trend.dailyActiveUsers.length !== trend.dates.length) {
+      throw new Error('活跃趋势数据不可用')
+    }
     renderChart(trendRef.value, {
-      tooltip: { trigger: 'axis' },
-      legend: { data: ['累计用户', 'AI调用量'], top: 4 },
+      tooltip: { trigger: 'axis', valueFormatter: value => `${value} 人` },
       xAxis: { type: 'category', data: trend.dates, axisLine: { lineStyle: { color: chartPalette.line } }, axisLabel: { color: chartPalette.ink2 } },
-      yAxis: [
-        { type: 'value', name: '用户', axisLine: { lineStyle: { color: chartPalette.line } }, axisLabel: { color: chartPalette.ink2 }, splitLine: { lineStyle: { color: chartPalette.line } } },
-        { type: 'value', name: '调用', axisLine: { lineStyle: { color: chartPalette.line } }, axisLabel: { color: chartPalette.ink2 }, splitLine: { show: false } }
-      ],
+      yAxis: { type: 'value', name: '人', minInterval: 1, axisLabel: { color: chartPalette.ink2 }, splitLine: { lineStyle: { color: chartPalette.line } } },
       series: [
-        { name: '累计用户', type: 'line', smooth: true, data: trend.userGrowth, areaStyle: { color: 'rgba(49,92,245,0.12)' }, color: seriesColors[0] },
-        { name: 'AI调用量', type: 'line', smooth: true, yAxisIndex: 1, data: trend.aiCalls, color: seriesColors[1] }
+        { name: '每日活跃用户', type: 'line', smooth: true, data: trend.dailyActiveUsers, areaStyle: { color: 'rgba(49,92,245,0.12)' }, color: seriesColors[0] }
       ],
-      grid: { left: 45, right: 45, bottom: 30, top: 38 }
+      grid: { left: 48, right: 24, bottom: 30, top: 36 }
     })
   } catch (e) { errors.value.push('趋势图') }
   })(), (async () => {
@@ -207,6 +231,7 @@ function mergeTheme(option) {
   return {
     ...base,
     ...option,
+    animation: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     textStyle: { ...base.textStyle, ...(option.textStyle || {}) },
     tooltip: option.tooltip ? { ...base.tooltip, ...option.tooltip } : base.tooltip,
     legend: option.legend ? { ...base.legend, ...option.legend } : base.legend,
@@ -224,7 +249,7 @@ function renderChart(el, option) {
 
 <style scoped>
 .dashboard-error { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 18px; border: 1px solid var(--brand-line); border-radius: 12px; background: var(--surface); color: var(--ink-2); }
-.dashboard { display: flex; flex-direction: column; gap: 20px; }
+.dashboard { display: flex; flex-direction: column; gap: 16px; }
 
 /* —— V2 问候头 —— */
 .admin-greeting {
@@ -232,10 +257,15 @@ function renderChart(el, option) {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 4px;
+  min-height: 110px;
+  padding: 20px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: linear-gradient(105deg, var(--surface) 45%, var(--brand-soft));
+  box-shadow: var(--shadow-sm);
 }
 .greet-date { font-size: 12px; color: var(--brand-strong); margin: 0 0 7px; }
-.admin-greeting h1 { font-size: var(--fs-h1); font-weight: 700; color: var(--ink); letter-spacing: -.4px; margin: 0; }
+.admin-greeting h1 { font-size: 26px; font-weight: 700; color: var(--ink); letter-spacing: -.4px; margin: 0; }
 .greet-sub { display: block; font-size: 12px; color: var(--ink-3); margin-top: 8px; }
 .system-pill {
   display: inline-flex;
@@ -253,15 +283,15 @@ function renderChart(el, option) {
 .system-pill.warn i { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, .18); }
 
 /* —— 统计卡 —— */
-.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .stat-card {
   display: flex;
   align-items: center;
   gap: 15px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 22px;
+  border-radius: var(--r-md);
+  padding: 18px 19px;
   min-width: 0;
 }
 .stat-icon {
@@ -277,13 +307,13 @@ function renderChart(el, option) {
 .stat-card small { display: block; font-size: 11px; color: var(--ink-3); margin-top: 4px; }
 
 /* —— 图表 —— */
-.admin-charts { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 18px; }
-.admin-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.admin-charts { display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(280px, 1fr); gap: 14px; }
+.admin-panels { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; }
 .chart-panel {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 22px;
+  border-radius: var(--r-md);
+  padding: 18px 19px;
   min-width: 0;
 }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 13px; }
@@ -294,6 +324,16 @@ function renderChart(el, option) {
 .chart.bar-chart { height: 220px; }
 
 /* —— 待办审核 —— */
+.pending-panel h2 { margin: 0; color: var(--ink); font-size: 17px; }
+.pending-message { margin: 0 0 12px; color: var(--ink-3); font-size: var(--fs-sm); }
+.pending-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(125px, 100%), 1fr)); gap: 10px; }
+.pending-link {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--surface-2); color: var(--ink); font-size: var(--fs-sm); text-decoration: none;
+}
+.pending-link:hover { border-color: var(--brand); }
+.pending-link .pending-count { color: var(--brand-strong); font-variant-numeric: tabular-nums; }
 .audit-table { display: flex; flex-direction: column; }
 .audit-row {
   display: flex;
@@ -334,7 +374,7 @@ function renderChart(el, option) {
 .text-btn:hover { text-decoration: underline; text-underline-offset: 4px; }
 .audit-empty { text-align: center; color: var(--ink-3); font-size: 12px; padding: 30px 0; }
 
-@media (max-width: 1100px) {
+@media (max-width: 1220px) {
   .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-charts, .admin-panels { grid-template-columns: minmax(0, 1fr); }
   .chart.bar-chart { height: 260px; }
@@ -350,4 +390,5 @@ function renderChart(el, option) {
   .chart-panel { padding: 16px; }
   .panel-head span { display: none; }
 }
+.trend-note { margin: 4px 0 0; font-size: 12px; color: var(--ink-2); }
 </style>

@@ -37,6 +37,10 @@ export function signinQrcode(id) {
   return request.get(`/activity/${id}/signin-qrcode`)
 }
 
+export function signinActivity(activityId, token) {
+  return request.post('/activity/signin', { activityId, token })
+}
+
 export function myActivities(params) {
   return request.get('/activity/my', { params })
 }

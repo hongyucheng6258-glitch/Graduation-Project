@@ -234,15 +234,10 @@ public class AiGatewayService {
     /** 每日限流检查 */
     private void checkRateLimit(Long userId) {
         String key = Constants.REDIS_AI_RATE_LIMIT + userId + ":" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
-        Long count = redisUtils.get(key) == null ? 0L : Long.parseLong(redisUtils.get(key).toString());
-        if (count >= aiConfigHolder.getRateLimitPerDay()) {
-            throw new BizException(ResultCode.RATE_LIMITED, "今日AI调用次数已达上限(" + aiConfigHolder.getRateLimitPerDay() + "次/天)");
-        }
-        // 预占计数
-        if (count == 0L) {
-            redisUtils.incr(key, 1, TimeUnit.DAYS);
-        } else {
-            redisUtils.incr(key, 1, TimeUnit.DAYS);
+        int limit = aiConfigHolder.getRateLimitPerDay();
+        Long count = redisUtils.incr(key, 1, TimeUnit.DAYS);
+        if (count == null || count > limit) {
+            throw new BizException(ResultCode.RATE_LIMITED, "今日AI调用次数已达上限(" + limit + "次/天)");
         }
     }
 

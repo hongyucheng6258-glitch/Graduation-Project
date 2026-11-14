@@ -3,7 +3,9 @@ package com.campus.platform.config;
 import cn.hutool.core.util.StrUtil;
 import com.campus.platform.module.site.entity.SystemConfig;
 import com.campus.platform.module.site.mapper.SystemConfigMapper;
-import jakarta.annotation.PostConstruct;
+import com.campus.platform.utils.RedisCache;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -11,11 +13,11 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 /**
- * 通用系统配置持有者：DB 值加载到内存，修改后调 {@link #refresh()} 免重启即时生效。
+ * 通用系统配置持有者：DB 值通过 Redis 读取，修改后调 {@link #refresh()} 免重启即时生效。
  * <p>
  * 优先级：① system_config 表非空值 → ② {@link #DEFAULTS} 内置默认值
  * <p>
@@ -26,7 +28,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SystemConfigHolder {
 
+    private static final String CACHE_KEY = "system-config";
+    private static final TypeReference<Map<String, String>> CONFIG_TYPE = new TypeReference<>() {};
     private final SystemConfigMapper systemConfigMapper;
+    private final RedisCache cache;
 
     /** 内置默认值（DB 中无记录或值为空时回退） */
     private static final Map<String, String> DEFAULTS = Map.ofEntries(
@@ -49,32 +54,23 @@ public class SystemConfigHolder {
             Map.entry("login_fail_lock_threshold", "5")
     );
 
-    // volatile + 整体换引用：refresh 期间读者要么看到完整旧快照，要么看到完整新快照，绝无中间态（缓存一致）
-    private volatile Map<String, String> configCache = new ConcurrentHashMap<>();
-
-    @PostConstruct
-    public void init() {
-        refresh();
+    public void refresh() {
+        cache.invalidate(CACHE_KEY);
     }
 
-    /** 从 DB 重新加载全部配置到缓存（修改配置后调用即生效） */
-    public void refresh() {
-        Map<String, String> next = new ConcurrentHashMap<>();
-        List<SystemConfig> configs = systemConfigMapper.selectList(null);
-        for (SystemConfig config : configs) {
+    private Map<String, String> load() {
+        Map<String, String> values = new HashMap<>();
+        for (SystemConfig config : systemConfigMapper.selectList(null)) {
             if (StrUtil.isNotBlank(config.getConfigKey())) {
-                next.put(config.getConfigKey(),
-                        config.getConfigValue() == null ? "" : config.getConfigValue());
+                values.put(config.getConfigKey(), StrUtil.nullToEmpty(config.getConfigValue()));
             }
         }
-        // 先构建完整快照再整体发布，避免 clear+put 过程中被读到半空缓存
-        configCache = next;
-        log.info("SystemConfigHolder 已刷新，共加载 {} 项配置", configCache.size());
+        return values;
     }
 
     /** 获取字符串配置：DB 非空值 → 内置默认 → null */
     public String get(String key) {
-        String val = configCache.get(key);
+        String val = cache.get(CACHE_KEY, CONFIG_TYPE, Duration.ofMinutes(1), this::load).get(key);
         if (StrUtil.isNotBlank(val)) {
             return val;
         }

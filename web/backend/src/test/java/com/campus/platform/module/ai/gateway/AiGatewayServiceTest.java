@@ -100,7 +100,7 @@ class AiGatewayServiceTest {
         when(configHolder.getRetryTimes()).thenReturn(2);
         when(configHolder.getRateLimitPerDay()).thenReturn(50);
         when(sensitiveWordService.contains(anyString())).thenReturn(false);
-        when(redisUtils.get(anyString())).thenReturn(null);
+        when(redisUtils.incr(anyString(), eq(1L), eq(TimeUnit.DAYS))).thenReturn(1L);
         when(chatMemoryService.getRecentContext(any())).thenReturn(List.of());
 
         responseStatus = 200;
@@ -119,14 +119,14 @@ class AiGatewayServiceTest {
     @Test
     @DisplayName("达到每日限额时应拒绝调用模型")
     void chat_shouldRejectWhenRateLimited() {
-        when(redisUtils.get(anyString())).thenReturn(50L);
+        when(redisUtils.incr(anyString(), eq(1L), eq(TimeUnit.DAYS))).thenReturn(51L);
 
         assertThatThrownBy(() -> gateway.chat(UID, Constants.SCENE_CHAT, "问题", null, null))
                 .isInstanceOf(BizException.class)
                 .hasFieldOrPropertyWithValue("code", ResultCode.RATE_LIMITED.getCode());
 
         assertThat(requestCount.get()).isZero();
-        verify(redisUtils, never()).incr(anyString(), eq(1L), eq(TimeUnit.DAYS));
+        verify(redisUtils).incr(anyString(), eq(1L), eq(TimeUnit.DAYS));
     }
 
     @Test
@@ -252,6 +252,24 @@ class AiGatewayServiceTest {
         String expectedKey = Constants.REDIS_AI_RATE_LIMIT + UID + ":"
                 + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
         verify(redisUtils).incr(expectedKey, 1, TimeUnit.DAYS);
+    }
+
+    @Test
+    @DisplayName("额度用尽的并发请求不会发送给模型")
+    void chat_shouldRejectWhenAtomicReservationExceedsQuota() {
+        when(configHolder.getRateLimitPerDay()).thenReturn(1);
+        when(redisUtils.incr(anyString(), eq(1L), eq(TimeUnit.DAYS))).thenReturn(1L, 2L);
+        var first = java.util.concurrent.CompletableFuture.supplyAsync(
+                () -> gateway.chat(UID, Constants.SCENE_CHAT, "问题", null, null));
+        var second = java.util.concurrent.CompletableFuture.supplyAsync(
+                () -> gateway.chat(UID, Constants.SCENE_CHAT, "问题", null, null));
+        var outcomes = List.of(first, second).stream()
+                .map(call -> call.handle((answer, error) -> error == null ? answer : error.getCause()).join())
+                .toList();
+        assertThat(outcomes).contains("答案");
+        assertThat(outcomes.stream().filter(BizException.class::isInstance).map(BizException.class::cast))
+                .extracting(BizException::getCode).containsExactly(ResultCode.RATE_LIMITED.getCode());
+        assertThat(requestCount.get()).isEqualTo(1);
     }
 
     private static String successResponse(String content, int promptTokens, int completionTokens) {

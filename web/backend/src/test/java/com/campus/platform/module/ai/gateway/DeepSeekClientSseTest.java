@@ -84,7 +84,7 @@ class DeepSeekClientSseTest {
         when(configHolder.getTimeoutMs()).thenReturn(5_000);
         when(configHolder.getRateLimitPerDay()).thenReturn(50);
         when(sensitiveWordService.contains(anyString())).thenReturn(false);
-        when(redisUtils.get(anyString())).thenReturn(null);
+        when(redisUtils.incr(anyString(), org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.eq(java.util.concurrent.TimeUnit.DAYS))).thenReturn(1L);
         when(chatMemoryService.getRecentContext(any())).thenReturn(List.of());
 
         responseStatus = 200;

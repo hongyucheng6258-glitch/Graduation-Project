@@ -5,6 +5,8 @@ import com.campus.platform.module.lostfound.entity.LostFound;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 
 /**
  * LostFound Mapper（MyBatis-Plus BaseMapper，CRUD 零 XML）。
@@ -18,4 +20,10 @@ public interface LostFoundMapper extends BaseMapper<LostFound> {
     /** 行级排他锁查询：SELECT ... FOR UPDATE（须在事务内调用） */
     @Select("SELECT * FROM lost_found WHERE id = #{id} FOR UPDATE")
     LostFound selectByIdForUpdate(java.lang.Long id);
+    @Update("""
+            UPDATE lost_found SET status=#{target} WHERE id=#{id} AND status=#{source}
+              AND NOT EXISTS (SELECT 1 FROM lost_found_claim c
+                              WHERE c.lost_found_id=#{id} AND c.status IN (0,1,3))
+            """)
+    int changeListing(@Param("id") Long id, @Param("source") int source, @Param("target") int target);
 }

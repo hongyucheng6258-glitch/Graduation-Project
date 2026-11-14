@@ -5,11 +5,13 @@
     <RouterLink v-if="focusedId" :to="route.query.searchQ ? '/report' : '/report?view=pending'">
       {{ route.query.searchQ ? '查看全部举报' : '返回待处理举报' }}
     </RouterLink>
-    <el-select v-else v-model="status" aria-label="举报状态" placeholder="全部状态" style="width: 140px" @change="search">
+    <el-select v-else :model-value="status" aria-label="举报状态" placeholder="全部状态" style="width: 140px" @change="changeStatus">
       <el-option label="全部状态" value="" />
       <el-option label="待处理" :value="0" />
       <el-option label="已处理" :value="1" />
     </el-select>
+    <el-button v-if="!focusedId" @click="changeStatus('')">重置</el-button>
+    <el-button :disabled="loading" @click="load">刷新</el-button>
   </div>
   <div v-if="focusedId" v-loading="loading">
     <AdminRecordCard v-if="list[0]" :id="focusedId" :title="list[0].reasonType || '举报工单'"
@@ -23,7 +25,7 @@
     </AdminRecordCard>
     <p v-else-if="!loading" role="status">{{ loadError || '没有找到该举报。' }}</p>
   </div>
-  <el-table v-else class="admin-list-table" :data="list" :scrollbar-tabindex="0" v-loading="loading" empty-text="暂无举报">
+  <el-table v-else class="admin-list-table" :data="list" :scrollbar-tabindex="0" v-loading="loading" :empty-text="loadError || '暂无举报'">
     <el-table-column prop="id" label="ID" width="60" />
     <el-table-column prop="reporterId" label="举报人ID" width="90" />
     <el-table-column label="被举报对象" width="110">
@@ -53,8 +55,8 @@
       </template>
     </el-table-column>
   </el-table>
-  <el-pagination v-if="!focusedId" class="admin-list-pagination" v-model:current-page="pageNum" :total="total" :page-size="10"
-                 :pager-count="5" layout="total, prev, pager, next" @current-change="load" />
+  <el-pagination v-if="!focusedId && total > 0" class="admin-list-pagination" :current-page="pageNum" :total="total" :page-size="10"
+                 :pager-count="5" layout="total, prev, pager, next" @update:current-page="changePage" />
 
   <!-- 处置弹窗 -->
   <el-dialog v-model="handleVisible" title="举报处置" width="min(460px, calc(100vw - 32px))">
@@ -67,7 +69,7 @@
             <el-radio value="ignore">举报不成立</el-radio>
           </template>
           <template v-else>
-            <el-radio value="offline">下架内容</el-radio>
+            <el-radio v-if="currentRow?.targetType !== 'chat_message'" value="offline">下架内容</el-radio>
             <el-radio value="warn">警告发布者</el-radio>
             <el-radio value="ban">封禁发布者</el-radio>
             <el-radio value="ignore">举报不成立</el-radio>
@@ -87,21 +89,26 @@
 </template>
 
 <script setup>
+import { listPage } from '../../layout/adminNavigation.mjs'
+import { useAdminPendingStore } from '../../store/adminPending'
 import { computed, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import AdminRecordCard from '../../components/AdminRecordCard.vue'
 import { ElMessage } from 'element-plus'
 import { reportDetail, reportList, handleReport } from '../../api/report'
 import { formatTime } from '../../utils/date'
 
+const pending = useAdminPendingStore()
+
 const route = useRoute()
+const router = useRouter()
 const focusedId = computed(() => typeof route.query.record === 'string' && /^[1-9]\d*$/.test(route.query.record)
   ? route.query.record : null)
 let requestVersion = 0
-const status = ref('')
+const status = computed(() => route.query.view === 'pending' ? 0 : route.query.view === 'handled' ? 1 : '')
 const list = ref([])
-const pageNum = ref(1)
+const pageNum = computed(() => listPage(route.query.page))
 const total = ref(0)
 const loading = ref(false)
 const loadError = ref('')
@@ -110,11 +117,15 @@ const handleVisible = ref(false)
 const currentRow = ref(null)
 const handleForm = reactive({ action: 'offline', handleResult: '' })
 
-const typeName = (t) => ({ idle: '闲置', activity: '活动', lostfound: '失物', post: '动态', comment: '评论', user: '用户' }[t] || t)
+const typeName = (t) => ({ idle: '闲置', activity: '活动', lostfound: '失物', post: '动态', comment: '评论', chat_message: '私信', user: '用户' }[t] || t)
 
-function search() {
-  pageNum.value = 1
-  load()
+function changeStatus(value) {
+  const view = value === 0 ? 'pending' : value === 1 ? 'handled' : undefined
+  router.replace({ query: { ...route.query, view, page: undefined } })
+}
+
+function changePage(value) {
+  router.replace({ query: { ...route.query, page: value > 1 ? String(value) : undefined } })
 }
 
 async function load() {
@@ -127,6 +138,11 @@ async function load() {
     const res = recordId ? { list: [{ ...await reportDetail(recordId), id: recordId }], total: 1 }
       : await reportList({ status: status.value === '' ? undefined : status.value, pageNum: pageNum.value, pageSize: 10 })
     if (version !== requestVersion) return
+    const lastPage = Math.max(1, Math.ceil(res.total / 10))
+    if (!recordId && pageNum.value > lastPage) {
+      changePage(lastPage)
+      return
+    }
     list.value = res.list
     total.value = res.total
   } catch (error) {
@@ -142,7 +158,7 @@ async function load() {
 
 function openHandle(row) {
   currentRow.value = row
-  handleForm.action = row.targetType === 'user' ? 'warn' : 'offline'
+  handleForm.action = ['user', 'chat_message'].includes(row.targetType) ? 'warn' : 'offline'
   handleForm.handleResult = ''
   handleVisible.value = true
 }
@@ -156,6 +172,7 @@ async function doHandle() {
   acting.value = true
   try {
     await handleReport(currentRow.value.id, handleForm)
+    pending.refresh({ afterMutation: true })
     ElMessage.success('处置完成，举报人已收到通知')
     handleVisible.value = false
     load()
@@ -164,11 +181,10 @@ async function doHandle() {
   }
 }
 
-watch([() => route.query.view, focusedId], ([view]) => {
+watch([status, focusedId, pageNum], () => {
   handleVisible.value = false
   currentRow.value = null
   handleForm.handleResult = ''
-  status.value = view === 'pending' ? 0 : ''
-  search()
+  load()
 }, { immediate: true })
 </script>

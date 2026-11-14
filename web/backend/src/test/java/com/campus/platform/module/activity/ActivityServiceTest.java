@@ -115,7 +115,8 @@ class ActivityServiceTest {
         when(activityMapper.selectPage(any(Page.class), any())).thenReturn(page);
         User publisher = user();
         when(userMapper.findPublisherProfiles(List.of(PUBLISHER_ID, 99L))).thenReturn(Map.of(PUBLISHER_ID, publisher));
-        when(memberMapper.approvedCounts(List.of(ACTIVITY_ID, 9L))).thenReturn(Map.of(ACTIVITY_ID, 2L));
+        when(memberMapper.capacityByActivities(List.of(ACTIVITY_ID, 9L))).thenReturn(
+                Map.of(ACTIVITY_ID, new ActivityMemberMapper.ActivityCapacity(ACTIVITY_ID, 1, 1)));
 
         var result = service.list(null, null, 1, 2);
 
@@ -124,7 +125,8 @@ class ActivityServiceTest {
         assertThat(result.getList()).satisfiesExactly(
                 row -> {
                     assertThat(row.getId()).isEqualTo(ACTIVITY_ID);
-                    assertThat(row.getMemberCount()).isEqualTo(2);
+                    assertThat(row.getMemberCount()).isEqualTo(1);
+                    assertThat(row.getOccupiedSeats()).isEqualTo(2);
                     assertThat(row.getCanSignup()).isFalse();
                     assertThat(row.getPublisherNickname()).isEqualTo(publisher.getNickname());
                 },

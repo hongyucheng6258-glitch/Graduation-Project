@@ -1,8 +1,12 @@
 <template>
   <div v-if="loadError" class="load-error" role="alert"><span>{{ loadError }}</span><button type="button" class="text-btn" @click="load">重新加载</button></div>
-  <WtPageHeader title="失物招领" subtitle="遗失物品别着急，先在这里找一找。">
+  <WtPageHeader title="失物招领" subtitle="每一份遗失，都有回应。">
     <el-button type="primary" @click="goPublish">＋ 登记信息</el-button>
   </WtPageHeader>
+  <WtFeature image="/images/generated-lost-found.webp" title="让寻找更有方向"
+    description="登记寻物或拾到信息，通过候选匹配与发布者核实，安全完成认领。">
+    <RouterLink class="btn primary" to="/lostfound/publish">填写信息并匹配</RouterLink>
+  </WtFeature>
 
   <div class="lf-list">
     <div class="toolbar">
@@ -16,21 +20,23 @@
       </el-input>
     </div>
 
-    <div class="grid photo-feed" v-loading="loading">
-      <RouterLink v-for="lf in list" :key="lf.id" class="lost-card photo-feed__link" :to="`/lostfound/detail/${lf.id}`">
-        <ItemCard feed :cover="firstContentImage(lf, 'lost')" :title="lf.title" module="lost">
-          <template #badge>
-            <span class="badge-tag" :class="lf.type === 0 ? 'tag-seeking' : 'tag-found'">{{ lf.type === 0 ? '寻物中' : '待认领' }}</span>
-          </template>
-          <template #footer>
+    <ul class="lost-results" v-loading="loading" aria-label="失物招领信息">
+      <li v-for="lf in list" :key="lf.id">
+        <RouterLink class="lost-row" :to="`/lostfound/detail/${lf.id}`">
+          <img class="lost-thumb" :src="firstContentImage(lf, 'lost')" alt="" loading="lazy"
+            @error="onImageError($event, 'lost')" />
+          <div class="lost-summary">
+            <strong>{{ lf.title }}</strong>
             <div class="card-footer">
-              <span>📍 {{ lf.location || '未知地点' }}</span>
+              <span class="badge-tag" :class="lf.type === 0 ? 'tag-seeking' : 'tag-found'">{{ lf.type === 0 ? '寻物' : '拾到' }}</span>
+              <span>{{ lf.location || '未知地点' }}</span>
               <span v-if="lf.happenTime || lf.createTime">{{ fromNow(lf.happenTime || lf.createTime) }}</span>
             </div>
-          </template>
-        </ItemCard>
-      </RouterLink>
-    </div>
+          </div>
+          <span class="lost-action">{{ lf.type === 0 ? '查看线索' : '查看认领' }} <span aria-hidden="true">›</span></span>
+        </RouterLink>
+      </li>
+    </ul>
     <EmptyBox v-if="!loadError && !loading && !list.length" description="暂无信息" />
     <el-pagination v-model:current-page="pageNum" :total="total" :page-size="12"
                    layout="prev, pager, next" @current-change="load" />
@@ -40,15 +46,15 @@
 <script setup>
 import { useListState } from '../../utils/list-state'
 import { ref, watch } from 'vue'
+import WtFeature from '../../components/wt/WtFeature.vue'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import ItemCard from '../../components/ItemCard.vue'
 import EmptyBox from '../../components/EmptyBox.vue'
 import { listLostFound } from '../../api/lostfound'
 import { useUserStore } from '../../store/user'
 import { fromNow } from '../../utils/date'
-import { firstContentImage } from '../../utils/content-assets.mjs'
+import { firstContentImage, onImageError } from '../../utils/content-assets.mjs'
 
 const route = useRoute()
 const router = useRouter()
@@ -142,6 +148,34 @@ watch(
   background: var(--brand-soft);
   color: var(--brand-strong);
   border-color: var(--brand-line);
+}
+.lost-results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg, 12px);
+  background: var(--surface);
+}
+.lost-results:empty { display: none; }
+.lost-results li + li { border-top: 1px solid var(--line); }
+.lost-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: inherit;
+  color: var(--ink);
+}
+.lost-row:hover { background: var(--surface-2); }
+.lost-thumb { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: var(--surface-2); }
+.lost-summary { overflow-wrap: anywhere; }
+.lost-summary strong { display: block; margin-bottom: 4px; }
+.lost-action { font-size: 12px; color: var(--brand-strong); white-space: nowrap; }
+@media (max-width: 480px) {
+  .lost-row { gap: 8px; padding: 10px; }
+  .lost-thumb { width: 56px; height: 56px; }
 }
 .badge-tag {
   display: inline-flex;

@@ -11,3 +11,7 @@ export async function getCaptcha() {
   const res = await axios.get('/api/auth/captcha')
   return res.data.data
 }
+
+export function getAdminSession(returnPath) {
+  return request.get('/auth/me', { adminReturnPath: returnPath })
+}

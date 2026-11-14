@@ -23,6 +23,9 @@ public class ActivityVO extends Activity {
     /** 已通过报名数 */
     private Long memberCount;
 
+    /** 已占用报名名额（待审批及已通过） */
+    private Long occupiedSeats;
+
     // ---------- 有效展示状态（按时间动态计算，不落库） ----------
 
     /** 有效展示状态：0报名中 1已满员 2报名已截止 3活动进行中 4已结束 5已下架 */

@@ -1,5 +1,8 @@
 package com.campus.platform.module.admin.controller;
 
+import com.campus.platform.module.admin.audit.AdminOperation;
+import com.campus.platform.module.admin.audit.AdminPermission;
+
 import com.campus.platform.module.admin.service.AdminNoticeService;
 
 import com.campus.platform.common.PageResult;
@@ -31,28 +34,33 @@ public class AdminNoticeController {
     }
 
     @PostMapping
+    @AdminOperation(permission = AdminPermission.NOTICE_WRITE, module = "notice", action = "create")
     public R<Notice> create(@Valid @RequestBody NoticeSaveDTO dto) {
         return R.ok(adminNoticeService.create(UserContext.getUid(), dto));
     }
 
     @PutMapping("/{id}")
+    @AdminOperation(permission = AdminPermission.NOTICE_WRITE, module = "notice", action = "update", idArgument = 0)
     public R<Notice> update(@PathVariable Long id, @Valid @RequestBody NoticeSaveDTO dto) {
         return R.ok(adminNoticeService.update(id, dto));
     }
 
     @PutMapping("/{id}/publish")
+    @AdminOperation(permission = AdminPermission.NOTICE_WRITE, module = "notice", action = "publish", idArgument = 0)
     public R<Void> publish(@PathVariable Long id) {
         adminNoticeService.publish(id);
         return R.ok();
     }
 
     @PutMapping("/{id}/offline")
+    @AdminOperation(permission = AdminPermission.NOTICE_WRITE, module = "notice", action = "offline", idArgument = 0)
     public R<Void> offline(@PathVariable Long id) {
         adminNoticeService.offline(id);
         return R.ok();
     }
 
     @DeleteMapping("/{id}")
+    @AdminOperation(permission = AdminPermission.NOTICE_WRITE, module = "notice", action = "delete", idArgument = 0)
     public R<Void> delete(@PathVariable Long id) {
         adminNoticeService.delete(id);
         return R.ok();

@@ -18,6 +18,9 @@ import com.campus.platform.module.ai.mapper.AiConfigMapper;
 import com.campus.platform.module.ai.mapper.PromptTemplateMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +61,7 @@ public class AiAdminService {
     }
 
     /** 批量修改配置 → 刷新缓存即时生效 */
+    @Transactional
     public void updateConfigs(Map<String, String> configs) {
         if (configs == null || configs.isEmpty()) {
             throw new BizException(ResultCode.BAD_REQUEST, "配置不能为空");
@@ -81,7 +85,12 @@ public class AiAdminService {
                 aiConfigMapper.insert(config);
             }
         }
-        aiConfigHolder.refresh();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                aiConfigHolder.refresh();
+            }
+        });
     }
 
     // ---------- 提示词模板 ----------

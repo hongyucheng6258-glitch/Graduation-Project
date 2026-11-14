@@ -1,5 +1,8 @@
 package com.campus.platform.module.admin.controller;
 
+import com.campus.platform.module.admin.audit.AdminOperation;
+import com.campus.platform.module.admin.audit.AdminPermission;
+
 import com.campus.platform.common.R;
 import com.campus.platform.module.admin.service.AdminPermissionService;
 import com.campus.platform.module.site.entity.SystemConfig;
@@ -35,38 +38,38 @@ public class AdminSystemConfigController {
 
     /** 批量更新配置值（最常用：管理端表单保存）→ 即时生效 */
     @PutMapping
+    @AdminOperation(permission = AdminPermission.SYSTEM_CONFIG_EDIT, module = "system", action = "update-config")
     public R<Void> updateConfigs(@RequestBody Map<String, String> configs) {
-        adminPermissionService.requireSuper();
         systemConfigService.updateConfigs(configs);
         return R.ok();
     }
 
     /** 新增配置项 */
     @PostMapping
+    @AdminOperation(permission = AdminPermission.SYSTEM_CONFIG_EDIT, module = "system", action = "create-config")
     public R<SystemConfig> create(@RequestBody SystemConfig config) {
-        adminPermissionService.requireSuper();
         return R.ok(systemConfigService.create(config));
     }
 
     /** 更新配置项（含元信息） */
     @PutMapping("/{id}")
+    @AdminOperation(permission = AdminPermission.SYSTEM_CONFIG_EDIT, module = "system", action = "update-config", idArgument = 0)
     public R<SystemConfig> update(@PathVariable Long id, @RequestBody SystemConfig config) {
-        adminPermissionService.requireSuper();
         return R.ok(systemConfigService.update(id, config));
     }
 
     /** 删除配置项 */
     @DeleteMapping("/{id}")
+    @AdminOperation(permission = AdminPermission.SYSTEM_CONFIG_EDIT, module = "system", action = "delete-config", idArgument = 0)
     public R<Void> delete(@PathVariable Long id) {
-        adminPermissionService.requireSuper();
         systemConfigService.delete(id);
         return R.ok();
     }
 
     /** 手动刷新配置缓存 */
     @PostMapping("/refresh")
+    @AdminOperation(permission = AdminPermission.SYSTEM_CONFIG_EDIT, module = "system", action = "refresh-config")
     public R<Void> refresh() {
-        adminPermissionService.requireSuper();
         systemConfigService.refresh();
         return R.ok();
     }

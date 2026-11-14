@@ -1,5 +1,8 @@
 package com.campus.platform.module.admin.controller;
 
+import com.campus.platform.module.admin.audit.AdminOperation;
+import com.campus.platform.module.admin.audit.AdminPermission;
+
 import com.campus.platform.module.admin.service.AiAdminService;
 
 import com.campus.platform.common.PageResult;
@@ -38,6 +41,7 @@ public class AdminAiController {
     }
 
     @PutMapping("/config")
+    @AdminOperation(permission = AdminPermission.AI_CONFIG_EDIT, module = "ai", action = "update-config")
     public R<Void> updateConfigs(@Valid @RequestBody AiConfigUpdateDTO dto) {
         aiAdminService.updateConfigs(dto.getConfigs());
         return R.ok();
@@ -49,11 +53,13 @@ public class AdminAiController {
     }
 
     @PostMapping("/prompt")
+    @AdminOperation(permission = AdminPermission.AI_PROMPT_EDIT, module = "ai", action = "create-prompt")
     public R<PromptTemplate> createPrompt(@Valid @RequestBody PromptTemplateDTO dto) {
         return R.ok(aiAdminService.createPrompt(dto));
     }
 
     @PutMapping("/prompt/{id}")
+    @AdminOperation(permission = AdminPermission.AI_PROMPT_EDIT, module = "ai", action = "update-prompt", idArgument = 0)
     public R<PromptTemplate> updatePrompt(@PathVariable Long id, @Valid @RequestBody PromptTemplateDTO dto) {
         return R.ok(aiAdminService.updatePrompt(id, dto));
     }
