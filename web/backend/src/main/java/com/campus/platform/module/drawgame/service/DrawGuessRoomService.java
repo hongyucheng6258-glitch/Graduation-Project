@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
+import com.campus.platform.module.drawgame.dto.DrawGuessCreateRoomDTO;
 import com.campus.platform.module.drawgame.domain.DrawGuessGame;
 import com.campus.platform.module.drawgame.domain.DrawGuessRoomAccessPolicy;
 import com.campus.platform.module.drawgame.domain.DrawGuessStrokePolicy;
@@ -127,7 +128,7 @@ public class DrawGuessRoomService {
     }
 
     @Transactional
-    public DrawGuessRoomVO createRoom(Long userId, com.campus.platform.module.drawgame.dto.DrawGuessCreateRoomDTO dto) {
+    public DrawGuessRoomVO createRoom(Long userId, DrawGuessCreateRoomDTO dto) {
         User user = requireUser(userId);
         boolean privateRoom = Boolean.TRUE.equals(dto.getPrivateRoom());
         String password = dto.getPassword();
@@ -140,28 +141,30 @@ public class DrawGuessRoomService {
         if (maxPlayers < DrawGuessGame.MIN_PLAYERS || maxPlayers > DrawGuessGame.MAX_PLAYERS) {
             throw badRequest("房间人数必须在2到6人之间");
         }
-        if (roundsPerPlayer < 1 || roundsPerPlayer > 8) throw badRequest("每人轮数必须在1到8轮之间");
+        if (roundsPerPlayer < 1 || roundsPerPlayer > 8) {
+            throw badRequest("每人轮数必须在1到8轮之间");
+        }
 
-        DrawGuessRoom entity = new DrawGuessRoom();
-        entity.setRoomCode(generateRoomCode());
-        entity.setOwnerUserId(userId);
-        entity.setTitle(safeTitle(dto.getTitle()));
-        entity.setPrivateRoom(privateRoom);
-        entity.setPasswordHash(passwordHash);
-        entity.setMaxPlayers(maxPlayers);
-        entity.setRoundsPerPlayer(roundsPerPlayer);
-        entity.setStatus(DrawGuessGame.Status.WAITING.name());
-        entity.setCurrentTurn(0);
-        entity.setCreatedAt(LocalDateTime.now());
-        entity.setUpdatedAt(LocalDateTime.now());
-        roomMapper.insert(entity);
+        DrawGuessRoom room = new DrawGuessRoom();
+        room.setRoomCode(generateRoomCode());
+        room.setOwnerUserId(userId);
+        room.setTitle(safeTitle(dto.getTitle()));
+        room.setPrivateRoom(privateRoom);
+        room.setPasswordHash(passwordHash);
+        room.setMaxPlayers(maxPlayers);
+        room.setRoundsPerPlayer(roundsPerPlayer);
+        room.setStatus(DrawGuessGame.Status.WAITING.name());
+        room.setCurrentTurn(0);
+        room.setCreatedAt(LocalDateTime.now());
+        room.setUpdatedAt(LocalDateTime.now());
+        roomMapper.insert(room);
 
-        DrawGuessMember owner = newMember(entity.getId(), userId, 1, user);
+        DrawGuessMember owner = newMember(room.getId(), userId, 1, user);
         memberMapper.insert(owner);
-        DrawGuessGame game = new DrawGuessGame(entity.getId(), userId, maxPlayers, roundsPerPlayer);
+        DrawGuessGame game = new DrawGuessGame(room.getId(), userId, maxPlayers, roundsPerPlayer);
         game.addPlayer(userId, user.getNickname(), safeAvatar(user.getAvatar()));
-        RuntimeRoom runtime = new RuntimeRoom(entity, game);
-        liveRooms.put(entity.getId(), runtime);
+        RuntimeRoom runtime = new RuntimeRoom(room, game);
+        liveRooms.put(room.getId(), runtime);
         return roomView(runtime, userId);
     }
 

@@ -37,15 +37,15 @@ public class MessageService {
         if (userId == null) {
             return;
         }
-        Message msg = new Message();
-        msg.setUserId(userId);
-        msg.setType(type);
-        msg.setTitle(StrUtil.sub(title, 0, 64));
-        msg.setContent(content == null ? null : StrUtil.sub(content, 0, 500));
-        msg.setBizType(bizType);
-        msg.setBizId(bizId);
-        msg.setIsRead(0);
-        messageMapper.insert(msg);
+        Message message = new Message();
+        message.setUserId(userId);
+        message.setType(type);
+        message.setTitle(StrUtil.sub(title, 0, 64));
+        message.setContent(content == null ? null : StrUtil.sub(content, 0, 500));
+        message.setBizType(bizType);
+        message.setBizId(bizId);
+        message.setIsRead(0);
+        messageMapper.insert(message);
     }
 
     /** 消息列表（type 筛选 + 分页） */

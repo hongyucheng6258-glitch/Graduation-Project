@@ -36,9 +36,7 @@ public class NoticeService {
     /** 公告列表（公开，仅已发布） */
     public PageResult<Notice> list(int pageNum, int pageSize) {
         Page<Notice> page = noticeMapper.selectPage(new Page<>(pageNum, pageSize),
-                new LambdaQueryWrapper<Notice>()
-                        .eq(Notice::getStatus, Constants.NOTICE_PUBLISHED)
-                        .orderByDesc(Notice::getPublishTime));
+                publishedNotices());
         return PageResult.of(page);
     }
 
@@ -53,35 +51,40 @@ public class NoticeService {
 
     /** 首页聚合（公告轮播 + 各模块最新3条） */
     public HomeAggregateVO homeAggregate() {
-        HomeAggregateVO vo = new HomeAggregateVO();
-        vo.setNotices(noticeMapper.selectList(new LambdaQueryWrapper<Notice>()
-                .eq(Notice::getStatus, Constants.NOTICE_PUBLISHED)
-                .orderByDesc(Notice::getPublishTime)
+        HomeAggregateVO home = new HomeAggregateVO();
+        home.setNotices(noticeMapper.selectList(publishedNotices()
                 .last("LIMIT 5")));
-        vo.setIdleItems(idleItemMapper.selectList(new LambdaQueryWrapper<IdleItem>()
+        home.setIdleItems(idleItemMapper.selectList(new LambdaQueryWrapper<IdleItem>()
                 .eq(IdleItem::getAuditStatus, Constants.AUDIT_PASS)
                 .eq(IdleItem::getStatus, Constants.IDLE_ON_SHELF)
                 .orderByDesc(IdleItem::getId)
                 .last("LIMIT 3")));
-        vo.setActivities(activityMapper.selectList(new LambdaQueryWrapper<Activity>()
+        home.setActivities(activityMapper.selectList(new LambdaQueryWrapper<Activity>()
                 .eq(Activity::getAuditStatus, Constants.AUDIT_PASS)
                 .eq(Activity::getStatus, Constants.ACTIVITY_SIGNING)
                 // 已结束的活动不再计入首页推荐
                 .and(w -> w.isNull(Activity::getEndTime).or().gt(Activity::getEndTime, java.time.LocalDateTime.now()))
                 .orderByDesc(Activity::getId)
                 .last("LIMIT 3")));
-        vo.setLostFounds(lostFoundMapper.selectList(new LambdaQueryWrapper<LostFound>()
+        home.setLostFounds(lostFoundMapper.selectList(new LambdaQueryWrapper<LostFound>()
                 .eq(LostFound::getAuditStatus, Constants.AUDIT_PASS)
                 .eq(LostFound::getStatus, Constants.LF_DOING)
                 .orderByDesc(LostFound::getId)
                 .last("LIMIT 3")));
-        vo.getNotices().forEach(row -> row.setCover(ListedImages.url(row.getCover(),
+        home.getNotices().forEach(row -> row.setCover(ListedImages.url(row.getCover(),
                 "/api/media/notice/" + row.getId() + "/0")));
-        vo.getActivities().forEach(row -> row.setImages(compact("activity", row.getId(), row.getImages())));
-        vo.getIdleItems().forEach(row -> row.setImages(compact("idle", row.getId(), row.getImages())));
-        vo.getLostFounds().forEach(row -> row.setImages(compact("lostfound", row.getId(), row.getImages())));
-        return vo;
+        home.getActivities().forEach(row -> row.setImages(compact("activity", row.getId(), row.getImages())));
+        home.getIdleItems().forEach(row -> row.setImages(compact("idle", row.getId(), row.getImages())));
+        home.getLostFounds().forEach(row -> row.setImages(compact("lostfound", row.getId(), row.getImages())));
+        return home;
     }
+
+    private LambdaQueryWrapper<Notice> publishedNotices() {
+        return new LambdaQueryWrapper<Notice>()
+                .eq(Notice::getStatus, Constants.NOTICE_PUBLISHED)
+                .orderByDesc(Notice::getPublishTime);
+    }
+
     private String compact(String resource, long id, String images) {
         return IdleService.toJson(ListedImages.urls(resource, id, IdleService.parseJson(images)));
     }

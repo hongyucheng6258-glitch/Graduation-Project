@@ -48,6 +48,12 @@ public class UserService {
         if (dto.getPhone() != null) {
             user.setPhone(dto.getPhone());
         }
+        saveProfile(user, uid);
+        return user;
+    }
+
+    private void saveProfile(User user, Long uid) {
+        // 只把个人资料字段交给 MyBatis-Plus 更新。
         User profile = new User();
         profile.setId(uid);
         profile.setNickname(user.getNickname());
@@ -56,7 +62,6 @@ public class UserService {
         profile.setGender(user.getGender());
         profile.setPhone(user.getPhone());
         userMapper.updateById(profile);
-        return user;
     }
 
     /** 修改密码：校验原密码 */

@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
@@ -60,14 +61,15 @@ public class AiChatService {
         AiSession session = new AiSession();
         session.setUserId(userId);
         session.setScene(dto.getScene());
-        session.setTitle(dto.getTitle() == null || dto.getTitle().isBlank() ? "新会话" : dto.getTitle());
+        String title = dto.getTitle();
+        session.setTitle(title == null || title.isBlank() ? "新会话" : title);
         session.setDocId(dto.getDocId());
         aiSessionMapper.insert(session);
         return session;
     }
 
     /** 会话列表（按场景筛选） */
-    public java.util.List<AiSession> listSessions(Long userId, String scene) {
+    public List<AiSession> listSessions(Long userId, String scene) {
         return aiSessionMapper.selectList(new LambdaQueryWrapper<AiSession>()
                 .eq(AiSession::getUserId, userId)
                 .eq(scene != null && !scene.isBlank(), AiSession::getScene, scene)
@@ -100,9 +102,9 @@ public class AiChatService {
     }
 
     /** 删除会话（含消息） */
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public void deleteSession(Long userId, Long sessionId) {
-        var session = aiSessionMapper.selectOne(new LambdaQueryWrapper<AiSession>()
+        AiSession session = aiSessionMapper.selectOne(new LambdaQueryWrapper<AiSession>()
                 .eq(AiSession::getId, sessionId).last("FOR UPDATE"));
         verifyOwner(userId, session);
         chatMemoryService.deleteBySession(sessionId);
@@ -201,7 +203,7 @@ public class AiChatService {
         Map<String, String> params = new HashMap<>();
         switch (mode) {
             case Constants.OUTLINE_MODE_SELECTED -> {
-                java.util.List<WrongQuestion> list =
+                List<WrongQuestion> list =
                         wrongQuestionService.listOwnedByIds(userId, dto.getWrongQuestionIds());
                 if (list.isEmpty()) {
                     throw new BizException(ResultCode.BAD_REQUEST, "请先勾选要生成提纲的错题");
@@ -213,7 +215,7 @@ public class AiChatService {
                         "请根据以下选中的错题归纳高频知识点、容易混淆的概念、需要优先复习的内容、推荐复习顺序与自测问题。", null, params);
             }
             case Constants.OUTLINE_MODE_ALL -> {
-                java.util.List<WrongQuestion> list = wrongQuestionService.listOwnedAll(userId);
+                List<WrongQuestion> list = wrongQuestionService.listOwnedAll(userId);
                 if (list.isEmpty()) {
                     throw new BizException(ResultCode.BAD_REQUEST, "错题本为空，请先收录错题");
                 }
@@ -236,7 +238,7 @@ public class AiChatService {
                 params.put("topic", topic);
                 if (StrUtil.isBlank(dto.getTopic())) {
                     // 未指定主题：基于该学科错题生成
-                    java.util.List<WrongQuestion> list =
+                    List<WrongQuestion> list =
                             wrongQuestionService.listOwnedBySubject(userId, dto.getSubject());
                     if (list.isEmpty()) {
                         throw new BizException(ResultCode.BAD_REQUEST, "该学科暂无错题，无法生成复习提纲");
@@ -253,7 +255,7 @@ public class AiChatService {
     }
 
     /** 组装错题列表上下文（题目 + 标签/错因/知识点） */
-    private String buildOutlineContext(java.util.List<WrongQuestion> list) {
+    private String buildOutlineContext(List<WrongQuestion> list) {
         StringBuilder sb = new StringBuilder();
         for (WrongQuestion wq : list) {
             sb.append("- ").append(wq.getQuestion());

@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 public class FriendService {
     private static final String PENDING = "pending";
     private static final String ACCEPTED = "accepted";
+    private static final String DECLINED = "declined";
     private final FriendshipMapper mapper;
     private final UserMapper users;
     private final UserBlockMapper blocks;
@@ -85,17 +86,24 @@ public class FriendService {
 
     @Transactional
     public void respond(Long userId, Long peerId, boolean accept) {
-        Friendship row = mapper.lock(userId, peerId);
-        if (row != null && !row.getRequesterId().equals(userId)
-                && (accept ? ACCEPTED : "declined").equals(row.getStatus())) return;
-        if (row == null || !PENDING.equals(row.getStatus()) || row.getRequesterId().equals(userId)) {
+        Friendship friendship = mapper.lock(userId, peerId);
+        String responseStatus = accept ? ACCEPTED : DECLINED;
+        if (friendship != null && !friendship.getRequesterId().equals(userId)
+                && responseStatus.equals(friendship.getStatus())) {
+            return;
+        }
+        if (friendship == null || !PENDING.equals(friendship.getStatus()) || friendship.getRequesterId().equals(userId)) {
             throw new BizException(ResultCode.BAD_REQUEST, "没有待处理的好友申请");
         }
-        if (accept) requireAvailable(userId, peerId);
-        row.setStatus(accept ? ACCEPTED : "declined");
-        mapper.updateById(row);
-        messages.clearBusinessNotice(userId, "friendship", row.getId());
-        if (accept) notify(peerId, userId, "好友申请已通过", "接受了你的好友申请", row.getId());
+        if (accept) {
+            requireAvailable(userId, peerId);
+        }
+        friendship.setStatus(responseStatus);
+        mapper.updateById(friendship);
+        messages.clearBusinessNotice(userId, "friendship", friendship.getId());
+        if (accept) {
+            notify(peerId, userId, "好友申请已通过", "接受了你的好友申请", friendship.getId());
+        }
     }
 
     @Transactional

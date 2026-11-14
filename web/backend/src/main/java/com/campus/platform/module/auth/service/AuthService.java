@@ -25,6 +25,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 /**
  * 认证服务：Web 注册/登录、管理员登录。
@@ -83,7 +84,7 @@ public class AuthService {
         if (Constants.USER_STATUS_BANNED == user.getStatus()) {
             throw new BizException(ResultCode.FORBIDDEN, "账号已被禁用，请联系管理员");
         }
-        LocalDateTime now = LocalDateTime.now(java.time.ZoneOffset.UTC);
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         if (user.getTemporaryPasswordExpiresAt() != null && !now.isBefore(user.getTemporaryPasswordExpiresAt())) {
             throw new BizException(ResultCode.BAD_REQUEST, "临时密码已过期，请联系管理员重新重置");
         }
@@ -125,18 +126,18 @@ public class AuthService {
         if (user.getTemporaryPasswordExpiresAt() != null) {
             throw new BizException(ResultCode.BAD_REQUEST, "请先通过手机号找回密码，再登录");
         }
-        var now = LocalDateTime.now();
-        if (userMapper.recordLogin(user.getId(), user.getPassword(), now) != 1) {
+        LocalDateTime loginTime = LocalDateTime.now();
+        if (userMapper.recordLogin(user.getId(), user.getPassword(), loginTime) != 1) {
             throw new BizException(ResultCode.BAD_REQUEST, "账号状态已变化，请重试");
         }
-        user.setLastLoginTime(now);
+        user.setLastLoginTime(loginTime);
         return buildLoginVO(user);
     }
 
     private LoginVO buildLoginVO(User user) {
         LocalDateTime expiresAt = user.getTemporaryPasswordExpiresAt();
         String token = expiresAt == null ? jwtUtils.generate(user.getId(), Constants.ROLE_STUDENT)
-                : jwtUtils.generate(user.getId(), Constants.ROLE_STUDENT, expiresAt.toInstant(java.time.ZoneOffset.UTC));
+                : jwtUtils.generate(user.getId(), Constants.ROLE_STUDENT, expiresAt.toInstant(ZoneOffset.UTC));
         return new LoginVO(token, user, expiresAt != null);
     }
 }

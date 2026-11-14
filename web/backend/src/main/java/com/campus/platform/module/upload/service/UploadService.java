@@ -37,18 +37,17 @@ public class UploadService {
             throw new BizException(ResultCode.BAD_REQUEST, "仅支持 jpg/png/gif/webp 图片");
         }
         String url = dataUriUtils.toDataUri(file);
-        UploadResource resource = record(ownerUserId, url, "image", contentType, file.getSize());
-        return new UploadVO(resource.getId(), url);
+        return saveResource(ownerUserId, url, "image", contentType, file.getSize());
     }
 
     public UploadVO uploadFile(Long ownerUserId, MultipartFile file) {
         checkFile(file, FILE_MAX_SIZE, "文件不能超过20MB");
         String url = dataUriUtils.toDataUri(file);
-        UploadResource resource = record(ownerUserId, url, "file", StrUtil.nullToEmpty(file.getContentType()), file.getSize());
-        return new UploadVO(resource.getId(), url);
+        String contentType = StrUtil.nullToEmpty(file.getContentType());
+        return saveResource(ownerUserId, url, "file", contentType, file.getSize());
     }
 
-    private UploadResource record(Long ownerUserId, String url, String type, String contentType, long size) {
+    private UploadVO saveResource(Long ownerUserId, String url, String type, String contentType, long size) {
         UploadResource resource = new UploadResource();
         resource.setOwnerUserId(ownerUserId);
         resource.setResourceUrl(url);
@@ -56,7 +55,7 @@ public class UploadService {
         resource.setContentType(contentType);
         resource.setFileSize(size);
         uploadResourceMapper.insert(resource);
-        return resource;
+        return new UploadVO(resource.getId(), url);
     }
 
     private void checkFile(MultipartFile file, long maxSize, String sizeMsg) {

@@ -121,12 +121,14 @@ public class AuditService {
     private <T> PageResult<T> searchList(BaseMapper<T> mapper, int pageNum, int pageSize,
                                        String keyword, Long record, SFunction<T, Long> id,
                                        SFunction<T, String> firstField, SFunction<T, String>... otherFields) {
-        var query = new LambdaQueryWrapper<T>().eq(record != null, id, record);
+        LambdaQueryWrapper<T> query = new LambdaQueryWrapper<T>().eq(record != null, id, record);
         if (keyword != null && !keyword.isBlank()) {
             String text = keyword.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
             query.and(fields -> {
                 fields.like(firstField, text);
-                for (var field : otherFields) fields.or().like(field, text);
+                for (SFunction<T, String> field : otherFields) {
+                    fields.or().like(field, text);
+                }
             });
         }
         return PageResult.of(mapper.selectPage(new Page<>(pageNum, pageSize), query.orderByDesc(id)));

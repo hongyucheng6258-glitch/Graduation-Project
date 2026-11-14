@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,11 +48,8 @@ public class FavoriteService {
     @Transactional
     public void favorite(Long userId, String type, Long targetId) {
         checkTarget(type, targetId);
-        Long exist = favoriteMapper.selectCount(new LambdaQueryWrapper<Favorite>()
-                .eq(Favorite::getUserId, userId)
-                .eq(Favorite::getTargetType, type)
-                .eq(Favorite::getTargetId, targetId));
-        if (exist != null && exist > 0) {
+        Long existingCount = favoriteMapper.selectCount(favoriteQuery(userId, type, targetId));
+        if (existingCount != null && existingCount > 0) {
             return;
         }
         Favorite favorite = new Favorite();
@@ -66,19 +62,20 @@ public class FavoriteService {
 
     /** 取消收藏 */
     public void unfavorite(Long userId, String type, Long targetId) {
-        favoriteMapper.delete(new LambdaQueryWrapper<Favorite>()
-                .eq(Favorite::getUserId, userId)
-                .eq(Favorite::getTargetType, type)
-                .eq(Favorite::getTargetId, targetId));
+        favoriteMapper.delete(favoriteQuery(userId, type, targetId));
     }
 
     /** 是否已收藏 */
     public boolean isFavorited(Long userId, String type, Long targetId) {
-        Long count = favoriteMapper.selectCount(new LambdaQueryWrapper<Favorite>()
+        Long count = favoriteMapper.selectCount(favoriteQuery(userId, type, targetId));
+        return count != null && count > 0;
+    }
+
+    private LambdaQueryWrapper<Favorite> favoriteQuery(Long userId, String type, Long targetId) {
+        return new LambdaQueryWrapper<Favorite>()
                 .eq(Favorite::getUserId, userId)
                 .eq(Favorite::getTargetType, type)
-                .eq(Favorite::getTargetId, targetId));
-        return count != null && count > 0;
+                .eq(Favorite::getTargetId, targetId);
     }
 
     /** 我的收藏（聚合标题与封面） */
@@ -88,37 +85,31 @@ public class FavoriteService {
                         .eq(Favorite::getUserId, userId)
                         .orderByDesc(Favorite::getCreateTime));
         List<Favorite> records = page.getRecords();
-        List<FavoriteVO> vos = new ArrayList<>(records.size());
 
-        Map<String, Map<Long, String[]>> meta = new HashMap<>();
+        Map<String, Map<Long, String[]>> detailsByType = new HashMap<>();
         Map<String, List<Favorite>> byType = records.stream()
                 .collect(Collectors.groupingBy(Favorite::getTargetType));
         for (Map.Entry<String, List<Favorite>> entry : byType.entrySet()) {
             List<Long> ids = entry.getValue().stream().map(Favorite::getTargetId).collect(Collectors.toList());
-            meta.put(entry.getKey(), loadMeta(entry.getKey(), ids));
+            detailsByType.put(entry.getKey(), loadMeta(entry.getKey(), ids));
         }
 
-        for (Favorite f : records) {
-            FavoriteVO vo = new FavoriteVO();
-            vo.setId(f.getId());
-            vo.setTargetType(f.getTargetType());
-            vo.setTargetId(f.getTargetId());
-            vo.setCreateTime(f.getCreateTime());
-            String[] m = meta.getOrDefault(f.getTargetType(), Map.of()).get(f.getTargetId());
-            if (m != null) {
-                vo.setTitle(m[0]);
-                vo.setImage(m[1]);
+        return PageResult.of(page, favorite -> {
+            FavoriteVO view = new FavoriteVO();
+            view.setId(favorite.getId());
+            view.setTargetType(favorite.getTargetType());
+            view.setTargetId(favorite.getTargetId());
+            view.setCreateTime(favorite.getCreateTime());
+            String[] details = detailsByType.getOrDefault(favorite.getTargetType(), Map.of())
+                    .get(favorite.getTargetId());
+            if (details == null) {
+                view.setTitle("内容已删除");
             } else {
-                vo.setTitle("内容已删除");
+                view.setTitle(details[0]);
+                view.setImage(details[1]);
             }
-            vos.add(vo);
-        }
-
-        PageResult<FavoriteVO> result = new PageResult<>();
-        result.setTotal(page.getTotal());
-        result.setPages(page.getPages());
-        result.setList(vos);
-        return result;
+            return view;
+        });
     }
 
     /** 按类型批量加载 (id -> [title, firstImage]) */

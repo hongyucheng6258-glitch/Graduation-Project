@@ -104,20 +104,12 @@ public class StudyPartnerService {
         if (candidates.isEmpty()) {
             return Collections.emptyList();
         }
-        StringBuilder sb = new StringBuilder();
-        for (StudyPartner c : candidates) {
-            sb.append("[id=").append(c.getId()).append("] 科目：").append(nullTo(c.getSubject(), ""))
-                    .append(" | 目标：").append(nullTo(c.getGoal(), ""))
-                    .append(" | 可搭时间：").append(nullTo(c.getSchedule(), ""))
-                    .append(" | 自我介绍：").append(nullTo(c.getIntro(), ""))
-                    .append("\n");
-        }
         Map<String, String> params = new HashMap<>();
         params.put("my_subject", subject);
         params.put("my_goal", nullTo(dto.getGoal(), ""));
         params.put("my_schedule", nullTo(dto.getSchedule(), ""));
         params.put("my_intro", nullTo(dto.getIntro(), ""));
-        params.put("candidates", sb.toString());
+        params.put("candidates", describeCandidates(candidates));
         String raw = aiGatewayService.internalChat(userId, Constants.SCENE_PARTNER_MATCH, "请进行学习搭子匹配", params);
 
         List<Long> ids = new ArrayList<>();
@@ -129,7 +121,6 @@ public class StudyPartnerService {
         for (StudyPartner c : candidates) {
             byId.put(c.getId(), c);
         }
-        Map<Long, String> nickCache = new HashMap<>();
         List<StudyPartnerVO> result = new ArrayList<>();
         for (Long id : ids) {
             if (result.size() >= 3) break;
@@ -140,6 +131,18 @@ public class StudyPartnerService {
             result.add(vo);
         }
         return result;
+    }
+
+    private String describeCandidates(List<StudyPartner> candidates) {
+        StringBuilder description = new StringBuilder();
+        for (StudyPartner candidate : candidates) {
+            description.append("[id=").append(candidate.getId()).append("] 科目：").append(nullTo(candidate.getSubject(), ""))
+                    .append(" | 目标：").append(nullTo(candidate.getGoal(), ""))
+                    .append(" | 可搭时间：").append(nullTo(candidate.getSchedule(), ""))
+                    .append(" | 自我介绍：").append(nullTo(candidate.getIntro(), ""))
+                    .append("\n");
+        }
+        return description.toString();
     }
 
     private boolean parseMatches(String raw, List<Long> ids, Map<Long, String> reasons) {

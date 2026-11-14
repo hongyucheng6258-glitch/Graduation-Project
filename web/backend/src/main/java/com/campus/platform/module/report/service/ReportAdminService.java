@@ -13,6 +13,9 @@ import com.campus.platform.common.Constants;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.activity.entity.Activity;
+import com.campus.platform.module.chat.mapper.ChatMessageMapper;
+import com.campus.platform.module.admin.service.AdminUserService;
+import com.campus.platform.module.admin.service.AdminContentService;
 import com.campus.platform.module.idle.entity.IdleItem;
 import com.campus.platform.module.lostfound.entity.LostFound;
 import com.campus.platform.module.post.entity.Post;
@@ -44,9 +47,9 @@ public class ReportAdminService {
     private final PostMapper postMapper;
     private final PostCommentMapper postCommentMapper;
     private final UserMapper userMapper;
-    private final com.campus.platform.module.chat.mapper.ChatMessageMapper chatMessageMapper;
-    private final com.campus.platform.module.admin.service.AdminUserService adminUserService;
-    private final com.campus.platform.module.admin.service.AdminContentService adminContentService;
+    private final ChatMessageMapper chatMessageMapper;
+    private final AdminUserService adminUserService;
+    private final AdminContentService adminContentService;
     private final MessageService messageService;
 
     /** 举报列表（状态筛选） */
@@ -106,11 +109,13 @@ public class ReportAdminService {
         report.setHandlerId(adminId);
         report.setHandleTime(LocalDateTime.now());
         reportMapper.updateById(report);
-        // 通知举报人处置结果
+        notifyReporter(report, reportId, isUserReport, dto.getHandleResult());
+    }
+
+    private void notifyReporter(Report report, Long reportId, boolean isUserReport, String handleResult) {
+        String prefix = isUserReport ? "你举报的用户已处理完毕：" : "你举报的内容已处理完毕：";
         messageService.send(report.getReporterId(), Constants.MSG_AUDIT,
-                "举报处理结果",
-                (isUserReport ? "你举报的用户已处理完毕：" : "你举报的内容已处理完毕：") + dto.getHandleResult(),
-                "report", reportId);
+                "举报处理结果", prefix + handleResult, "report", reportId);
     }
 
     /** 按类型下架目标内容 */

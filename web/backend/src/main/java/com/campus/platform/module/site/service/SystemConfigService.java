@@ -174,16 +174,16 @@ public class SystemConfigService {
      * 无活动事务时（手动调用）立即刷新。
      */
     private void refreshAfterCommit() {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    systemConfigHolder.refresh();
-                }
-            });
-        } else {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             systemConfigHolder.refresh();
+            return;
         }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                systemConfigHolder.refresh();
+            }
+        });
     }
 
     /** 按固定键定义校验类型、整数溢出和业务范围。 */
