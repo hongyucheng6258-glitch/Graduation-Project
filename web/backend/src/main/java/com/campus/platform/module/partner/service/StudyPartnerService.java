@@ -1,5 +1,6 @@
 package com.campus.platform.module.partner.service;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -95,12 +96,11 @@ public class StudyPartnerService {
                     "AI 服务暂不可用（未配置 API Key），可稍后重试");
         }
         String subject = dto.getSubject().trim();
-        List<StudyPartner> candidates = partnerMapper.selectList(new LambdaQueryWrapper<StudyPartner>()
+        List<StudyPartner> candidates = partnerMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<StudyPartner>()
                 .eq(StudyPartner::getAuditStatus, Constants.AUDIT_PASS)
                 .eq(StudyPartner::getStatus, Constants.LF_DOING)
                 .ne(StudyPartner::getUserId, userId)
-                .like(StudyPartner::getSubject, subject.substring(0, Math.min(subject.length(), 2)))
-                .last("LIMIT 20"));
+                .like(StudyPartner::getSubject, subject.substring(0, Math.min(subject.length(), 2))), 20));
         if (candidates.isEmpty()) {
             return Collections.emptyList();
         }

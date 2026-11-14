@@ -12,9 +12,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import com.campus.platform.module.ai.mapper.AdminAssistantNoticeDraftMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,16 +24,8 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-class AdminAssistantNoticeDrafts {
-    private static final String SELECT = """
-            SELECT id,title,content,expires_at,notice_id,
-                CASE WHEN notice_id IS NOT NULL THEN 'SAVED' WHEN expires_at<=NOW() THEN 'EXPIRED' ELSE 'DRAFT' END
-            FROM admin_assistant_notice_draft
-            """;
-    private static final RowMapper<Draft> ROW = (rs, row) -> new Draft(rs.getString(1), rs.getString(2),
-            rs.getString(3), rs.getObject(4, LocalDateTime.class), rs.getString(5), rs.getString(6));
-
-    private final JdbcTemplate jdbc;
+public class AdminAssistantNoticeDrafts {
+    private final AdminAssistantNoticeDraftMapper drafts;
     private final ObjectMapper json;
     private final AgentModelClient model;
     private final AdminNoticeService notices;
@@ -62,10 +53,7 @@ class AdminAssistantNoticeDrafts {
                 throw new BizException(ResultCode.AI_INVOKE_FAIL, "生成的公告草稿不完整，请重试");
             }
             String id = UUID.randomUUID().toString();
-            jdbc.update("""
-                    INSERT INTO admin_assistant_notice_draft(id,admin_id,title,content,expires_at)
-                    VALUES(?,?,?,?,DATE_ADD(NOW(),INTERVAL 1 DAY))
-                    """, id, adminId, title, content);
+            drafts.insertDraft(id, adminId, title, content);
             return get(adminId, id);
         } catch (JsonProcessingException e) {
             throw new BizException(ResultCode.AI_INVOKE_FAIL, "公告草稿格式无效，请重试");
@@ -73,7 +61,7 @@ class AdminAssistantNoticeDrafts {
     }
 
     List<Draft> list(Long adminId) {
-        return jdbc.query(SELECT + " WHERE admin_id=? ORDER BY created_at DESC,id DESC LIMIT 30", ROW, adminId);
+        return drafts.findRecent(adminId);
     }
 
     Draft get(Long adminId, String id) { return find(adminId, id, false); }
@@ -94,14 +82,16 @@ class AdminAssistantNoticeDrafts {
         dto.setTitle(title);
         dto.setContent(content);
         var notice = notices.create(adminId, dto);
-        jdbc.update("UPDATE admin_assistant_notice_draft SET notice_id=?,title=?,content=? WHERE id=?",
-                notice.getId(), dto.getTitle(), dto.getContent(), id);
+        drafts.markSaved(id, notice.getId(), dto.getTitle(), dto.getContent());
         return find(adminId, id, false);
     }
 
     private Draft find(Long adminId, String id, boolean lock) {
-        return jdbc.query(SELECT + " WHERE id=? AND admin_id=?" + (lock ? " FOR UPDATE" : ""), ROW, id, adminId)
-                .stream().findFirst().orElseThrow(() -> new BizException(ResultCode.NOT_FOUND, "未找到公告草稿"));
+        Draft draft = lock ? drafts.lockDraft(id, adminId) : drafts.findDraft(id, adminId);
+        if (draft == null) {
+            throw new BizException(ResultCode.NOT_FOUND, "未找到公告草稿");
+        }
+        return draft;
     }
 
     public record Form(@NotBlank @Size(max = 64) String title, @NotBlank @Size(max = 5000) String content) {}

@@ -5,11 +5,11 @@ import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.activity.mapper.ActivityMapper;
+import com.campus.platform.module.activity.mapper.ActivityWaitlistMapper;
+import com.campus.platform.module.activity.mapper.ActivityWaitlistMapper.Candidate;
 import com.campus.platform.module.message.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -24,18 +24,13 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Slf4j
 public class ActivityWaitlist {
-    private static final String FIELDS = "w.id,w.activity_id,a.title,w.state,w.offer_until,w.queued_at";
-    private static final RowMapper<Entry> ROW = (rs, index) -> new Entry(rs.getLong(1), rs.getLong(2), rs.getString(3),
-            rs.getString(4), rs.getObject(5, LocalDateTime.class), rs.getObject(6, LocalDateTime.class));
-    private static final String SELECT = "SELECT " + FIELDS + " FROM activity_waitlist w JOIN activity a ON a.id=w.activity_id";
-
-    private final JdbcTemplate jdbc;
+    private final ActivityWaitlistMapper waitlist;
     private final ActivityMapper activities;
     private final MessageService messages;
     private final TransactionTemplate transactions;
 
     public List<Entry> mine(long userId) {
-        return jdbc.query(SELECT + " WHERE w.user_id=? ORDER BY w.id DESC LIMIT 100", ROW, userId);
+        return waitlist.mine(userId);
     }
 
     public View view(long userId, long activityId) {
@@ -67,19 +62,15 @@ public class ActivityWaitlist {
         if (occupied(activityId, now, null) < limit(activity)) {
             throw new BizException(ResultCode.BAD_REQUEST, "活动仍有空位，请直接报名");
         }
-        jdbc.update("DELETE FROM activity_waitlist WHERE activity_id=? AND user_id=?", activityId, userId);
-        jdbc.update("INSERT INTO activity_waitlist(activity_id,user_id,state,queued_at) VALUES(?,?,'WAITING',?)",
-                activityId, userId, now);
+        waitlist.deleteEntry(activityId, userId);
+        waitlist.enqueue(activityId, userId, now);
         return entry(userId, activityId);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void leave(long userId, long activityId, long entryId) {
         Activity activity = activities.selectForUpdate(activityId);
-        int changed = jdbc.update("""
-                UPDATE activity_waitlist SET state='CANCELLED'
-                WHERE id=? AND activity_id=? AND user_id=? AND state IN ('WAITING','OFFERED')
-                """, entryId, activityId, userId);
+        int changed = waitlist.cancel(entryId, activityId, userId);
         if (changed != 1) {
             throw new BizException(ResultCode.BAD_REQUEST, "候补状态已变化，请刷新后重试");
         }
@@ -98,10 +89,7 @@ public class ActivityWaitlist {
                 || occupied(activity.getId(), now, userId) >= limit(activity)) {
             throw unavailable();
         }
-        int changed = jdbc.update("""
-                UPDATE activity_waitlist SET state='CLAIMED'
-                WHERE id=? AND activity_id=? AND user_id=? AND state='OFFERED' AND offer_until>?
-                """, entryId, activity.getId(), userId, now);
+        int changed = waitlist.claim(entryId, activity.getId(), userId, now);
         if (changed != 1) {
             throw new BizException(ResultCode.BAD_REQUEST, "递补邀请已失效，请刷新查看");
         }
@@ -109,10 +97,7 @@ public class ActivityWaitlist {
     }
 
     void release(long activityId, long userId, String state) {
-        jdbc.update("""
-                UPDATE activity_waitlist SET state=? WHERE activity_id=? AND user_id=?
-                AND (state='CLAIMED' OR (state='APPROVED' AND ?='CANCELLED'))
-                """, state, activityId, userId, state);
+        waitlist.release(state, activityId, userId);
     }
 
     boolean reservedForOthers(Activity activity, long userId) {
@@ -135,24 +120,19 @@ public class ActivityWaitlist {
         long id = activity.getId();
         LocalDateTime now = now();
         if (!open(activity, now) || limit(activity) == 0) {
-            jdbc.update("UPDATE activity_waitlist SET state='EXPIRED' WHERE activity_id=? AND state IN ('WAITING','OFFERED')", id);
+            waitlist.expireAll(id);
             return;
         }
-        jdbc.update("UPDATE activity_waitlist SET state='EXPIRED' WHERE activity_id=? AND state='OFFERED' AND offer_until<=?", id, now);
+        waitlist.expireOffers(id, now);
         long available = limit(activity) - occupied(id, now, null);
         if (available <= 0) return;
-        var next = jdbc.query("""
-                SELECT w.id,w.user_id FROM activity_waitlist w
-                WHERE w.activity_id=? AND w.state='WAITING'
-                  AND NOT EXISTS (SELECT 1 FROM activity_member m WHERE m.activity_id=w.activity_id AND m.user_id=w.user_id)
-                ORDER BY w.id LIMIT ?
-                """, (rs, row) -> new Candidate(rs.getLong(1), rs.getLong(2)), id, available);
+        var next = waitlist.findCandidates(id, available);
         LocalDateTime until = now.plusMinutes(30);
         for (LocalDateTime boundary : new LocalDateTime[]{activity.getSignupDeadline(), activity.getStartTime(), activity.getEndTime()}) {
             if (boundary != null && boundary.isBefore(until)) until = boundary;
         }
         for (Candidate candidate : next) {
-            jdbc.update("UPDATE activity_waitlist SET state='OFFERED',offer_until=? WHERE id=?", until, candidate.id());
+            waitlist.offer(until, candidate.id());
             messages.send(candidate.userId(), Constants.MSG_INTERACT, "活动递补邀请",
                     "「%s」有空位，请在 %s 前到活动详情确认递补。".formatted(activity.getTitle(), until.toString().replace('T', ' ')),
                     Constants.BIZ_ACTIVITY, id);
@@ -161,17 +141,7 @@ public class ActivityWaitlist {
 
     @Scheduled(fixedDelay = 30_000, initialDelay = 30_000)
     public void advanceQueues() {
-        var ids = jdbc.queryForList("""
-                SELECT DISTINCT w.activity_id FROM activity_waitlist w JOIN activity a ON a.id=w.activity_id
-                WHERE (w.state='OFFERED' AND w.offer_until<=?)
-                   OR (w.state='WAITING' AND (a.status IN (2,3) OR a.audit_status<>1 OR a.max_members=0
-                      OR a.start_time<=? OR a.end_time<=? OR a.signup_deadline<=?
-                      OR a.max_members > (SELECT COUNT(*) FROM activity_member m WHERE m.activity_id=a.id AND m.status IN (0,1))
-                         + (SELECT COUNT(*) FROM activity_waitlist q WHERE q.activity_id=a.id AND q.state='OFFERED' AND q.offer_until>NOW())))
-                   OR (w.state='OFFERED' AND (a.status IN (2,3) OR a.audit_status<>1 OR a.max_members=0
-                      OR a.start_time<=? OR a.end_time<=? OR a.signup_deadline<=?))
-                ORDER BY w.activity_id LIMIT 100
-                """, Long.class, now(), now(), now(), now(), now(), now(), now());
+        var ids = waitlist.findQueuesToAdvance(now(), now(), now(), now(), now(), now(), now());
         for (Long id : ids) {
             try {
                 transactions.executeWithoutResult(status -> refresh(activities.selectForUpdate(id)));
@@ -182,27 +152,21 @@ public class ActivityWaitlist {
     }
 
     private Entry entry(long userId, long activityId) {
-        return jdbc.query(SELECT + " WHERE w.activity_id=? AND w.user_id=?", ROW, activityId, userId)
+        return waitlist.findEntry(activityId, userId)
                 .stream().findFirst().orElse(null);
     }
 
     private boolean hasMembership(long userId, long activityId) {
-        return jdbc.queryForObject("SELECT COUNT(*) FROM activity_member WHERE activity_id=? AND user_id=?",
-                Long.class, activityId, userId) > 0;
+        return waitlist.countMembership(activityId, userId) > 0;
     }
 
     private long occupied(long activityId, LocalDateTime now, Long exceptUser) {
-        long reserved = jdbc.queryForObject("SELECT COUNT(*) FROM activity_member WHERE activity_id=? AND status IN (?,?)",
-                Long.class, activityId, Constants.MEMBER_PENDING, Constants.MEMBER_APPROVED);
+        long reserved = waitlist.countReserved(activityId, Constants.MEMBER_PENDING, Constants.MEMBER_APPROVED);
         return reserved + holds(activityId, now, exceptUser);
     }
 
     private long holds(long activityId, LocalDateTime now, Long exceptUser) {
-        return jdbc.queryForObject("""
-                SELECT COUNT(*) FROM activity_waitlist WHERE activity_id=?
-                AND state='OFFERED' AND offer_until>?
-                AND (? IS NULL OR user_id<>?)
-                """, Long.class, activityId, now, exceptUser, exceptUser);
+        return waitlist.countOffers(activityId, now, exceptUser);
     }
 
     private static boolean active(String state) {
@@ -230,7 +194,6 @@ public class ActivityWaitlist {
         return new BizException(ResultCode.BAD_REQUEST, "该活动当前不可候补或递补");
     }
 
-    private record Candidate(long id, long userId) {}
     public record Entry(long id, long activityId, String title, String state, LocalDateTime offerUntil, LocalDateTime queuedAt) {}
     public record View(boolean canJoin, Entry entry) {}
 }

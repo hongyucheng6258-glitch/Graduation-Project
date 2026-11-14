@@ -1,5 +1,6 @@
 package com.campus.platform.module.drawgame.service;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.campus.platform.common.BizException;
@@ -169,11 +170,11 @@ public class DrawGuessRoomService {
     }
 
     public List<DrawGuessRoomVO> listPublicRooms(Long viewerUserId) {
-        List<DrawGuessRoom> candidates = roomMapper.selectList(new QueryWrapper<DrawGuessRoom>()
+        List<DrawGuessRoom> candidates = roomMapper.selectList(MapperQueries.limit(new QueryWrapper<DrawGuessRoom>()
                 .eq("private_room", false)
                 .eq("status", DrawGuessGame.Status.WAITING.name())
                 .orderByDesc("updated_at")
-                .last("LIMIT 50"));
+                , 50));
         List<DrawGuessRoomVO> result = new ArrayList<>();
         for (DrawGuessRoom room : candidates) {
             RuntimeRoom runtime = liveRooms.get(room.getId());
@@ -241,11 +242,11 @@ public class DrawGuessRoomService {
     }
 
     public List<DrawGuessRoomVO> recentRooms(Long userId) {
-        List<DrawGuessMember> recent = memberMapper.selectList(new QueryWrapper<DrawGuessMember>()
+        List<DrawGuessMember> recent = memberMapper.selectList(MapperQueries.limit(new QueryWrapper<DrawGuessMember>()
                 .eq("user_id", userId)
                 .eq("active", true)
                 .orderByDesc("last_visited_at")
-                .last("LIMIT 10"));
+                , 10));
         List<DrawGuessRoomVO> result = new ArrayList<>();
         Set<Long> seen = ConcurrentHashMap.newKeySet();
         for (DrawGuessMember entry : recent) {

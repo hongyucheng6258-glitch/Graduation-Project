@@ -1,5 +1,6 @@
 package com.campus.platform.module.idle.service;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import com.campus.platform.module.idle.mapper.IdleAppointmentMapper;
 import com.campus.platform.module.idle.vo.PendingAppointmentVO;
 import com.campus.platform.module.idle.mapper.IdleReviewMapper;
@@ -175,19 +176,19 @@ public class IdleService {
         detail.setIsOwner(isOwner);
         // 当前用户对该物品的进行中预约
         if (currentUid != null && !isOwner) {
-            IdleAppointment myAppointment = appointmentMapper.selectOne(new LambdaQueryWrapper<IdleAppointment>()
+            IdleAppointment myAppointment = appointmentMapper.selectOne(MapperQueries.limit(new LambdaQueryWrapper<IdleAppointment>()
                     .eq(IdleAppointment::getItemId, id)
                     .eq(IdleAppointment::getBuyerId, currentUid)
                     .in(IdleAppointment::getStatus, Constants.APPOINT_PENDING, Constants.APPOINT_ACCEPTED)
-                    .last("LIMIT 1"));
+                    , 1));
             detail.setMyAppointmentId(myAppointment == null ? null : myAppointment.getId());
         }
         // 卖家查看待确认或已接受的预约。
         if (isOwner) {
-            IdleAppointment pending = appointmentMapper.selectOne(new LambdaQueryWrapper<IdleAppointment>()
+            IdleAppointment pending = appointmentMapper.selectOne(MapperQueries.limit(new LambdaQueryWrapper<IdleAppointment>()
                     .eq(IdleAppointment::getItemId, id)
                     .in(IdleAppointment::getStatus, Constants.APPOINT_PENDING, Constants.APPOINT_ACCEPTED)
-                    .last("LIMIT 1"));
+                    , 1));
             if (pending != null) {
                 User buyer = userMapper.selectById(pending.getBuyerId());
                 PendingAppointmentVO pv = new PendingAppointmentVO();
@@ -201,13 +202,13 @@ public class IdleService {
         }
         // 当前用户可评价的已完成预约（买/卖双方都可评价）
         if (currentUid != null) {
-            IdleAppointment reviewable = appointmentMapper.selectOne(new LambdaQueryWrapper<IdleAppointment>()
+            IdleAppointment reviewable = appointmentMapper.selectOne(MapperQueries.limit(new LambdaQueryWrapper<IdleAppointment>()
                     .eq(IdleAppointment::getItemId, id)
                     .eq(IdleAppointment::getStatus, Constants.APPOINT_FINISHED)
                     .and(w -> w.eq(IdleAppointment::getBuyerId, currentUid)
                             .or()
                             .eq(IdleAppointment::getSellerId, currentUid))
-                    .last("LIMIT 1"));
+                    , 1));
             if (reviewable != null) {
                 detail.setReviewAppointmentId(reviewable.getId());
                 Long reviewed = reviewMapper.selectCount(new LambdaQueryWrapper<IdleReview>()
@@ -306,12 +307,7 @@ public class IdleService {
         if (item.getStatus() != Constants.IDLE_ON_SHELF) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "该物品已被预约或交易完成");
         }
-        int claimed = idleItemMapper.update(null, new UpdateWrapper<IdleItem>()
-                .eq("id", itemId)
-                .eq("audit_status", Constants.AUDIT_PASS)
-                .eq("status", Constants.IDLE_ON_SHELF)
-                .notExists("SELECT 1 FROM idle_appointment a WHERE a.item_id=idle_item.id AND a.status IN (0,1,3)")
-                .set("status", Constants.IDLE_RESERVED));
+        int claimed = idleItemMapper.changeListing(itemId, Constants.IDLE_ON_SHELF, Constants.IDLE_RESERVED, true);
         if (claimed != 1) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "该物品已被其他同学预约，请刷新后重试");
         }

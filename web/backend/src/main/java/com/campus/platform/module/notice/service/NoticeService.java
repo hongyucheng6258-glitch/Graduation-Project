@@ -1,5 +1,6 @@
 package com.campus.platform.module.notice.service;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import com.campus.platform.module.notice.mapper.NoticeMapper;
 import com.campus.platform.module.notice.entity.Notice;
 
@@ -52,25 +53,21 @@ public class NoticeService {
     /** 首页聚合（公告轮播 + 各模块最新3条） */
     public HomeAggregateVO homeAggregate() {
         HomeAggregateVO home = new HomeAggregateVO();
-        home.setNotices(noticeMapper.selectList(publishedNotices()
-                .last("LIMIT 5")));
-        home.setIdleItems(idleItemMapper.selectList(new LambdaQueryWrapper<IdleItem>()
+        home.setNotices(noticeMapper.selectList(MapperQueries.limit(publishedNotices(), 5)));
+        home.setIdleItems(idleItemMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<IdleItem>()
                 .eq(IdleItem::getAuditStatus, Constants.AUDIT_PASS)
                 .eq(IdleItem::getStatus, Constants.IDLE_ON_SHELF)
-                .orderByDesc(IdleItem::getId)
-                .last("LIMIT 3")));
-        home.setActivities(activityMapper.selectList(new LambdaQueryWrapper<Activity>()
+                .orderByDesc(IdleItem::getId), 3)));
+        home.setActivities(activityMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<Activity>()
                 .eq(Activity::getAuditStatus, Constants.AUDIT_PASS)
                 .eq(Activity::getStatus, Constants.ACTIVITY_SIGNING)
                 // 已结束的活动不再计入首页推荐
                 .and(w -> w.isNull(Activity::getEndTime).or().gt(Activity::getEndTime, java.time.LocalDateTime.now()))
-                .orderByDesc(Activity::getId)
-                .last("LIMIT 3")));
-        home.setLostFounds(lostFoundMapper.selectList(new LambdaQueryWrapper<LostFound>()
+                .orderByDesc(Activity::getId), 3)));
+        home.setLostFounds(lostFoundMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<LostFound>()
                 .eq(LostFound::getAuditStatus, Constants.AUDIT_PASS)
                 .eq(LostFound::getStatus, Constants.LF_DOING)
-                .orderByDesc(LostFound::getId)
-                .last("LIMIT 3")));
+                .orderByDesc(LostFound::getId), 3)));
         home.getNotices().forEach(row -> row.setCover(ListedImages.url(row.getCover(),
                 "/api/media/notice/" + row.getId() + "/0")));
         home.getActivities().forEach(row -> row.setImages(compact("activity", row.getId(), row.getImages())));

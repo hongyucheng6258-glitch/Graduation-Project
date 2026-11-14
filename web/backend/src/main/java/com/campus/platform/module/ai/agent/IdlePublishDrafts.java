@@ -12,8 +12,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import com.campus.platform.module.ai.mapper.AgentIdleDraftMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +30,7 @@ public class IdlePublishDrafts implements AgentToolSource {
     static final String PREPARE = "prepare_idle_publish";
     private static final Set<String> CATEGORIES = Set.of("教材书籍", "数码电子", "生活用品", "运动器材", "服饰鞋包", "其他");
 
-    private final JdbcTemplate jdbc;
+    private final AgentIdleDraftMapper drafts;
     private final ObjectMapper json;
     private final IdleService idle;
     private final UploadResourceMapper uploads;
@@ -51,10 +51,7 @@ public class IdlePublishDrafts implements AgentToolSource {
         var form = form(new Submission(args.path("title").asText(), args.path("description").asText(),
                 args.path("category").asText(), args.path("expectItem").asText(), List.of()));
         String id = UUID.randomUUID().toString();
-        jdbc.update("""
-                INSERT INTO agent_idle_draft(id,user_id,title,description,category,expect_item,expires_at)
-                VALUES(?,?,?,?,?,?,DATE_ADD(NOW(), INTERVAL 1 DAY))
-                """, id, uid, form.getTitle(), form.getDescription(), form.getCategory(), form.getExpectItem());
+        drafts.insertDraft(id, uid, form.getTitle(), form.getDescription(), form.getCategory(), form.getExpectItem());
         return json.valueToTree(requireDraft(uid, id, false));
     }
 
@@ -79,9 +76,7 @@ public class IdlePublishDrafts implements AgentToolSource {
         var form = form(request);
         form.setImages(ownedImages(uid, request.imageIds()));
         var item = idle.publish(uid, form);
-        jdbc.update("""
-                UPDATE agent_idle_draft SET item_id=?,title=?,description=?,category=?,expect_item=? WHERE id=?
-                """, item.getId(), form.getTitle(), form.getDescription(), form.getCategory(), form.getExpectItem(), id);
+        drafts.markSubmitted(id, item.getId(), form.getTitle(), form.getDescription(), form.getCategory(), form.getExpectItem());
         return requireDraft(uid, id, false);
     }
 
@@ -138,14 +133,7 @@ public class IdlePublishDrafts implements AgentToolSource {
     }
 
     private Draft query(Long uid, String id, boolean lock) {
-        return jdbc.query("""
-                SELECT id,title,description,category,expect_item,expires_at,item_id,
-                       CASE WHEN item_id IS NOT NULL THEN 'SUBMITTED'
-                            WHEN expires_at<=NOW() THEN 'EXPIRED' ELSE 'DRAFT' END
-                FROM agent_idle_draft WHERE id=? AND user_id=?
-                """ + (lock ? " FOR UPDATE" : ""), (rs, row) -> new Draft(rs.getString(1), rs.getString(2),
-                rs.getString(3), rs.getString(4), rs.getString(5), rs.getObject(6, LocalDateTime.class),
-                rs.getObject(7, Long.class), rs.getString(8)), id, uid).stream().findFirst().orElse(null);
+        return lock ? drafts.lockDraft(id, uid) : drafts.findDraft(id, uid);
     }
 
     public record Submission(@NotBlank @Size(max = 64) String title, @Size(max = 2000) String description,

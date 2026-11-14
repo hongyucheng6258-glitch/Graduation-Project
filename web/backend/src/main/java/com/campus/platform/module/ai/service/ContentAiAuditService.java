@@ -100,20 +100,8 @@ public class ContentAiAuditService {
         switch (type) {
             case Constants.BIZ_IDLE -> {
                 IdleItem item = (IdleItem) content;
-                int updated = idleItemMapper.update(null, new UpdateWrapper<IdleItem>()
-                        .eq("id", item.getId()).eq("audit_status", Constants.AUDIT_PENDING)
-                        .eq(idleRevision != null, "audit_revision", idleRevision)
-                        .apply("BINARY title <=> BINARY {0}", item.getTitle())
-                        .apply("BINARY description <=> BINARY {0}", item.getDescription())
-                        .apply("BINARY category <=> BINARY {0}", item.getCategory())
-                        .apply("BINARY expect_item <=> BINARY {0}", item.getExpectItem())
-                        .apply("SHA2(images,256) <=> {0}", item.getImages() == null ? null : SecureUtil.sha256(item.getImages()))
-                        .apply(idleRevision == null, "ai_audit_time <=> {0}", item.getAiAuditTime())
-                        .apply(idleRevision == null, "ai_risk_level <=> {0}", item.getAiRiskLevel())
-                        .apply(idleRevision == null, "BINARY ai_audit_reason <=> BINARY {0}", item.getAiAuditReason())
-                        .set("ai_risk_level", riskLevel).set("ai_audit_reason", reason)
-                        .set("ai_audit_time", now).set("audit_source", "ai")
-                        .set(autoPass, "audit_status", Constants.AUDIT_PASS));
+                String imageHash = item.getImages() == null ? null : SecureUtil.sha256(item.getImages());
+                int updated = idleItemMapper.applyAiAudit(item, idleRevision, imageHash, riskLevel, reason, now, autoPass);
                 if (updated == 1) {
                     fill(item, riskLevel, reason, now, autoPass);
                 } else {

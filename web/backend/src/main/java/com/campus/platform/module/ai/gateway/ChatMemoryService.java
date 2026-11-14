@@ -1,5 +1,6 @@
 package com.campus.platform.module.ai.gateway;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.platform.module.ai.entity.AiMessage;
 import com.campus.platform.module.ai.mapper.AiMessageMapper;
@@ -32,11 +33,10 @@ public class ChatMemoryService {
 
     /** 查询模型上下文所需的最近 20 条消息，并按原有顺序返回。 */
     public List<AiMessage> getRecentContext(Long sessionId) {
-        List<AiMessage> newestFirst = aiMessageMapper.selectList(new LambdaQueryWrapper<AiMessage>()
+        List<AiMessage> newestFirst = aiMessageMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<AiMessage>()
                 .select(AiMessage::getRole, AiMessage::getContent)
                 .eq(AiMessage::getSessionId, sessionId)
-                .orderByDesc(AiMessage::getId)
-                .last("LIMIT 20"));
+                .orderByDesc(AiMessage::getId), 20));
         List<AiMessage> context = new ArrayList<>(newestFirst);
         Collections.reverse(context);
         return context;

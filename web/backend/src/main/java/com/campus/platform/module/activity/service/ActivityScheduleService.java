@@ -5,9 +5,8 @@ import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.activity.mapper.ActivityMapper;
+import com.campus.platform.module.activity.mapper.ActivityScheduleMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -22,31 +21,16 @@ import java.util.List;
 public class ActivityScheduleService {
     static final ZoneId CAMPUS_ZONE = ZoneId.of("Asia/Shanghai");
 
-    private static final String MY_ACTIVITIES = """
-            SELECT a.id, a.title, a.location, a.start_time, a.end_time, m.status
-            FROM activity_member m JOIN activity a ON a.id = m.activity_id
-            WHERE m.user_id = ? AND m.status IN (?, ?)
-                AND a.audit_status = ? AND a.status IN (?, ?)
-            """;
-    private static final RowMapper<Entry> ENTRY = (rs, row) -> new Entry(
-            rs.getLong("id"), rs.getString("title"), rs.getString("location"),
-            rs.getObject("start_time", LocalDateTime.class), rs.getObject("end_time", LocalDateTime.class),
-            rs.getInt("status"));
-
-    private final JdbcTemplate jdbc;
+    private final ActivityScheduleMapper schedules;
     private final ActivityMapper activities;
 
     public Schedule schedule(Long userId) {
         LocalDateTime now = LocalDateTime.now(CAMPUS_ZONE);
         LocalDate today = now.toLocalDate();
         LocalDate through = today.plusDays(6);
-        var entries = jdbc.query(MY_ACTIVITIES + """
-                AND (a.start_time IS NULL OR a.start_time < ?)
-                AND (a.end_time > ? OR (a.end_time IS NULL AND (a.start_time IS NULL OR a.start_time >= ?)))
-                ORDER BY a.start_time IS NULL, a.start_time, a.id
-                """, ENTRY, userId, Constants.MEMBER_PENDING, Constants.MEMBER_APPROVED,
+        var entries = schedules.findUpcoming(userId, Constants.MEMBER_PENDING, Constants.MEMBER_APPROVED,
                 Constants.AUDIT_PASS, Constants.ACTIVITY_SIGNING, Constants.ACTIVITY_FULL,
-                through.plusDays(1).atStartOfDay(), now, now);
+                through.plusDays(1).atStartOfDay(), now);
         return new Schedule(today, through, entries);
     }
 
@@ -62,10 +46,7 @@ public class ActivityScheduleService {
             return new ConflictCheck(false, List.of());
         }
 
-        var entries = jdbc.query(MY_ACTIVITIES + """
-                AND a.id <> ? AND a.start_time < ? AND a.end_time > ? AND a.start_time < a.end_time
-                ORDER BY a.start_time, a.id
-                """, ENTRY, userId, Constants.MEMBER_APPROVED, Constants.MEMBER_APPROVED,
+        var entries = schedules.findOverlaps(userId, Constants.MEMBER_APPROVED,
                 Constants.AUDIT_PASS, Constants.ACTIVITY_SIGNING, Constants.ACTIVITY_FULL, activityId, end, start);
         List<Conflict> conflicts = new ArrayList<>();
         for (Entry entry : entries) {

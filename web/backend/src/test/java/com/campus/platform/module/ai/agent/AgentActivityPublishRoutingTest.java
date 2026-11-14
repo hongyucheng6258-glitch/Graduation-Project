@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.campus.platform.module.ai.mapper.AgentRunMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -76,6 +76,6 @@ class AgentActivityPublishRoutingTest {
                         .put("title", args.path("title").asText()));
         ObjectProvider<KnowledgeService> knowledge = mock();
         return new AgentService(model, json, mock(AgentQuota.class), conversation, prompts, mock(AiConfigHolder.class),
-                mock(JdbcTemplate.class), List.of(() -> List.of(tool)), knowledge, mock(IdleService.class), mock(CampusResourceTools.class));
+                mock(AgentRunMapper.class), List.of(() -> List.of(tool)), knowledge, mock(IdleService.class), mock(CampusResourceTools.class));
     }
 }

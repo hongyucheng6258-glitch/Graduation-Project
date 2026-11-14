@@ -1,5 +1,6 @@
 package com.campus.platform.module.ai.agent;
 
+import com.campus.platform.module.ai.mapper.AgentMessageAttachmentMapper;
 import com.campus.platform.common.BizException;
 import com.campus.platform.module.ai.entity.AiMessage;
 import com.campus.platform.module.ai.rag.KnowledgeService;
@@ -10,7 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,7 +20,7 @@ import java.util.Objects;
 @Slf4j
 @RequiredArgsConstructor
 public class AgentMessageAttachments {
-    private final JdbcTemplate jdbc;
+    private final AgentMessageAttachmentMapper attachments;
     private final ObjectMapper json;
     private final ObjectProvider<KnowledgeService> knowledge;
     private final ActivitySignupActions actions;
@@ -42,8 +42,7 @@ public class AgentMessageAttachments {
             return;
         }
         try {
-            jdbc.update("INSERT INTO agent_message_attachment(message_id,body) VALUES(?,?)", messageId,
-                    json.writeValueAsString(stored));
+            attachments.insertAttachment(messageId, json.writeValueAsString(stored));
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("无法保存向导消息附件", e);
         }
@@ -54,13 +53,12 @@ public class AgentMessageAttachments {
             if (!"assistant".equals(message.getRole())) {
                 continue;
             }
-            var stored = jdbc.queryForList("SELECT body FROM agent_message_attachment WHERE message_id=?",
-                    String.class, message.getId());
-            if (stored.isEmpty()) {
+            String stored = attachments.findBody(message.getId());
+            if (stored == null) {
                 continue;
             }
             try {
-                var values = json.readValue(stored.get(0), Stored.class);
+                var values = json.readValue(stored, Stored.class);
                 var visible = values.citations().stream().filter(source -> canRead(uid, source.documentId())).toList();
                 var cards = values.actionIds().stream().map(id -> actions.card(uid, id)).filter(Objects::nonNull).toList();
                 var idleItems = values.idleIds() == null ? List.<IdleGuideCard>of() : idle.guideCards(uid, values.idleIds());

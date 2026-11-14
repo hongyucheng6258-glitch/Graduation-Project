@@ -13,8 +13,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.campus.platform.module.ai.mapper.AgentCampusDraftMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +39,7 @@ public class CampusPublishDrafts implements AgentToolSource {
             .withResolverStyle(ResolverStyle.STRICT);
     private static final Set<String> CATEGORIES = Set.of("课程", "考试", "技术", "生活", "其他");
 
-    private final JdbcTemplate jdbc;
+    private final AgentCampusDraftMapper drafts;
     private final ObjectMapper json;
     private final LostFoundService lostFound;
     private final StudyPartnerService partners;
@@ -99,10 +99,7 @@ public class CampusPublishDrafts implements AgentToolSource {
             targetTitle = cards.get(0).title();
         }
         String id = UUID.randomUUID().toString();
-        jdbc.update("""
-                INSERT INTO agent_campus_draft(id,user_id,kind,form,target_id,target_title,expires_at)
-                VALUES(?,?,?,?,?,?,DATE_ADD(NOW(), INTERVAL 1 DAY))
-                """, id, uid, kind.code, form.toString(), target, targetTitle);
+        drafts.insertDraft(id, uid, kind.code, form.toString(), target, targetTitle);
         return json.valueToTree(find(uid, id));
     }
 
@@ -124,7 +121,7 @@ public class CampusPublishDrafts implements AgentToolSource {
             case QUESTION -> questions.publish(uid, json.convertValue(form, QuestionDTO.class)).getId();
             case ANSWER -> questions.answer(uid, draft.targetId(), json.convertValue(form, AnswerDTO.class)).getId();
         };
-        jdbc.update("UPDATE agent_campus_draft SET form=?,submitted_id=? WHERE id=?", form.toString(), submitted, id);
+        drafts.markSubmitted(id, form.toString(), submitted);
         return query(uid, id, false);
     }
 
@@ -180,23 +177,16 @@ public class CampusPublishDrafts implements AgentToolSource {
     }
 
     private Draft query(Long uid, String id, boolean lock) {
-        return jdbc.query("""
-                SELECT id,kind,form,target_id,target_title,submitted_id,
-                       CASE WHEN submitted_id IS NOT NULL THEN 'SUBMITTED'
-                            WHEN expires_at<=NOW() THEN 'EXPIRED' ELSE 'DRAFT' END
-                       , CASE kind
-                           WHEN 'lost' THEN (SELECT audit_status FROM lost_found WHERE id=agent_campus_draft.submitted_id)
-                           WHEN 'partner' THEN (SELECT audit_status FROM study_partner WHERE id=agent_campus_draft.submitted_id)
-                         END AS audit_status
-                FROM agent_campus_draft WHERE id=? AND user_id=?
-                """ + (lock ? " FOR UPDATE" : ""), (rs, row) -> {
-            try {
-                return new Draft(rs.getString(1), rs.getString(2), json.readTree(rs.getString(3)),
-                        rs.getObject(4, Long.class), rs.getString(5), rs.getObject(6, Long.class), rs.getString(7), rs.getObject(8, Integer.class));
-            } catch (JsonProcessingException e) {
-                throw new IllegalStateException("校园发布草稿内容无效", e);
-            }
-        }, id, uid).stream().findFirst().orElse(null);
+        var row = lock ? drafts.lockDraft(id, uid) : drafts.findDraft(id, uid);
+        if (row == null) {
+            return null;
+        }
+        try {
+            return new Draft(row.id(), row.kind(), json.readTree(row.form()), row.targetId(), row.targetTitle(),
+                    row.submittedId(), row.state(), row.auditStatus());
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("校园发布草稿内容无效", e);
+        }
     }
 
     private static BizException invalid(String message) {

@@ -1,6 +1,7 @@
 package com.campus.platform.module.ai.gateway;
 
 
+import com.campus.platform.common.mapper.MapperQueries;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.platform.common.BizException;
@@ -348,11 +349,10 @@ public class AiGatewayService {
 
     /** 获取场景对应的提示词模板 */
     private String getPromptTemplate(String scene, Map<String, String> params) {
-        PromptTemplate tpl = promptTemplateMapper.selectOne(new LambdaQueryWrapper<PromptTemplate>()
+        PromptTemplate tpl = promptTemplateMapper.selectOne(MapperQueries.limit(new LambdaQueryWrapper<PromptTemplate>()
                 .eq(PromptTemplate::getScene, scene)
                 .eq(PromptTemplate::getEnabled, 1)
-                .orderByDesc(PromptTemplate::getUpdateTime)
-                .last("LIMIT 1"));
+                .orderByDesc(PromptTemplate::getUpdateTime), 1));
         if (tpl != null && StrUtil.isNotBlank(tpl.getContent())) {
             String content = tpl.getContent();
             if (params != null) {

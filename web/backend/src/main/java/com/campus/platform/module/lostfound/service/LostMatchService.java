@@ -1,5 +1,6 @@
 package com.campus.platform.module.lostfound.service;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import cn.hutool.core.util.StrUtil;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
@@ -45,12 +46,11 @@ public class LostMatchService {
                     "AI 服务暂不可用（未配置 API Key），可稍后重试");
         }
         // 1. 检索进行中的"拾到"记录（审核通过）
-        List<LostFound> candidates = lostFoundMapper.selectList(new LambdaQueryWrapper<LostFound>()
+        List<LostFound> candidates = lostFoundMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<LostFound>()
                 .eq(LostFound::getAuditStatus, Constants.AUDIT_PASS)
                 .eq(LostFound::getStatus, Constants.LF_DOING)
                 .eq(LostFound::getType, 1)
-                .orderByDesc(LostFound::getId)
-                .last("LIMIT " + MAX_CANDIDATES));
+                .orderByDesc(LostFound::getId), MAX_CANDIDATES));
         if (candidates.isEmpty()) {
             return Collections.emptyList();
         }

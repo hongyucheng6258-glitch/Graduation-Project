@@ -1,5 +1,6 @@
 package com.campus.platform.module.ai.service;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import com.campus.platform.module.ai.mapper.WrongQuestionGeneratedMapper;
 import com.campus.platform.module.ai.mapper.WrongQuestionReviewMapper;
 import com.campus.platform.module.ai.entity.WrongQuestionGenerated;
@@ -43,10 +44,6 @@ public class WrongQuestionService {
     private final WrongQuestionGeneratedMapper wrongQuestionGeneratedMapper;
 
     /** 排序方式 */
-    private static final String SORT_CREATE_DESC = "create_desc";       // 最近收录
-    private static final String SORT_LAST_REVIEW_ASC = "last_review_asc"; // 最久未复习
-    private static final String SORT_WRONG_DESC = "wrong_desc";          // 错误次数最多
-    private static final String SORT_DIFFICULTY_DESC = "difficulty_desc";// 难度最高
 
     /** 分页列表：学科 + 掌握状态筛选，四种排序 */
     public PageResult<WrongQuestion> list(Long userId, String subject, Integer status,
@@ -55,22 +52,9 @@ public class WrongQuestionService {
                 .eq(WrongQuestion::getUserId, userId)
                 .eq(StrUtil.isNotBlank(subject), WrongQuestion::getSubject, subject)
                 .eq(status != null, WrongQuestion::getStatus, status);
-        applySort(wrapper, sort);
+        wrongQuestionMapper.applyReviewSort(wrapper, sort);
         Page<WrongQuestion> page = wrongQuestionMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
         return PageResult.of(page);
-    }
-
-    private void applySort(LambdaQueryWrapper<WrongQuestion> wrapper, String sort) {
-        if (SORT_LAST_REVIEW_ASC.equals(sort)) {
-            // 从未复习（null）最优先
-            wrapper.last("ORDER BY last_review_time IS NULL DESC, last_review_time ASC, id DESC");
-        } else if (SORT_WRONG_DESC.equals(sort)) {
-            wrapper.orderByDesc(WrongQuestion::getWrongCount).orderByDesc(WrongQuestion::getId);
-        } else if (SORT_DIFFICULTY_DESC.equals(sort)) {
-            wrapper.last("ORDER BY FIELD(difficulty, '难', '中', '易') DESC, id DESC");
-        } else {
-            wrapper.orderByDesc(WrongQuestion::getId);
-        }
     }
 
     public WrongQuestion getOwned(Long userId, Long id) {
@@ -213,12 +197,11 @@ public class WrongQuestionService {
     /** 今日待复习：待复习状态 或 已到下次复习时间 */
     public List<WrongQuestion> todayReview(Long userId) {
         LocalDateTime now = LocalDateTime.now();
-        return wrongQuestionMapper.selectList(new LambdaQueryWrapper<WrongQuestion>()
+        return wrongQuestionMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<WrongQuestion>()
                 .eq(WrongQuestion::getUserId, userId)
                 .and(w -> w.eq(WrongQuestion::getStatus, Constants.WQ_STATUS_PENDING)
                         .or().le(WrongQuestion::getNextReviewTime, now))
-                .orderByAsc(WrongQuestion::getNextReviewTime)
-                .last("LIMIT 50"));
+                .orderByAsc(WrongQuestion::getNextReviewTime), 50));
     }
 
     /**

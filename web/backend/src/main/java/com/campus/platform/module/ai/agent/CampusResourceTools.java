@@ -5,9 +5,8 @@ import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.campus.platform.module.ai.mapper.CampusResourceMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -26,7 +25,7 @@ class CampusResourceTools implements AgentToolSource {
             "^(?:请\\s*)?(?:帮我\\s*|我想\\s*)?(?:查阅|查询|查找|查|搜索|检索|搜|找)\\s*(?:一下\\s*)?"
                     + "(?:校园)?(?:公共)?(?:知识库|资料)");
 
-    private final NamedParameterJdbcTemplate jdbc;
+    private final CampusResourceMapper resources;
     private final ObjectMapper json;
 
     static String explicitLookupKind(String question) {
@@ -53,23 +52,18 @@ class CampusResourceTools implements AgentToolSource {
         Kind kind = Kind.from(args.path("kind").asText());
         String keyword = args.path("keyword").asText("").strip();
         if (keyword.length() > 80) throw new BizException(ResultCode.BAD_REQUEST, "校园搜索关键词过长");
-        var params = parameters();
-        String filter = "";
-        if (!keyword.isEmpty()) {
-            filter = kind.keywordFilter;
-            params.addValue("term", "%" + keyword.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%");
-        }
+        String term = keyword.isEmpty() ? null
+                : "%" + keyword.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
+        Long lostType = null;
         if (args.has("lostType")) {
-            long lostType = args.path("lostType").asLong(-1);
+            lostType = args.path("lostType").asLong(-1);
             if (kind != Kind.LOST || (lostType != 0 && lostType != 1)) {
                 throw new BizException(ResultCode.BAD_REQUEST, "失物招领类型不合法");
             }
-            filter += " AND type=:lostType";
-            params.addValue("lostType", lostType);
         }
         var result = json.createObjectNode().put("kind", kind.code);
         var items = result.putArray("items");
-        query(kind, filter + " ORDER BY id DESC LIMIT 6", params).forEach(card -> items.addObject()
+        query(kind, term, lostType, null).forEach(card -> items.addObject()
                 .put("id", card.id()).put("title", card.title()).put("subtitle", card.subtitle()).put("status", card.status()));
         return result;
     }
@@ -77,38 +71,30 @@ class CampusResourceTools implements AgentToolSource {
     List<Card> cards(List<Ref> refs) {
         if (refs == null || refs.isEmpty()) return List.of();
         var byKind = refs.stream().collect(Collectors.groupingBy(Ref::kind));
-        Map<Ref, Card> visible = byKind.entrySet().stream().flatMap(group -> query(Kind.from(group.getKey()),
-                        " AND id IN (:ids)", parameters().addValue("ids", group.getValue().stream().map(Ref::id).toList())).stream())
+        Map<Ref, Card> visible = byKind.entrySet().stream()
+                .flatMap(group -> query(Kind.from(group.getKey()), null, null,
+                        group.getValue().stream().map(Ref::id).toList()).stream())
                 .collect(Collectors.toMap(card -> new Ref(card.kind(), card.id()), Function.identity()));
         return refs.stream().map(visible::get).filter(Objects::nonNull).toList();
     }
 
-    private List<Card> query(Kind kind, String suffix, MapSqlParameterSource params) {
-        return jdbc.query(kind.query + suffix, params, (rs, row) -> new Card(kind.code, rs.getLong(1),
-                rs.getString(2), rs.getString(3), rs.getInt(4), rs.getObject(5, Long.class)));
-    }
-
-    private MapSqlParameterSource parameters() {
-        return new MapSqlParameterSource().addValue("approved", Constants.AUDIT_PASS)
-                .addValue("active", Constants.LF_DOING).addValue("qaOff", Constants.QA_OFF);
+    private List<Card> query(Kind kind, String term, Long lostType, List<Long> ids) {
+        var rows = switch (kind) {
+            case LOST -> resources.findLost(Constants.AUDIT_PASS, Constants.LF_DOING, term, lostType, ids);
+            case PARTNER -> resources.findPartners(Constants.AUDIT_PASS, Constants.LF_DOING, term, ids);
+            case QA -> resources.findQuestions(Constants.QA_OFF, term, ids);
+        };
+        return rows.stream().map(row ->
+                new Card(kind.code, row.id(), row.title(), row.subtitle(), row.status(), row.profileId())).toList();
     }
 
     private enum Kind {
-        LOST("lost", "SELECT id,title,location,type,NULL FROM lost_found WHERE audit_status=:approved AND status=:active",
-                " AND (title LIKE :term ESCAPE '!' OR description LIKE :term ESCAPE '!' OR location LIKE :term ESCAPE '!')"),
-        PARTNER("partner", "SELECT id,subject,goal,status,user_id FROM study_partner WHERE audit_status=:approved AND status=:active",
-                " AND (subject LIKE :term ESCAPE '!' OR goal LIKE :term ESCAPE '!' OR intro LIKE :term ESCAPE '!')"),
-        QA("qa", "SELECT id,title,category,status,NULL FROM campus_question WHERE status<>:qaOff",
-                " AND (title LIKE :term ESCAPE '!' OR content LIKE :term ESCAPE '!')");
+        LOST("lost"), PARTNER("partner"), QA("qa");
 
         final String code;
-        final String query;
-        final String keywordFilter;
 
-        Kind(String code, String query, String keywordFilter) {
+        Kind(String code) {
             this.code = code;
-            this.query = query;
-            this.keywordFilter = keywordFilter;
         }
 
         static Kind from(String code) {

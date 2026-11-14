@@ -9,8 +9,8 @@ import com.campus.platform.module.activity.service.ActivityService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.campus.platform.module.ai.mapper.AgentActivityDraftMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,7 +41,7 @@ public class ActivityPublishDrafts implements AgentToolSource {
     private static final Pattern SIGNUP_CUTOFF = Pattern.compile("截止|截至|报名[^。！？；]{0,8}关闭");
     private static final String CLOCK = "(?:[01]?[0-9]|2[0-3])(?:[:：][0-5]?[0-9](?:[:：][0-5]?[0-9])?|[点时](?:[0-5]?[0-9]分?)?)";
 
-    private final JdbcTemplate jdbc;
+    private final AgentActivityDraftMapper drafts;
     private final ObjectMapper json;
     private final ActivityService activities;
 
@@ -79,12 +79,7 @@ public class ActivityPublishDrafts implements AgentToolSource {
         validateTextLengths(form);
         validateMaxMembers(form.getMaxMembers());
         String id = UUID.randomUUID().toString();
-        jdbc.update("""
-                INSERT INTO agent_activity_draft(id,user_id,title,description,category,location,start_time,end_time,
-                                                 signup_deadline,max_members,expires_at)
-                VALUES(?,?,?,?,?,?,?,?,?,?,DATE_ADD(NOW(), INTERVAL 1 DAY))
-                """, id, uid, form.getTitle(), form.getDescription(), form.getCategory(), form.getLocation(),
-                form.getStartTime(), form.getEndTime(), form.getSignupDeadline(), form.getMaxMembers());
+        drafts.insertDraft(id, uid, form);
         return json.valueToTree(get(uid, id));
     }
 
@@ -124,11 +119,7 @@ public class ActivityPublishDrafts implements AgentToolSource {
         }
         checkOwnedImages(uid, form.getImages());
         var activity = activities.publish(uid, form);
-        jdbc.update("""
-                UPDATE agent_activity_draft SET activity_id=?,title=?,description=?,category=?,location=?,
-                    start_time=?,end_time=?,signup_deadline=?,max_members=?,confirmation_hash=? WHERE id=? AND user_id=?
-                """, activity.getId(), form.getTitle(), form.getDescription(), form.getCategory(), form.getLocation(),
-                form.getStartTime(), form.getEndTime(), form.getSignupDeadline(), form.getMaxMembers(), hash, id, uid);
+        drafts.markSubmitted(id, uid, activity.getId(), hash, form);
         return get(uid, id);
     }
 
@@ -175,10 +166,7 @@ public class ActivityPublishDrafts implements AgentToolSource {
 
     private void checkOwnedImages(Long uid, List<String> images) {
         for (String url : images) {
-            boolean owned = Boolean.TRUE.equals(jdbc.queryForObject("""
-                    SELECT EXISTS(SELECT 1 FROM upload_resource WHERE owner_user_id=? AND resource_type='image'
-                                  AND CAST(resource_url AS BINARY)=CAST(? AS BINARY))
-                    """, Boolean.class, uid, url));
+            boolean owned = drafts.ownsImage(uid, url);
             if (!owned) {
                 throw new BizException(ResultCode.BAD_REQUEST, "图片资源不存在或不属于当前用户");
             }
@@ -321,21 +309,14 @@ public class ActivityPublishDrafts implements AgentToolSource {
     }
 
     private StoredDraft query(Long uid, String id, boolean lock) {
-        return jdbc.query("""
-                SELECT d.id,d.title,d.description,d.category,d.location,d.start_time,d.end_time,d.signup_deadline,
-                       d.max_members,d.expires_at,d.activity_id,d.confirmation_hash,a.audit_status,a.audit_reason,
-                       CASE WHEN d.activity_id IS NOT NULL THEN 'SUBMITTED'
-                            WHEN d.expires_at<=NOW() THEN 'EXPIRED' ELSE 'DRAFT' END AS state
-                FROM agent_activity_draft d LEFT JOIN activity a ON a.id=d.activity_id AND a.user_id=d.user_id
-                WHERE d.id=? AND d.user_id=?
-                """ + (lock ? " FOR UPDATE OF d" : ""), (rs, row) -> new StoredDraft(new Draft(rs.getString("id"), rs.getString("title"),
-                rs.getString("description"), rs.getString("category"), rs.getString("location"),
-                rs.getObject("start_time", LocalDateTime.class), rs.getObject("end_time", LocalDateTime.class),
-                rs.getObject("signup_deadline", LocalDateTime.class), rs.getObject("max_members", Integer.class),
-                rs.getObject("expires_at", LocalDateTime.class), rs.getObject("activity_id", Long.class),
-                rs.getString("state"), rs.getObject("audit_status", Integer.class), rs.getString("audit_reason")),
-                rs.getString("confirmation_hash")),
-                id, uid).stream().findFirst().orElse(null);
+        var row = lock ? drafts.lockDraft(id, uid) : drafts.findDraft(id, uid);
+        if (row == null) {
+            return null;
+        }
+        var card = new Draft(row.id(), row.title(), row.description(), row.category(), row.location(),
+                row.startTime(), row.endTime(), row.signupDeadline(), row.maxMembers(), row.expiresAt(),
+                row.activityId(), row.state(), row.auditStatus(), row.auditReason());
+        return new StoredDraft(card, row.confirmationHash());
     }
 
     private record StoredDraft(Draft card, String confirmationHash) {}

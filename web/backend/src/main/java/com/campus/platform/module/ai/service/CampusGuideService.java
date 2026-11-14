@@ -1,5 +1,6 @@
 package com.campus.platform.module.ai.service;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.platform.common.Constants;
 import com.campus.platform.module.activity.entity.Activity;
@@ -121,11 +122,10 @@ public class CampusGuideService {
 
     /** 近期活动（审核通过 + 报名中/已满，按开始时间升序） */
     private void appendActivities(StringBuilder ctx) {
-        List<Activity> list = activityMapper.selectList(new LambdaQueryWrapper<Activity>()
+        List<Activity> list = activityMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<Activity>()
                 .eq(Activity::getAuditStatus, Constants.AUDIT_PASS)
                 .in(Activity::getStatus, Constants.ACTIVITY_SIGNING, Constants.ACTIVITY_FULL)
-                .orderByAsc(Activity::getStartTime)
-                .last("LIMIT 8"));
+                .orderByAsc(Activity::getStartTime), 8));
         if (list.isEmpty()) return;
         ctx.append("【近期活动】\n");
         for (Activity a : list) {
@@ -139,10 +139,9 @@ public class CampusGuideService {
 
     /** 我的活动报名（最近 5 条，含活动名称/时间/地点/状态） */
     private void appendMy(StringBuilder ctx, Long userId) {
-        List<ActivityMember> members = memberMapper.selectList(new LambdaQueryWrapper<ActivityMember>()
+        List<ActivityMember> members = memberMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<ActivityMember>()
                 .eq(ActivityMember::getUserId, userId)
-                .orderByDesc(ActivityMember::getCreateTime)
-                .last("LIMIT 5"));
+                .orderByDesc(ActivityMember::getCreateTime), 5));
         if (members.isEmpty()) {
             ctx.append("【我的活动报名】\n- 暂时没有报名记录，去活动广场看看感兴趣的活动吧\n");
             return;
@@ -165,11 +164,10 @@ public class CampusGuideService {
 
     /** 闲置在售（审核通过 + 在架） */
     private void appendIdle(StringBuilder ctx) {
-        List<IdleItem> list = idleItemMapper.selectList(new LambdaQueryWrapper<IdleItem>()
+        List<IdleItem> list = idleItemMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<IdleItem>()
                 .eq(IdleItem::getAuditStatus, Constants.AUDIT_PASS)
                 .eq(IdleItem::getStatus, Constants.IDLE_ON_SHELF)
-                .orderByDesc(IdleItem::getCreateTime)
-                .last("LIMIT 8"));
+                .orderByDesc(IdleItem::getCreateTime), 8));
         if (list.isEmpty()) return;
         ctx.append("【闲置在售】\n");
         for (IdleItem it : list) {
@@ -183,11 +181,10 @@ public class CampusGuideService {
 
     /** 失物招领（审核通过 + 处理中，丢失/拾到分开标注） */
     private void appendLost(StringBuilder ctx) {
-        List<LostFound> list = lostFoundMapper.selectList(new LambdaQueryWrapper<LostFound>()
+        List<LostFound> list = lostFoundMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<LostFound>()
                 .eq(LostFound::getAuditStatus, Constants.AUDIT_PASS)
                 .eq(LostFound::getStatus, Constants.LF_DOING)
-                .orderByDesc(LostFound::getCreateTime)
-                .last("LIMIT 8"));
+                .orderByDesc(LostFound::getCreateTime), 8));
         if (list.isEmpty()) return;
         ctx.append("【失物招领】\n");
         for (LostFound lf : list) {
@@ -201,10 +198,9 @@ public class CampusGuideService {
 
     /** 校园动态（审核通过，取点赞/评论较高的热门内容） */
     private void appendPosts(StringBuilder ctx) {
-        List<Post> list = postMapper.selectList(new LambdaQueryWrapper<Post>()
+        List<Post> list = postMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<Post>()
                 .eq(Post::getAuditStatus, Constants.AUDIT_PASS)
-                .orderByDesc(Post::getLikeCount)
-                .last("LIMIT 5"));
+                .orderByDesc(Post::getLikeCount), 5));
         if (list.isEmpty()) return;
         Set<Long> uids = list.stream().map(Post::getUserId).collect(Collectors.toSet());
         Map<Long, String> nickMap = uids.isEmpty() ? Collections.emptyMap()
@@ -224,10 +220,9 @@ public class CampusGuideService {
 
     /** 公告（已发布） */
     private void appendNotices(StringBuilder ctx) {
-        List<Notice> list = noticeMapper.selectList(new LambdaQueryWrapper<Notice>()
+        List<Notice> list = noticeMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<Notice>()
                 .eq(Notice::getStatus, Constants.NOTICE_PUBLISHED)
-                .orderByDesc(Notice::getCreateTime)
-                .last("LIMIT 3"));
+                .orderByDesc(Notice::getCreateTime), 3));
         if (list.isEmpty()) return;
         ctx.append("【校园公告】\n");
         for (Notice n : list) {

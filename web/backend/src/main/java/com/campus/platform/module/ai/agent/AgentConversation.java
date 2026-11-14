@@ -1,5 +1,6 @@
 package com.campus.platform.module.ai.agent;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
@@ -27,17 +28,17 @@ class AgentConversation {
             return List.of();
         }
         check(uid, sessionId);
-        return messages.selectList(new LambdaQueryWrapper<AiMessage>()
-                .eq(AiMessage::getSessionId, sessionId).orderByDesc(AiMessage::getId).last("LIMIT 12"))
+        return messages.selectList(MapperQueries.limit(new LambdaQueryWrapper<AiMessage>()
+                .eq(AiMessage::getSessionId, sessionId).orderByDesc(AiMessage::getId), 12))
                 .stream().sorted(java.util.Comparator.comparing(AiMessage::getId)).toList();
     }
 
     String latestIdleSearch(Long sessionId) {
         if (sessionId == null) return "";
-        var context = messages.selectOne(new LambdaQueryWrapper<AiMessage>()
+        var context = messages.selectOne(MapperQueries.limit(new LambdaQueryWrapper<AiMessage>()
                 .eq(AiMessage::getSessionId, sessionId).eq(AiMessage::getRole, "context")
                 .like(AiMessage::getContent, "\"idleSearch\":")
-                .orderByDesc(AiMessage::getId).last("LIMIT 1"));
+                .orderByDesc(AiMessage::getId), 1));
         return context == null ? "" : context.getContent();
     }
 

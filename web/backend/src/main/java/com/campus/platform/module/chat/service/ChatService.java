@@ -1,6 +1,7 @@
 package com.campus.platform.module.chat.service;
 
 
+import com.campus.platform.common.mapper.MapperQueries;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -136,13 +137,13 @@ public class ChatService {
     public List<ChatUserVO> searchUsers(Long userId, String keyword) {
         String term = keyword.strip();
         if (term.isEmpty() || term.length() > 32) return List.of();
-        return userMapper.selectList(new LambdaQueryWrapper<User>()
+        return userMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<User>()
                         .select(User::getId, User::getNickname, User::getAvatar)
                         .ne(User::getId, userId)
                         .eq(User::getStatus, 0)
                         .like(User::getNickname, term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_"))
                         .orderByAsc(User::getNickname, User::getId)
-                        .last("LIMIT 20"))
+                        , 20))
                 .stream().map(ChatUserVO::from).toList();
     }
 
@@ -369,12 +370,12 @@ public class ChatService {
     public List<ChatMessageVO> history(Long userId, Long conversationId, Long beforeId, int limit) {
         requireMember(conversationId, userId);
         Long joinedAfter = requireMemberEntity(conversationId, userId).getJoinedAfterMessageId();
-        List<ChatMessage> list = messageMapper.selectList(new LambdaQueryWrapper<ChatMessage>()
+        List<ChatMessage> list = messageMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<ChatMessage>()
                 .eq(ChatMessage::getConversationId, conversationId)
                 .gt(joinedAfter != null, ChatMessage::getId, joinedAfter)
                 .lt(beforeId != null, ChatMessage::getId, beforeId)
                 .orderByDesc(ChatMessage::getId)
-                .last("LIMIT " + Math.min(Math.max(limit, 1), 100)));
+                , Math.min(Math.max(limit, 1), 100)));
         return list.stream().map(ChatMessageVO::from).toList();
     }
 

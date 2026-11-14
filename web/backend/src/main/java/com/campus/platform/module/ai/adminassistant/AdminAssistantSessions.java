@@ -4,8 +4,8 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.campus.platform.module.ai.mapper.AdminAssistantSessionMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,24 +16,19 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-class AdminAssistantSessions {
-    private final JdbcTemplate jdbc;
+public class AdminAssistantSessions {
+    private final AdminAssistantSessionMapper sessions;
     private final ObjectMapper json;
 
     List<Session> list(Long adminId) {
-        return jdbc.query("""
-                SELECT id,title,updated_at FROM admin_assistant_session WHERE admin_id=?
-                ORDER BY updated_at DESC,id DESC LIMIT 50
-                """, (rs, row) -> new Session(rs.getString(1), rs.getString(2), rs.getObject(3, LocalDateTime.class)), adminId);
+        return sessions.findSessions(adminId);
     }
 
     List<AdminAssistantService.Turn> history(Long adminId, String sessionId, int limit) {
         if (sessionId == null) return List.of();
         requireOwner(adminId, sessionId, false);
-        var turns = jdbc.query("""
-                SELECT t.body FROM admin_assistant_turn t JOIN admin_assistant_session s ON s.id=t.session_id
-                WHERE t.session_id=? AND s.admin_id=? ORDER BY t.id DESC LIMIT ?
-                """, (rs, row) -> readTurn(rs.getString(1)), sessionId, adminId, limit);
+        var turns = new java.util.ArrayList<>(sessions.findHistory(sessionId, adminId, limit)
+                .stream().map(this::readTurn).toList());
         Collections.reverse(turns);
         return turns;
     }
@@ -44,12 +39,12 @@ class AdminAssistantSessions {
             sessionId = UUID.randomUUID().toString();
             String title = turn.question().codePoints().limit(32)
                     .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
-            jdbc.update("INSERT INTO admin_assistant_session(id,admin_id,title) VALUES(?,?,?)", sessionId, adminId, title);
+            sessions.insertSession(sessionId, adminId, title);
         } else {
             requireOwner(adminId, sessionId, true);
-            jdbc.update("UPDATE admin_assistant_session SET updated_at=CURRENT_TIMESTAMP(6) WHERE id=?", sessionId);
+            sessions.touchSession(sessionId);
         }
-        jdbc.update("INSERT INTO admin_assistant_turn(session_id,body) VALUES(?,?)", sessionId, writeTurn(turn));
+        sessions.insertTurn(sessionId, writeTurn(turn));
         return sessionId;
     }
 
@@ -58,8 +53,9 @@ class AdminAssistantSessions {
     }
 
     private void requireOwner(Long adminId, String sessionId, boolean lock) {
-        if (jdbc.queryForList("SELECT id FROM admin_assistant_session WHERE id=? AND admin_id=?"
-                + (lock ? " FOR UPDATE" : ""), String.class, sessionId, adminId).isEmpty()) {
+        String ownedSession = lock ? sessions.lockOwnedSession(sessionId, adminId)
+                : sessions.findOwnedSession(sessionId, adminId);
+        if (ownedSession == null) {
             throw new BizException(ResultCode.NOT_FOUND, "未找到管理助手会话");
         }
     }

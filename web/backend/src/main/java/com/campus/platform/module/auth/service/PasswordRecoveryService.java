@@ -3,13 +3,14 @@ package com.campus.platform.module.auth.service;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.admin.service.AdminUserService;
+import com.campus.platform.module.auth.mapper.PasswordRecoveryMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -17,7 +18,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class PasswordRecoveryService {
-    private final JdbcTemplate jdbc;
+    private final PasswordRecoveryMapper recoveries;
     private final StringRedisTemplate redis;
     private final AdminUserService accounts;
 
@@ -34,63 +35,54 @@ public class PasswordRecoveryService {
             throw new BizException(ResultCode.RATE_LIMITED, "请稍后再提交申请");
         }
         String receipt = UUID.randomUUID().toString() + UUID.randomUUID();
-        jdbc.update("""
-                INSERT INTO student_password_recovery(ticket_hash,student_no,claimed_name,contact,explanation)
-                VALUES (?,?,?,?,?)
-                """, hash(receipt), studentNo, name, contact, explanation);
+        recoveries.insertApplication(hash(receipt), studentNo, name, contact, explanation);
         return receipt;
     }
 
     public Status status(String receipt) {
-        return jdbc.query("""
-                SELECT status,decision_reason FROM student_password_recovery WHERE ticket_hash=?
-                """, (rs, i) -> new Status(rs.getString(1), rs.getString(2)), receiptHash(receipt))
-                .stream().findFirst().orElseThrow(PasswordRecoveryService::missing);
+        Status status = recoveries.findStatus(receiptHash(receipt));
+        if (status == null) throw missing();
+        return status;
     }
 
     public List<Map<String, Object>> list(long before) {
-        return jdbc.queryForList("""
-                SELECT id,student_no AS studentNo,claimed_name AS name,contact,explanation,
-                       status,decision_reason AS reason,created_at AS createdAt
-                FROM student_password_recovery WHERE id<? ORDER BY id DESC LIMIT 30
-                """, before);
+        return recoveries.listBefore(before).stream().map(row -> {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("id", row.id());
+            result.put("studentNo", row.studentNo());
+            result.put("name", row.name());
+            result.put("contact", row.contact());
+            result.put("explanation", row.explanation());
+            result.put("status", row.status());
+            result.put("reason", row.reason());
+            result.put("createdAt", row.createdAt());
+            return result;
+        }).toList();
     }
 
     @Transactional
     public void decide(long id, boolean approve, String reason) {
         if (approve) {
-            String studentNo = jdbc.query("SELECT student_no FROM student_password_recovery WHERE id=?",
-                    (rs, index) -> rs.getString(1), id).stream().findFirst().orElseThrow(PasswordRecoveryService::missing);
-            if (findActiveUser(studentNo) == null) {
+            String studentNo = recoveries.findStudentNo(id);
+            if (studentNo == null) throw missing();
+            if (recoveries.findActiveUserId(studentNo) == null) {
                 throw new BizException(ResultCode.BAD_REQUEST, "没有找到可用的学生账号，请核实学号");
             }
         }
         String note = approve ? null : required(reason, 500);
-        int changed = jdbc.update("""
-                UPDATE student_password_recovery SET status=?,decision_reason=?,decided_at=NOW()
-                WHERE id=? AND status='PENDING'
-                """, approve ? "APPROVED" : "REJECTED", note, id);
+        int changed = recoveries.decide(id, approve ? "APPROVED" : "REJECTED", note);
         if (changed != 1) throw new BizException(ResultCode.BAD_REQUEST, "申请不存在或已审核");
     }
 
     @Transactional
     public String claim(String receipt) {
-        var rows = jdbc.queryForList("""
-                SELECT id,student_no FROM student_password_recovery
-                WHERE ticket_hash=? AND status='APPROVED' AND decided_at>NOW()-INTERVAL 7 DAY FOR UPDATE
-                """, receiptHash(receipt));
-        if (rows.isEmpty()) throw new BizException(ResultCode.BAD_REQUEST, "申请尚不可领取、已领取或领取期限已过");
-        var row = rows.get(0);
-        Long userId = findActiveUser((String) row.get("student_no"));
+        var row = recoveries.lockClaimable(receiptHash(receipt));
+        if (row == null) throw new BizException(ResultCode.BAD_REQUEST, "申请尚不可领取、已领取或领取期限已过");
+        Long userId = recoveries.findActiveUserId(row.studentNo());
         if (userId == null) throw missing();
         String password = accounts.resetPassword(userId);
-        jdbc.update("UPDATE student_password_recovery SET status='CLAIMED' WHERE id=?", row.get("id"));
+        recoveries.markClaimed(row.id());
         return password;
-    }
-
-    private Long findActiveUser(String studentNo) {
-        return jdbc.query("SELECT id FROM `user` WHERE student_no=? AND status=0",
-                (rs, index) -> rs.getLong(1), studentNo).stream().findFirst().orElse(null);
     }
 
     private static String required(String value, int max) {

@@ -7,8 +7,9 @@ import com.campus.platform.module.idle.dto.AppointDTO;
 import com.campus.platform.module.idle.service.IdleService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.campus.platform.module.ai.mapper.AgentIdleAppointmentMapper;
+import com.campus.platform.module.ai.mapper.AgentIdleAppointmentMapper.Offer;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,12 +22,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class IdleAppointmentActions implements AgentToolSource {
     static final String PREPARE = "prepare_idle_appointment";
-    private static final String OFFER = """
-            SELECT title,SHA2(JSON_ARRAY(user_id,title,description,expect_item,category,images),256)
-            FROM idle_item WHERE id=? AND user_id<>? AND audit_status=? AND status=?
-            """;
-
-    private final JdbcTemplate jdbc;
+    private final AgentIdleAppointmentMapper appointments;
     private final ObjectMapper json;
     private final IdleService idle;
 
@@ -49,10 +45,7 @@ public class IdleAppointmentActions implements AgentToolSource {
             throw new BizException(ResultCode.BAD_REQUEST, "该闲置当前无法预约");
         }
         String id = UUID.randomUUID().toString();
-        jdbc.update("""
-                INSERT INTO agent_idle_appointment(id,user_id,item_id,item_title,remark,expires_at,offer_version)
-                VALUES(?,?,?,?,?,DATE_ADD(NOW(), INTERVAL 10 MINUTE),?)
-                """, id, uid, itemId, offer.title(), remark, offer.version());
+        appointments.insertCard(id, uid, itemId, offer.title(), remark, offer.version());
         return json.valueToTree(card(uid, id));
     }
 
@@ -79,7 +72,7 @@ public class IdleAppointmentActions implements AgentToolSource {
         var form = new AppointDTO();
         form.setMessage(remark == null ? current.remark() : remark.strip());
         var appointment = idle.appoint(uid, current.itemId(), form);
-        jdbc.update("UPDATE agent_idle_appointment SET appointment_id=?,remark=? WHERE id=?", appointment.getId(), form.getMessage(), id);
+        appointments.markSubmitted(id, appointment.getId(), form.getMessage());
         return card(uid, id);
     }
 
@@ -98,23 +91,19 @@ public class IdleAppointmentActions implements AgentToolSource {
     }
 
     private Offer offer(Long uid, long id, boolean lock) {
-        return jdbc.query(OFFER + (lock ? " FOR UPDATE" : ""), (rs, row) -> new Offer(rs.getString(1), rs.getString(2)),
-                id, uid, Constants.AUDIT_PASS, Constants.IDLE_ON_SHELF).stream().findFirst().orElse(null);
+        return lock ? appointments.lockOffer(id, uid, Constants.AUDIT_PASS, Constants.IDLE_ON_SHELF)
+                : appointments.findOffer(id, uid, Constants.AUDIT_PASS, Constants.IDLE_ON_SHELF);
     }
 
     private Stored query(Long uid, String id, boolean lock) {
-        return jdbc.query("""
-                SELECT a.id,a.item_id,a.item_title,a.remark,a.expires_at,a.appointment_id,
-                       CASE WHEN a.appointment_id IS NOT NULL THEN 'SUBMITTED'
-                            WHEN a.expires_at<=NOW() THEN 'EXPIRED' ELSE 'PENDING' END,
-                       (SELECT status FROM idle_appointment WHERE id=a.appointment_id AND buyer_id=a.user_id),a.offer_version
-                FROM agent_idle_appointment a WHERE a.id=? AND a.user_id=?
-                """ + (lock ? " FOR UPDATE" : ""), (rs, row) -> new Stored(new Card(rs.getString(1), rs.getLong(2), rs.getString(3),
-                rs.getString(4), rs.getObject(5, LocalDateTime.class), rs.getObject(6, Long.class), rs.getString(7),
-                rs.getObject(8, Integer.class)), rs.getString(9)), id, uid).stream().findFirst().orElse(null);
+        var row = lock ? appointments.lockCard(id, uid) : appointments.findCard(id, uid);
+        if (row == null) {
+            return null;
+        }
+        return new Stored(new Card(row.id(), row.itemId(), row.itemTitle(), row.remark(), row.expiresAt(),
+                row.appointmentId(), row.state(), row.appointmentStatus()), row.offerVersion());
     }
 
-    private record Offer(String title, String version) {}
     private record Stored(Card card, String offerVersion) {}
     public record Card(String id, long itemId, String itemTitle, String remark, LocalDateTime expiresAt,
                        Long appointmentId, String state, Integer appointmentStatus) {}

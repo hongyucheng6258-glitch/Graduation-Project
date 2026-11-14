@@ -1,5 +1,6 @@
 package com.campus.platform.module.activity.service;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import com.campus.platform.module.activity.mapper.ActivityMemberMapper;
 import com.campus.platform.module.activity.mapper.ActivitySigninMapper;
 import com.campus.platform.module.activity.dto.ActivityPublishDTO;
@@ -197,10 +198,10 @@ public class ActivityService {
         vo.setIsOwner(isOwner);
         vo.setSigninOpen(signinOpen(activity, LocalDateTime.now()));
         if (currentUid != null && !isOwner) {
-            ActivityMember my = memberMapper.selectOne(new LambdaQueryWrapper<ActivityMember>()
+            ActivityMember my = memberMapper.selectOne(MapperQueries.limit(new LambdaQueryWrapper<ActivityMember>()
                     .eq(ActivityMember::getActivityId, id)
                     .eq(ActivityMember::getUserId, currentUid)
-                    .last("LIMIT 1"));
+                    , 1));
             vo.setMySignupStatus(my == null ? null : my.getStatus());
             vo.setSignedIn(signinMapper.selectCount(new LambdaQueryWrapper<ActivitySignin>()
                     .eq(ActivitySignin::getActivityId, id)
@@ -443,10 +444,10 @@ public class ActivityService {
         if (!signinOpen(activity, LocalDateTime.now())) {
             throw new BizException(ResultCode.BAD_REQUEST, "仅可在活动开始后、结束前签到");
         }
-        ActivityMember member = memberMapper.selectOne(new LambdaQueryWrapper<ActivityMember>()
+        ActivityMember member = memberMapper.selectOne(MapperQueries.limit(new LambdaQueryWrapper<ActivityMember>()
                 .eq(ActivityMember::getActivityId, dto.getActivityId())
                 .eq(ActivityMember::getUserId, userId)
-                .last("LIMIT 1"));
+                , 1));
         if (member == null || member.getStatus() != Constants.MEMBER_APPROVED) {
             throw new BizException(ResultCode.FORBIDDEN, "报名未通过，无法签到");
         }

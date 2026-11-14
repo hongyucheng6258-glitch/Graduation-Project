@@ -1,6 +1,7 @@
 package com.campus.platform.module.auth.service;
 
 import com.campus.platform.common.BizException;
+import com.campus.platform.module.auth.mapper.VerifiedPhoneMapper;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
@@ -9,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +37,7 @@ public class PhoneAuthService {
             """, Long.class);
 
     private final StringRedisTemplate redis;
-    private final JdbcTemplate jdbc;
+    private final VerifiedPhoneMapper phones;
     private final UserMapper users;
     private final AuthService auth;
     private final com.campus.platform.module.admin.service.AdminUserService accountAdministration;
@@ -51,8 +51,7 @@ public class PhoneAuthService {
     public record Delivery(String consoleCode, int expiresInSeconds) {}
 
     public Binding binding(long uid) {
-        return new Binding(jdbc.query("SELECT phone FROM verified_student_phone WHERE user_id=?",
-                (rs, index) -> rs.getString(1), uid).stream().findFirst().orElse(null));
+        return new Binding(phones.findPhone(uid));
     }
 
     public Delivery send(String purpose, String phone, Long uid) {
@@ -70,9 +69,9 @@ public class PhoneAuthService {
     public Binding bind(long uid, String phone, String code) {
         verify("bind", phone, uid, code);
         try {
-            int updated = jdbc.update("UPDATE verified_student_phone SET phone=?, verified_at=NOW() WHERE user_id=?", phone, uid);
+            int updated = phones.updatePhone(uid, phone);
             if (updated == 0 && !phone.equals(binding(uid).phone())) {
-                jdbc.update("INSERT INTO verified_student_phone(user_id,phone) VALUES (?,?)", uid, phone);
+                phones.insertPhone(uid, phone);
             }
         } catch (DuplicateKeyException e) {
             throw new BizException(ResultCode.BAD_REQUEST, "手机号无法绑定，请核对号码或联系管理员");
@@ -94,8 +93,7 @@ public class PhoneAuthService {
     }
 
     private User requireAccount(String phone) {
-        Long uid = jdbc.query("SELECT user_id FROM verified_student_phone WHERE phone=?",
-                (rs, index) -> rs.getLong(1), phone).stream().findFirst().orElse(null);
+        Long uid = phones.findUserId(phone);
         User user = uid == null ? null : users.selectById(uid);
         if (user == null || !Integer.valueOf(0).equals(user.getStatus())) {
             throw new BizException(ResultCode.BAD_REQUEST, "此号码暂不能使用该功能，请联系管理员");

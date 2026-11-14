@@ -7,7 +7,7 @@ import com.campus.platform.module.idle.service.IdleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.campus.platform.module.ai.mapper.AgentRunMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -44,7 +44,7 @@ class AgentResourceVisibilityTest {
                 .thenReturn(List.of(new CampusResourceTools.Card("qa", 25, "真实选课问题", "课程", 0, null)));
         ObjectProvider<KnowledgeService> knowledge = mock();
         var service = new AgentService(model, json, mock(AgentQuota.class), conversation, prompts,
-                mock(AiConfigHolder.class), mock(JdbcTemplate.class), List.of(() -> List.of(tool)),
+                mock(AiConfigHolder.class), mock(AgentRunMapper.class), List.of(() -> List.of(tool)),
                 knowledge, mock(IdleService.class), resources);
 
         var reply = service.ask(1L, "查校园互助问答里的选课问题", null);
@@ -72,7 +72,7 @@ class AgentResourceVisibilityTest {
         when(resources.cards(List.of(new CampusResourceTools.Ref("lost", 15)))).thenReturn(List.of());
         ObjectProvider<KnowledgeService> knowledge = mock();
         var service = new AgentService(model, json, mock(AgentQuota.class), conversation, prompts,
-                mock(AiConfigHolder.class), mock(JdbcTemplate.class), List.of(() -> List.of(tool)),
+                mock(AiConfigHolder.class), mock(AgentRunMapper.class), List.of(() -> List.of(tool)),
                 knowledge, mock(IdleService.class), resources);
 
         var failure = assertThrows(BizException.class, () -> service.ask(1L, "查询失物", null));

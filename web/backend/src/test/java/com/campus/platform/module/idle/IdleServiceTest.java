@@ -11,8 +11,6 @@ import com.campus.platform.module.idle.entity.IdleReview;
 import com.campus.platform.module.idle.entity.IdleItem;
 
 import com.campus.platform.module.message.service.MessageService;
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.platform.common.BizException;
@@ -183,8 +181,7 @@ class IdleServiceTest {
         void appoint_happyPath() {
             when(idleItemMapper.selectById(ITEM_ID))
                     .thenReturn(item(Constants.AUDIT_PASS, Constants.IDLE_ON_SHELF));
-            when(idleItemMapper.update(org.mockito.ArgumentMatchers.<IdleItem>isNull(),
-                    org.mockito.ArgumentMatchers.<Wrapper<IdleItem>>any())).thenReturn(1);
+            when(idleItemMapper.changeListing(ITEM_ID, Constants.IDLE_ON_SHELF, Constants.IDLE_RESERVED, true)).thenReturn(1);
             User buyer = new User();
             buyer.setId(BUYER);
             buyer.setNickname("小明");
@@ -196,11 +193,7 @@ class IdleServiceTest {
             assertThat(saved.getBuyerId()).isEqualTo(BUYER);
             assertThat(saved.getSellerId()).isEqualTo(SELLER);
 
-            ArgumentCaptor<Wrapper<IdleItem>> reservation = ArgumentCaptor.forClass(Wrapper.class);
-            verify(idleItemMapper).update(org.mockito.ArgumentMatchers.<IdleItem>isNull(), reservation.capture());
-            UpdateWrapper<IdleItem> condition = (UpdateWrapper<IdleItem>) reservation.getValue();
-            assertThat(condition.getSqlSet()).contains("status");
-            assertThat(condition.getSqlSegment()).contains("id", "audit_status", "status");
+            verify(idleItemMapper).changeListing(ITEM_ID, Constants.IDLE_ON_SHELF, Constants.IDLE_RESERVED, true);
             verify(idleItemMapper, never()).updateById(any(IdleItem.class));
 
             verify(messageService).send(eq(SELLER), eq(Constants.MSG_INTERACT),
@@ -256,8 +249,7 @@ class IdleServiceTest {
                 }
                 return item(Constants.AUDIT_PASS, Constants.IDLE_ON_SHELF);
             });
-            when(idleItemMapper.update(org.mockito.ArgumentMatchers.<IdleItem>isNull(),
-                    org.mockito.ArgumentMatchers.<Wrapper<IdleItem>>any()))
+            when(idleItemMapper.changeListing(ITEM_ID, Constants.IDLE_ON_SHELF, Constants.IDLE_RESERVED, true))
                     .thenAnswer(invocation -> claimed.compareAndSet(false, true) ? 1 : 0);
             when(userMapper.selectById(anyLong())).thenAnswer(invocation -> {
                 User buyer = new User();
@@ -278,9 +270,7 @@ class IdleServiceTest {
                 assertThat(results).containsExactlyInAnyOrder(
                         200, ResultCode.DUPLICATE_OPERATION.getCode());
                 verify(appointmentMapper, times(1)).insert(any(IdleAppointment.class));
-                verify(idleItemMapper, times(2)).update(
-                        org.mockito.ArgumentMatchers.<IdleItem>isNull(),
-                        org.mockito.ArgumentMatchers.<Wrapper<IdleItem>>any());
+                verify(idleItemMapper, times(2)).changeListing(ITEM_ID, Constants.IDLE_ON_SHELF, Constants.IDLE_RESERVED, true);
             } finally {
                 releaseReaders.countDown();
                 pool.shutdownNow();
@@ -506,13 +496,11 @@ class IdleServiceTest {
         // 1) 预约
         IdleItem it = item(Constants.AUDIT_PASS, Constants.IDLE_ON_SHELF);
         when(idleItemMapper.selectById(ITEM_ID)).thenReturn(it);
-        when(idleItemMapper.update(org.mockito.ArgumentMatchers.<IdleItem>isNull(),
-                org.mockito.ArgumentMatchers.<Wrapper<IdleItem>>any())).thenReturn(1);
+        when(idleItemMapper.changeListing(ITEM_ID, Constants.IDLE_ON_SHELF, Constants.IDLE_RESERVED, true)).thenReturn(1);
         when(userMapper.selectById(BUYER)).thenReturn(new User());
         IdleAppointment created = idleService.appoint(BUYER, ITEM_ID, appointDto());
         assertThat(created.getStatus()).isEqualTo(Constants.APPOINT_PENDING);
-        verify(idleItemMapper).update(org.mockito.ArgumentMatchers.<IdleItem>isNull(),
-                org.mockito.ArgumentMatchers.<Wrapper<IdleItem>>any());
+        verify(idleItemMapper).changeListing(ITEM_ID, Constants.IDLE_ON_SHELF, Constants.IDLE_RESERVED, true);
 
         // 2) 卖家接受
         created.setId(APPOINT_ID);

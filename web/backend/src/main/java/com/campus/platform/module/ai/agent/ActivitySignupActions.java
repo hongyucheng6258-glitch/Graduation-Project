@@ -6,8 +6,8 @@ import com.campus.platform.module.activity.dto.SignupDTO;
 import com.campus.platform.module.activity.service.ActivityService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.campus.platform.module.ai.mapper.ActivitySignupActionMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ActivitySignupActions implements AgentToolSource {
     private final ActivityService activities;
-    private final JdbcTemplate jdbc;
+    private final ActivitySignupActionMapper actions;
     private final ObjectMapper json;
 
     @Override
@@ -48,10 +48,7 @@ public class ActivitySignupActions implements AgentToolSource {
         }
         String actionId = UUID.randomUUID().toString();
         LocalDateTime expiry = LocalDateTime.now().plusMinutes(10).withNano(0);
-        jdbc.update("""
-                INSERT INTO agent_action(id,user_id,activity_id,activity_title,remark,expires_at)
-                VALUES(?,?,?,?,?,?)
-                """, actionId, uid, id, activity.getTitle(), remark, expiry);
+        actions.insert(actionId, uid, id, activity.getTitle(), remark, expiry);
         return json.valueToTree(new Proposal(actionId, id, activity.getTitle(), remark, expiry));
     }
 
@@ -71,12 +68,10 @@ public class ActivitySignupActions implements AgentToolSource {
         if (id == null || !id.matches("[a-f0-9-]{36}")) {
             throw new BizException(ResultCode.NOT_FOUND, "未找到报名确认卡");
         }
-        var row = jdbc.query("""
-                SELECT activity_id,activity_title,remark,state,expires_at>NOW()
-                FROM agent_action WHERE id=? AND user_id=? FOR UPDATE
-                """, (rs, index) -> new Action(rs.getLong(1), rs.getString(2), rs.getString(3),
-                        rs.getString(4), rs.getBoolean(5)), id, uid).stream().findFirst()
-                .orElseThrow(() -> new BizException(ResultCode.NOT_FOUND, "未找到报名确认卡"));
+        var row = actions.lockAction(id, uid);
+        if (row == null) {
+            throw new BizException(ResultCode.NOT_FOUND, "未找到报名确认卡");
+        }
         if ("SUBMITTED".equals(row.state())) {
             return new Confirmation(row.activityId(), row.title(), "SUBMITTED", row.remark());
         }
@@ -87,20 +82,14 @@ public class ActivitySignupActions implements AgentToolSource {
         var dto = new SignupDTO();
         dto.setRemark(remark == null ? row.remark() : remark.strip());
         activities.signup(uid, row.activityId(), dto);
-        jdbc.update("UPDATE agent_action SET state='SUBMITTED',confirmed_at=NOW(),remark=? WHERE id=?", dto.getRemark(), id);
+        actions.markSubmitted(id, dto.getRemark());
         return new Confirmation(row.activityId(), row.title(), "SUBMITTED", dto.getRemark());
     }
 
     Card card(Long uid, String id) {
-        return jdbc.query("""
-                SELECT id,activity_id,activity_title,remark,expires_at,
-                    CASE WHEN state='PENDING' AND expires_at<=NOW() THEN 'EXPIRED' ELSE state END
-                FROM agent_action WHERE id=? AND user_id=?
-                """, (rs, row) -> new Card(rs.getString(1), rs.getLong(2), rs.getString(3), rs.getString(4),
-                        rs.getObject(5, LocalDateTime.class), rs.getString(6)), id, uid).stream().findFirst().orElse(null);
+        return actions.findCard(id, uid);
     }
 
-    private record Action(long activityId, String title, String remark, String state, boolean current) {}
     public record Proposal(String id, long activityId, String activityTitle, String remark, LocalDateTime expiresAt) {}
     public record Confirmation(long activityId, String activityTitle, String status, String remark) {}
     public record Card(String id, long activityId, String activityTitle, String remark, LocalDateTime expiresAt, String result) {}

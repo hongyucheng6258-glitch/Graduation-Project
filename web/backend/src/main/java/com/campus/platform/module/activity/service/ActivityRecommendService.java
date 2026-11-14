@@ -1,5 +1,6 @@
 package com.campus.platform.module.activity.service;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.platform.common.BizException;
@@ -41,11 +42,11 @@ public class ActivityRecommendService {
                     "AI 服务暂不可用（未配置 API Key），可稍后重试");
         }
         // 1. 我的报名历史（已通过）
-        List<ActivityMember> myMembers = memberMapper.selectList(new LambdaQueryWrapper<ActivityMember>()
+        List<ActivityMember> myMembers = memberMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<ActivityMember>()
                 .eq(ActivityMember::getUserId, userId)
                 .eq(ActivityMember::getStatus, Constants.MEMBER_APPROVED)
                 .orderByDesc(ActivityMember::getId)
-                .last("LIMIT 20"));
+                , 20));
         Set<Long> joinedIds = new HashSet<>();
         for (ActivityMember m : myMembers) {
             joinedIds.add(m.getActivityId());
@@ -62,14 +63,14 @@ public class ActivityRecommendService {
         }
         // 2. 候选活动（报名中/已满员且未结束，排除我报过的）
         LocalDateTime now = LocalDateTime.now();
-        List<Activity> candidates = activityMapper.selectList(new LambdaQueryWrapper<Activity>()
+        List<Activity> candidates = activityMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<Activity>()
                 .eq(Activity::getAuditStatus, Constants.AUDIT_PASS)
                 .and(w -> w.eq(Activity::getStatus, Constants.ACTIVITY_SIGNING)
                         .or().eq(Activity::getStatus, Constants.ACTIVITY_FULL))
                 .and(w -> w.isNull(Activity::getEndTime)
                         .or().gt(Activity::getEndTime, now))
                 .notIn(!joinedIds.isEmpty(), Activity::getId, joinedIds)
-                .last("LIMIT 40"));
+                , 40));
         if (candidates.isEmpty()) {
             return Collections.emptyList();
         }

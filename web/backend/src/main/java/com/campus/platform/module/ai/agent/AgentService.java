@@ -1,5 +1,6 @@
 package com.campus.platform.module.ai.agent;
 
+import com.campus.platform.module.ai.mapper.AgentRunMapper;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.ai.gateway.AiConfigHolder;
@@ -12,7 +13,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
@@ -86,14 +86,14 @@ public class AgentService {
     private final AgentConversation conversation;
     private final AgentPromptService prompts;
     private final AiConfigHolder config;
-    private final JdbcTemplate jdbc;
+    private final AgentRunMapper runs;
     private final ObjectProvider<KnowledgeService> knowledge;
     private final IdleService idle;
     private final CampusResourceTools resources;
     private final Map<String, AgentTool> tools;
 
     public AgentService(AgentModelClient model, ObjectMapper json, AgentQuota quota, AgentConversation conversation,
-                        AgentPromptService prompts, AiConfigHolder config, JdbcTemplate jdbc, List<AgentToolSource> sources,
+                        AgentPromptService prompts, AiConfigHolder config, AgentRunMapper runs, List<AgentToolSource> sources,
                         ObjectProvider<KnowledgeService> knowledge, IdleService idle, CampusResourceTools resources) {
         this.model = model;
         this.json = json;
@@ -101,7 +101,7 @@ public class AgentService {
         this.conversation = conversation;
         this.prompts = prompts;
         this.config = config;
-        this.jdbc = jdbc;
+        this.runs = runs;
         this.knowledge = knowledge;
         this.idle = idle;
         this.resources = resources;
@@ -120,10 +120,7 @@ public class AgentService {
             return reply;
         } finally {
             try {
-                jdbc.update("""
-                        INSERT INTO agent_run(user_id,session_id,prompt_version,model_name,tools,elapsed_ms,status)
-                        VALUES(?,?,?,?,?,?,?)
-                        """, userId, reply == null ? sessionId : Long.valueOf(reply.sessionId()), prompt.id(),
+                runs.insertRun(userId, reply == null ? sessionId : Long.valueOf(reply.sessionId()), prompt.id(),
                         config.getModel(), String.join(",", state.toolsUsed),
                         Duration.ofNanos(System.nanoTime() - start).toMillis(), reply == null ? "FAILED" : "OK");
             } catch (RuntimeException e) {

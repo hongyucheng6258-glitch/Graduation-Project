@@ -1,5 +1,6 @@
 package com.campus.platform.module.lostfound.service;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import com.campus.platform.module.lostfound.dto.ClaimDTO;
 import com.campus.platform.module.lostfound.dto.LostFoundPublishDTO;
 import com.campus.platform.module.lostfound.entity.LostFoundClaim;
@@ -222,11 +223,10 @@ public class LostFoundService {
 
     /** 当前用户对该信息的认领申请（无则返回 null；多次申请时取最新一条） */
     public ClaimVO myClaim(Long userId, Long lfId) {
-        LostFoundClaim claim = claimMapper.selectOne(new LambdaQueryWrapper<LostFoundClaim>()
+        LostFoundClaim claim = claimMapper.selectOne(MapperQueries.limit(new LambdaQueryWrapper<LostFoundClaim>()
                 .eq(LostFoundClaim::getLostFoundId, lfId)
                 .eq(LostFoundClaim::getClaimUserId, userId)
-                .orderByDesc(LostFoundClaim::getId)
-                .last("LIMIT 1"));
+                .orderByDesc(LostFoundClaim::getId), 1));
         if (claim == null) {
             return null;
         }

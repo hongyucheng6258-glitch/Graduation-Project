@@ -1,5 +1,6 @@
 package com.campus.platform.module.ai.rag;
 
+import com.campus.platform.common.mapper.MapperQueries;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.ai.agent.AgentModelClient;
@@ -48,8 +49,8 @@ public class KnowledgeAnswerService {
             validateSession(userId, sessionId, document.pdfId(), false);
         }
         var recent = sessionId == null ? List.<AiMessage>of() : messages.selectList(
-                new LambdaQueryWrapper<AiMessage>().eq(AiMessage::getSessionId, sessionId)
-                        .orderByDesc(AiMessage::getId).last("LIMIT 4"));
+                MapperQueries.limit(new LambdaQueryWrapper<AiMessage>().eq(AiMessage::getSessionId, sessionId)
+                        .orderByDesc(AiMessage::getId), 4));
         Reply reply = generate(userId, documentId, question, recent);
         if (sessionId != null) {
             transaction.executeWithoutResult(tx -> {
