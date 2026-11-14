@@ -5,12 +5,22 @@
       <el-tabs v-model="tab">
         <el-tab-pane :label="`好友 (${friends.length})`" name="contacts" />
         <el-tab-pane :label="`好友申请 (${incoming.length})`" name="requests" />
+        <el-tab-pane :label="`群聊邀请 (${groupInvites.length})`" name="groups" />
         <el-tab-pane label="找同学" name="search" />
       </el-tabs>
       <form v-if="tab === 'search'" class="search-form" @submit.prevent="search">
         <el-input v-model="keyword" maxlength="32" placeholder="输入同学昵称" aria-label="同学昵称" clearable />
         <el-button native-type="submit" type="primary" :disabled="!keyword.trim()" :loading="searching">搜索</el-button>
       </form>
+      <template v-if="tab === 'groups'">
+        <div v-for="invite in groupInvites" :key="invite.conversationId" class="contact">
+          <strong>{{ invite.groupName }}</strong>
+          <div class="actions">
+            <el-button size="small" type="primary" :loading="busy.has(invite.conversationId)" @click="decide(invite, true)">加入群聊</el-button>
+            <el-button size="small" text :disabled="busy.has(invite.conversationId)" @click="decide(invite, false)">拒绝</el-button>
+          </div>
+        </div>
+      </template>
       <div v-for="row in visible" :key="row.user.id" class="contact">
         <RouterLink class="person" :to="`/user/${row.user.id}`">
           <el-avatar shape="square" :size="42" :src="row.user.avatar">{{ row.user.nickname?.[0] || '同' }}</el-avatar>
@@ -32,7 +42,7 @@
           <el-button v-else size="small" type="primary" :loading="busy.has(row.user.id)" @click="apply(row)">加好友</el-button>
         </div>
       </div>
-      <EmptyBox v-if="!loading && !visible.length" :description="emptyText" />
+      <EmptyBox v-if="!loading && !(tab === 'groups' ? groupInvites.length : visible.length)" :description="emptyText" />
     </section>
   </div>
 </template>
@@ -42,7 +52,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listFriends, removeFriend, requestFriend, respondToFriend } from '../../api/friends'
-import { searchChatUsers } from '../../api/chat'
+import { searchChatUsers, listGroupInvitations, respondToGroupInvite } from '../../api/chat'
 import { useUserStore } from '../../store/user'
 import { startChat } from '../../utils/startChat'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
@@ -51,7 +61,9 @@ import EmptyBox from '../../components/EmptyBox.vue'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const tab = ref(route.query.tab === 'requests' ? 'requests' : 'contacts')
+const requestedTab = (value) => ['requests', 'groups'].includes(value) ? value : 'contacts'
+const tab = ref(requestedTab(route.query.tab))
+const groupInvites = ref([])
 const loading = ref(false)
 const searching = ref(false)
 const searched = ref(false)
@@ -64,6 +76,7 @@ let loadVersion = 0
 const friends = computed(() => contacts.value.filter((row) => row.status === 'friend'))
 const incoming = computed(() => contacts.value.filter((row) => row.status === 'incoming'))
 const visible = computed(() => {
+  if (tab.value === 'groups') return []
   if (tab.value === 'contacts') return friends.value
   if (tab.value === 'requests') return [...incoming.value, ...contacts.value.filter((row) => row.status === 'outgoing')]
   const byId = new Map(contacts.value.map((row) => [row.user.id, row.status]))
@@ -72,14 +85,13 @@ const visible = computed(() => {
 const emptyText = computed(() => {
   if (tab.value === 'contacts') return '还没有好友，可以去「找同学」发送申请'
   if (tab.value === 'requests') return '暂无待处理的好友申请'
+  if (tab.value === 'groups') return '暂无待确认的群聊邀请'
   return searched.value ? '没有找到匹配的同学' : '输入昵称查找同学'
 })
 
 watch(() => route.query.tab, (value) => {
-  if (value === 'requests') {
-    tab.value = 'requests'
-    load()
-  }
+  tab.value = requestedTab(value)
+  load()
 })
 onMounted(load)
 
@@ -87,12 +99,31 @@ async function load() {
   const version = ++loadVersion
   loading.value = true
   try {
-    const result = await listFriends()
-    if (version === loadVersion) contacts.value = result
+    const [result, invites] = await Promise.all([listFriends(), listGroupInvitations()])
+    if (version === loadVersion) {
+      contacts.value = result
+      groupInvites.value = invites
+    }
   } catch (error) {
     if (version === loadVersion) ElMessage.error(error.message || '通讯录加载失败')
   } finally {
     if (version === loadVersion) loading.value = false
+  }
+}
+
+async function decide(invite, accept) {
+  const id = invite.conversationId
+  if (busy.value.has(id)) return
+  busy.value.add(id)
+  try {
+    await respondToGroupInvite(id, accept)
+    if (accept) await router.push(`/chat/${id}`)
+    else await load()
+  } catch (error) {
+    ElMessage.error(error.message || '无法处理邀请')
+    await load()
+  } finally {
+    busy.value.delete(id)
   }
 }
 

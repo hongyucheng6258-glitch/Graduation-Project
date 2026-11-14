@@ -12,6 +12,9 @@
           <el-dropdown-menu>
             <el-dropdown-item v-if="group" command="members">群成员</el-dropdown-item>
             <el-dropdown-item v-else command="block">拉黑用户</el-dropdown-item>
+            <el-dropdown-item command="pin">{{ conversation.pinned ? '取消置顶' : '置顶会话' }}</el-dropdown-item>
+            <el-dropdown-item command="mute">{{ conversation.muted ? '关闭免打扰' : '消息免打扰' }}</el-dropdown-item>
+            <el-dropdown-item v-if="group" command="leave">退出群聊</el-dropdown-item>
             <el-dropdown-item command="hide">隐藏会话</el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -23,7 +26,7 @@
       <p v-if="!loading && !messages.length" class="history-end">{{ group ? '群聊已创建，发条消息打个招呼吧' : '发条消息打个招呼吧' }}</p>
       <template v-for="(message, index) in messages" :key="message.id || message.clientMessageId">
         <div v-if="showTime(message, messages[index - 1])" class="timestamp">{{ formatTime(message.createTime) }}</div>
-        <MessageBubble :message="message" :mine="isMine(message)" :sender="sender(message)" :group="group" @retry="retry" />
+        <MessageBubble :message="message" :mine="isMine(message)" :sender="sender(message)" :group="group" @retry="retry" @report="report" />
       </template>
     </div>
     <ChatComposer v-if="conversation" @send="send" />
@@ -32,9 +35,23 @@
     <div v-loading="membersLoading" class="members">
       <div v-for="member in members" :key="member.id" class="member">
         <el-avatar shape="square" :size="38" :src="member.avatar">{{ member.nickname?.charAt(0) }}</el-avatar>
-        <span>{{ member.nickname || '校园同学' }}{{ Number(member.id) === Number(userStore.userInfo?.id) ? '（我）' : '' }}</span>
+        <RouterLink :to="`/user/${member.id}`">{{ member.nickname || '校园同学' }}</RouterLink>
+        <span v-if="Number(member.id) === Number(conversation.groupOwnerId)">群主</span>
+        <el-button v-else-if="ownsGroup" size="small" text type="danger" @click="removeMember(member)">移出</el-button>
       </div>
     </div>
+    <div v-if="ownsGroup" class="group-management">
+      <el-button size="small" @click="rename">修改群名</el-button>
+      <el-button size="small" @click="inviteOpen = true">邀请好友</el-button>
+    </div>
+  </el-dialog>
+  <el-dialog v-if="ownsGroup" v-model="inviteOpen" title="邀请好友" width="min(420px, calc(100vw - 32px))" append-to-body>
+    <el-select v-model="invitee" filterable placeholder="选择好友" aria-label="选择好友" style="width: 100%">
+      <el-option v-for="friend in inviteChoices" :key="friend.id" :value="friend.id" :label="friend.nickname || '校园同学'" />
+    </el-select>
+    <template #footer>
+      <el-button type="primary" :disabled="!invitee" :loading="inviting" @click="sendInvite">发送邀请</el-button>
+    </template>
   </el-dialog>
 </template>
 
@@ -44,7 +61,9 @@ import { useRouter } from 'vue-router'
 import { ArrowLeft, MoreFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
-import { getConversation, hideConversation, blockChatUser, listGroupMembers } from '../../api/chat'
+import { getConversation, hideConversation, blockChatUser, listGroupMembers, leaveGroup,
+  removeGroupMember, inviteToGroup, renameGroup, setChatPreferences, reportChatMessage } from '../../api/chat'
+import { listFriends } from '../../api/friends'
 import { useChatStore } from '../../store/chat'
 import { useUserStore } from '../../store/user'
 import MessageBubble from './MessageBubble.vue'
@@ -56,9 +75,15 @@ const props = defineProps({ conversationId: { type: Number, required: true } })
 const id = props.conversationId
 let active = true
 const conversation = ref(null), loading = ref(false), historyLoading = ref(false), scroller = ref(null)
-const messages = computed(() => chatStore.messages(id))
+const messages = computed(() => {
+  const joinedAfter = conversation.value?.joinedAfterMessageId
+  return chatStore.messages(id).filter((message) => joinedAfter == null || message.id == null || message.id > joinedAfter)
+})
 const group = computed(() => Boolean(conversation.value?.groupName))
 const members = ref([]), showMembers = ref(false), membersLoading = ref(false)
+const ownsGroup = computed(() => group.value && Number(conversation.value?.groupOwnerId) === Number(userStore.userInfo?.id))
+const inviteOpen = ref(false), invitee = ref(null), inviting = ref(false), friends = ref([])
+const inviteChoices = computed(() => friends.value.filter((friend) => !members.value.some((member) => member.id === friend.id)))
 const membersById = computed(() => new Map(members.value.map((member) => [Number(member.id), member])))
 const isMine = (message) => Number(message.senderId) === Number(userStore.userInfo?.id)
 const sender = (message) => {
@@ -92,7 +117,7 @@ async function loadMore() {
   }
 }
 async function loadMembers() {
-  if (membersLoading.value || members.value.length) return
+  if (membersLoading.value) return
   membersLoading.value = true
   try {
     members.value = await listGroupMembers(id)
@@ -113,6 +138,16 @@ async function command(value) {
     if (value === 'members') {
       showMembers.value = true
       await loadMembers()
+    } else if (value === 'pin' || value === 'mute') {
+      const key = value === 'pin' ? 'pinned' : 'muted'
+      await setChatPreferences(id, { [key]: !conversation.value[key] })
+      conversation.value = await getConversation(id)
+      await chatStore.loadConversations()
+    } else if (value === 'leave') {
+      await ElMessageBox.confirm('退出后将无法查看此群消息。群主退出后由下一位成员接任。', '退出群聊', { type: 'warning' })
+      await leaveGroup(id)
+      delete chatStore.messagesByConversation[id]
+      await router.push('/chat')
     } else if (value === 'hide') {
       await hideConversation(id)
       await router.push('/chat')
@@ -125,6 +160,74 @@ async function command(value) {
     if (error !== 'cancel' && error !== 'close') ElMessage.error(error.message || '操作失败')
   }
 }
+async function confirmAction(action) {
+  try {
+    await action()
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error(error.message || '操作失败')
+  }
+}
+function rename() {
+  return confirmAction(async () => {
+    const { value } = await ElMessageBox.prompt('输入新的群聊名称', '修改群名', {
+      inputValue: conversation.value.groupName,
+      inputValidator: (text) => Boolean(text?.trim() && text.trim().length <= 32) || '请输入 1 至 32 字的群名'
+    })
+    await renameGroup(id, value.trim())
+    conversation.value = await getConversation(id)
+    await chatStore.loadConversations()
+  })
+}
+function removeMember(member) {
+  return confirmAction(async () => {
+    await ElMessageBox.confirm(`将 ${member.nickname || '该成员'} 移出群聊？`, '移出成员', { type: 'warning' })
+    await removeGroupMember(id, member.id)
+    await loadMembers()
+  })
+}
+watch(inviteOpen, (open) => {
+  if (!open) return
+  invitee.value = null
+  confirmAction(async () => {
+    friends.value = (await listFriends()).filter((row) => row.status === 'friend').map((row) => row.user)
+  })
+})
+async function sendInvite() {
+  if (inviting.value || !invitee.value) return
+  inviting.value = true
+  try {
+    await confirmAction(async () => {
+      await inviteToGroup(id, invitee.value)
+      inviteOpen.value = false
+      ElMessage.success('已发送入群邀请')
+    })
+  } finally {
+    inviting.value = false
+  }
+}
+function report(message) {
+  return confirmAction(async () => {
+    const { value } = await ElMessageBox.prompt('请说明这条消息的问题', '举报消息', {
+      inputType: 'textarea',
+      inputValidator: (text) => Boolean(text?.trim() && text.trim().length <= 500) || '请输入 1 至 500 字的举报原因',
+      confirmButtonText: '提交举报'
+    })
+    await reportChatMessage(message.id, { reasonType: '聊天消息违规', reason: value.trim() })
+    ElMessage.success('举报已提交，处理结果会在消息中心通知你')
+  })
+}
+watch(() => chatStore.conversationRevision, async () => {
+  try {
+    conversation.value = await getConversation(id)
+    if (active && group.value) await loadMembers()
+  } catch (error) {
+    if (!active) return
+    if (error.code === 403 || error.code === 404) {
+      delete chatStore.messagesByConversation[id]
+      await router.replace('/chat')
+    } else ElMessage.error(error.message || '会话状态刷新失败')
+  }
+})
 watch(() => messages.value.at(-1), (last) => {
   const element = scroller.value
   if (!historyLoading.value && last && element
@@ -169,7 +272,8 @@ header span { color: #69736d; font-size: 12px; }
 .history-end, .timestamp { text-align: center; color: #606b65; font-size: 12px; }
 .timestamp { margin: 19px 0 13px; }
 .members { display: grid; gap: 12px; max-height: 55vh; overflow: auto; }
-.member { display: flex; align-items: center; gap: 10px; }
+.member, .group-management { display: flex; align-items: center; gap: 10px; }
+.group-management { margin-top: 16px; }
 @media (max-width: 820px) {
   .room > header { padding: 8px 10px; }
   .back { display: inline-flex; }

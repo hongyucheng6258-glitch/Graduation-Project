@@ -127,12 +127,9 @@ public class ChatService {
         }
         ChatConversation group = new ChatConversation();
         group.setGroupName(name);
+        group.setGroupOwnerId(userId);
         conversationMapper.insert(group);
         memberMapper.insertMemberIfAbsent(group.getId(), userId);
-        for (Long invitee : invitees) {
-            memberMapper.insertMemberIfAbsent(group.getId(), invitee);
-        }
-        realtimePublisher.groupCreatedAfterCommit(group.getId(), invitees);
         return group;
     }
 
@@ -219,7 +216,9 @@ public class ChatService {
         ChatConversationMember receiver = memberMapper.findMember(conversationId, receiverId);
         if (receiver == null) throw new BizException(ResultCode.SYSTEM_ERROR, "会话成员数据异常");
         User sender = userMapper.selectById(senderId);
-        notificationService.remind(receiverId, conversationId, sender == null ? null : sender.getNickname());
+        if (!Integer.valueOf(1).equals(receiver.getMuted())) {
+            notificationService.remind(receiverId, conversationId, sender == null ? null : sender.getNickname());
+        }
         realtimePublisher.messageAfterCommit(message, receiver.getUnreadCount());
         return message;
     }
@@ -244,7 +243,8 @@ public class ChatService {
         Long effectiveLastReadMessageId = lastReadMessageId;
         if (lastReadMessageId != null) {
             ChatMessage requested = messageMapper.findMessageInConversation(lastReadMessageId, conversationId);
-            if (requested == null) {
+            if (requested == null || (member.getJoinedAfterMessageId() != null
+                    && lastReadMessageId <= member.getJoinedAfterMessageId())) {
                 throw new BizException(ResultCode.BAD_REQUEST, "已读消息不属于当前会话");
             }
             if (!conversation.isGroup() && !userId.equals(requested.getReceiverId())) {
@@ -321,6 +321,7 @@ public class ChatService {
             return toConversationVO(conversation, member, userId);
         }).filter(Objects::nonNull)
                 .sorted((left, right) -> {
+                    if (left.isPinned() != right.isPinned()) return left.isPinned() ? -1 : 1;
                     if (left.getLastMessageTime() == null && right.getLastMessageTime() == null) return Long.compare(right.getId(), left.getId());
                     if (left.getLastMessageTime() == null) return 1;
                     if (right.getLastMessageTime() == null) return -1;
@@ -353,8 +354,10 @@ public class ChatService {
 
     public List<ChatMessageVO> history(Long userId, Long conversationId, Long beforeId, int limit) {
         requireMember(conversationId, userId);
+        Long joinedAfter = requireMemberEntity(conversationId, userId).getJoinedAfterMessageId();
         List<ChatMessage> list = messageMapper.selectList(new LambdaQueryWrapper<ChatMessage>()
                 .eq(ChatMessage::getConversationId, conversationId)
+                .gt(joinedAfter != null, ChatMessage::getId, joinedAfter)
                 .lt(beforeId != null, ChatMessage::getId, beforeId)
                 .orderByDesc(ChatMessage::getId)
                 .last("LIMIT " + Math.min(Math.max(limit, 1), 100)));
@@ -365,7 +368,8 @@ public class ChatService {
         return memberMapper.selectObjs(new LambdaQueryWrapper<ChatConversationMember>()
                 .select(ChatConversationMember::getUnreadCount)
                 .eq(ChatConversationMember::getUserId, userId)
-                .eq(ChatConversationMember::getHidden, 0)).stream()
+                .eq(ChatConversationMember::getHidden, 0)
+                .eq(ChatConversationMember::getMuted, 0)).stream()
                 .mapToLong(v -> v == null ? 0L : ((Number) v).longValue()).sum();
     }
 
@@ -398,6 +402,11 @@ public class ChatService {
         ChatMessage message = messageMapper.selectById(messageId);
         if (message == null) throw new BizException(ResultCode.NOT_FOUND, "消息不存在");
         requireMember(message.getConversationId(), userId);
+        ChatConversationMember membership = requireMemberEntity(message.getConversationId(), userId);
+        if (userId.equals(message.getSenderId()) || (membership.getJoinedAfterMessageId() != null
+                && messageId <= membership.getJoinedAfterMessageId())) {
+            throw new BizException(ResultCode.FORBIDDEN, "无法举报该消息");
+        }
         Report report = new Report();
         report.setReporterId(userId);
         report.setTargetType("chat_message");

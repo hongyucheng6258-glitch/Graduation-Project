@@ -75,6 +75,15 @@ public class MessageService {
                 .set(Message::getIsRead, 1));
     }
 
+    public void clearBusinessNotice(Long userId, String bizType, Long bizId) {
+        messageMapper.update(null, new LambdaUpdateWrapper<Message>()
+                .eq(Message::getUserId, userId)
+                .eq(Message::getBizType, bizType)
+                .eq(Message::getBizId, bizId)
+                .eq(Message::getIsRead, 0)
+                .set(Message::getIsRead, 1));
+    }
+
     /** 全部已读 */
     public void markAllRead(Long userId) {
         messageMapper.update(null, new LambdaUpdateWrapper<Message>()

@@ -65,6 +65,18 @@ public class ReportAdminService {
         return report;
     }
 
+    public record ChatEvidence(Long senderId, String messageType, String text) {}
+
+    public ChatEvidence chatEvidence(Long id) {
+        Report report = detail(id);
+        if (!"chat_message".equals(report.getTargetType())) {
+            throw new BizException(ResultCode.BAD_REQUEST, "此举报没有聊天消息");
+        }
+        var message = chatMessageMapper.selectById(report.getTargetId());
+        if (message == null) throw new BizException(ResultCode.NOT_FOUND, "消息不存在");
+        return new ChatEvidence(message.getSenderId(), message.getMessageType(), message.getContent());
+    }
+
     /**
      * 处置举报。
      * action: offline=下架内容 / warn=警告发布者 / ban=封禁发布者 / ignore=举报不成立

@@ -496,6 +496,7 @@ CREATE TABLE IF NOT EXISTS `chat_conversation` (
   `user1_id` BIGINT DEFAULT NULL,
   `user2_id` BIGINT DEFAULT NULL,
   `group_name` VARCHAR(32) DEFAULT NULL,
+  `group_owner_id` BIGINT DEFAULT NULL,
   `last_message_id` BIGINT DEFAULT NULL,
   `last_message_summary` VARCHAR(255) DEFAULT NULL,
   `last_message_time` DATETIME DEFAULT NULL,
@@ -517,6 +518,8 @@ CREATE TABLE IF NOT EXISTS `chat_conversation_member` (
   `last_read_message_id` BIGINT DEFAULT NULL,
   `read_time` DATETIME DEFAULT NULL,
   `muted` TINYINT NOT NULL DEFAULT 0,
+  `pinned` TINYINT NOT NULL DEFAULT 0,
+  `joined_after_message_id` BIGINT DEFAULT NULL,
   `hidden` TINYINT NOT NULL DEFAULT 0,
   `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -683,4 +686,13 @@ CREATE TABLE IF NOT EXISTS friendship (
     update_time DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     UNIQUE KEY uk_friendship_pair (user1_id, user2_id),
     KEY idx_friendship_user2 (user2_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS chat_group_invite (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    conversation_id BIGINT NOT NULL,
+    invitee_id BIGINT NOT NULL,
+    inviter_id BIGINT NOT NULL,
+    UNIQUE KEY uk_chat_group_invite (conversation_id, invitee_id),
+    KEY idx_group_invitee (invitee_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -23,6 +23,7 @@ export const useChatStore = defineStore('chat', {
     socketState: 'disconnected',
     socket: null,
     activeConversationId: null,
+    conversationRevision: 0,
     currentUserId: null,
     pendingRequests: new Map(),
     ackTimeoutMs: 8000
@@ -71,7 +72,7 @@ export const useChatStore = defineStore('chat', {
       const conversations = await api.listConversations()
       if (version !== this.conversationLoadVersion) return
       this.conversations = conversations
-      this.unreadTotal = this.conversations.reduce((sum, item) => sum + Number(item.unreadCount || 0), 0)
+      this.unreadTotal = this.conversations.reduce((sum, item) => sum + (item.muted ? 0 : Number(item.unreadCount || 0)), 0)
     },
     async refreshUnread() {
       const result = await api.getChatUnreadCount()
@@ -178,6 +179,7 @@ export const useChatStore = defineStore('chat', {
         }
         this.loadConversations().catch(() => {})
       } else if (event.type === 'chat.conversation') {
+        if (Number(this.activeConversationId) === Number(event.conversationId)) this.conversationRevision++
         this.loadConversations().catch(() => {})
       } else if (event.type === 'chat.unread') {
         const next = applyUnreadEvent(this.$state, event)

@@ -94,6 +94,7 @@ public class FriendService {
         if (accept) requireAvailable(userId, peerId);
         row.setStatus(accept ? ACCEPTED : "declined");
         mapper.updateById(row);
+        messages.clearBusinessNotice(userId, "friendship", row.getId());
         if (accept) notify(peerId, userId, "好友申请已通过", "接受了你的好友申请", row.getId());
     }
 
@@ -102,6 +103,7 @@ public class FriendService {
         Friendship row = mapper.lock(userId, peerId);
         if (row == null) return;
         if (ACCEPTED.equals(row.getStatus()) || (PENDING.equals(row.getStatus()) && row.getRequesterId().equals(userId))) {
+            if (PENDING.equals(row.getStatus())) messages.clearBusinessNotice(peerId, "friendship", row.getId());
             mapper.deleteById(row.getId());
         }
     }

@@ -12,6 +12,7 @@
         <button v-else-if="message.sendState === 'failed'" :title="message.error" @click="$emit('retry', message)">发送失败，点击重试</button>
         <span v-else>{{ message.readTime ? '已读' : '已送达' }}</span>
       </div>
+      <button v-if="!mine && message.id" class="report" type="button" @click="$emit('report', message)">举报</button>
     </div>
   </div>
 </template>
@@ -23,7 +24,7 @@ defineProps({
   sender: Object,
   group: Boolean
 })
-defineEmits(['retry'])
+defineEmits(['retry', 'report'])
 </script>
 
 <style scoped>
@@ -42,4 +43,5 @@ defineEmits(['retry'])
 .bubble.image :deep(.el-image__inner) { display: block; height: auto; max-height: 360px; }
 .meta { margin-top: 4px; font-size: 11px; color: #626d66; }
 .meta button { border: 0; padding: 0; color: #ab322c; background: none; cursor: pointer; }
+.report { display: block; padding: 2px 0; border: 0; background: none; color: #626d66; font-size: 11px; cursor: pointer; }
 </style>

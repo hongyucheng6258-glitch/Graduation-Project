@@ -39,6 +39,8 @@ export function messageTarget(message) {
       const role = type === 'handoff_buyer' ? 'buyer' : 'seller'
       return `/idle/appointments?role=${role}${id ? '&appointmentId=' + id : ''}`
     }
+    case 'group_invite':
+      return '/friends?tab=groups'
     case 'friendship':
       return message?.title === '好友申请已通过' ? '/friends' : '/friends?tab=requests'
     case 'conversation':

@@ -23,6 +23,10 @@ public interface ChatConversationMemberMapper extends BaseMapper<ChatConversatio
             "VALUES(#{conversationId}, #{userId}, 0, 0, 0)")
     int insertMemberIfAbsent(Long conversationId, Long userId);
 
+    @Insert("INSERT INTO chat_conversation_member(conversation_id, user_id, last_read_message_id, joined_after_message_id) " +
+            "VALUES(#{conversationId}, #{userId}, #{lastMessageId}, #{lastMessageId})")
+    int joinGroup(Long conversationId, Long userId, Long lastMessageId);
+
     @Update("UPDATE chat_conversation_member SET hidden = 0 WHERE conversation_id = #{conversationId} AND user_id = #{userId}")
     int restoreMember(Long conversationId, Long userId);
 

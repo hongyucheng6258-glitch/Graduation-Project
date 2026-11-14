@@ -113,6 +113,7 @@ async function submit() {
     const conversation = isGroup.value
       ? await createGroup({ name: name.value.trim(), memberIds: selected.value })
       : await chatStore.createConversation({ targetUserId: selected.value })
+    if (isGroup.value) ElMessage.success('群聊已创建，已向所选同学发出邀请')
     open.value = false
     await router.push(`/chat/${conversation.id}`)
   } catch (error) {

@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 /**
  * 测试类别 13：私信
@@ -111,6 +112,43 @@ async function run(browser, request, ctx) {
     } finally {
       await chatPage.close();
     }
+  }
+
+  const thirdLogin = await h.apiLoginStudent(request, h.TEST_ACCOUNTS.third.studentNo, h.TEST_ACCOUNTS.third.password);
+  const third = h.apiWithToken(request, thirdLogin.token);
+  const group = await buyer.post('/chat/groups', {
+    name: '聊天回归',
+    memberIds: [sellerLogin.userInfo.id, thirdLogin.userInfo.id]
+  });
+  assert.equal(group.code, 200, group.message);
+  const id = group.data.id;
+  const route = `/chat/conversations/${id}`;
+  const invite = `/chat/groups/${id}/invitation`;
+  try {
+    assert.equal((await seller.get(route + '/messages')).code, 403);
+    const earlier = await buyer.post(route + '/messages', {
+      clientMessageId: randomUUID(), messageType: 'text', content: '加入前的消息'
+    });
+    assert.equal(earlier.code, 200, earlier.message);
+    assert.equal((await seller.put(invite, { accept: true })).code, 200);
+    assert.equal((await third.put(invite, { accept: false })).code, 200);
+    assert.equal((await third.get(route)).code, 403);
+    assert.deepEqual((await seller.get(route + '/messages')).data, []);
+    assert.equal((await seller.get(route)).data.lastMessageSummary, null);
+    const latest = await buyer.post(route + '/messages', {
+      clientMessageId: randomUUID(), messageType: 'text', content: '加入后的消息'
+    });
+    assert.equal(latest.code, 200, latest.message);
+    assert.equal((await seller.get(route)).data.unreadCount, 1);
+    assert.equal((await seller.put(route + '/read', { lastReadMessageId: latest.data.id })).code, 200);
+    assert.equal((await seller.get(route)).data.unreadCount, 0);
+    assert.equal((await seller.put(`/chat/groups/${id}/name`, { name: '成员改名' })).code, 403);
+    assert.equal((await buyer.delete(`/chat/groups/${id}/membership`)).code, 200);
+    assert.equal((await seller.get(route)).data.groupOwnerId, sellerLogin.userInfo.id);
+    h.record(C, '群邀请、历史权限、独立未读与群主交接', 'PASS');
+  } finally {
+    await buyer.delete(`/chat/groups/${id}/membership`);
+    await seller.delete(`/chat/groups/${id}/membership`);
   }
 
   // UI 截图

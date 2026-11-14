@@ -42,7 +42,7 @@ export function applyUnreadEvent(state, event) {
   return {
     ...state,
     conversations,
-    unreadTotal: conversations.reduce((sum, item) => sum + Number(item.unreadCount || 0), 0)
+    unreadTotal: conversations.reduce((sum, item) => sum + (item.muted ? 0 : Number(item.unreadCount || 0)), 0)
   }
 }
 

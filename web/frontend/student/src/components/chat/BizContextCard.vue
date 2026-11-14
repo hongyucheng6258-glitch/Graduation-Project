@@ -15,7 +15,7 @@ const paths = { idle: '/idle/detail/', lostfound: '/lostfound/detail/', activity
 function openContext() {
   const prefix = paths[props.conversation.contextType]
   if (prefix && props.conversation.contextId) router.push(prefix + props.conversation.contextId)
-  else if (props.conversation.contextType === 'post') router.push('/social')
+  else if (props.conversation.contextType === 'post') router.push({ path: '/social', query: { post: props.conversation.contextId } })
 }
 </script>
 

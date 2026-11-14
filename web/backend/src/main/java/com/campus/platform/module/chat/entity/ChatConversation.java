@@ -15,6 +15,7 @@ public class ChatConversation {
     private Long user1Id;
     private Long user2Id;
     private String groupName;
+    private Long groupOwnerId;
     private Long lastMessageId;
 
     public boolean isGroup() {

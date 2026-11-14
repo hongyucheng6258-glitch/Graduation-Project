@@ -11,6 +11,10 @@ import java.time.LocalDateTime;
 public class ConversationVO {
     private Long id;
     private String groupName;
+    private Long groupOwnerId;
+    private Long joinedAfterMessageId;
+    private boolean pinned;
+    private boolean muted;
     private Long peerUserId;
     private String peerNickname;
     private String peerAvatar;
@@ -25,11 +29,18 @@ public class ConversationVO {
         ConversationVO vo = new ConversationVO();
         vo.id = c.getId();
         vo.groupName = c.getGroupName();
+        vo.groupOwnerId = c.getGroupOwnerId();
+        vo.joinedAfterMessageId = member == null ? null : member.getJoinedAfterMessageId();
+        vo.pinned = member != null && Integer.valueOf(1).equals(member.getPinned());
+        vo.muted = member != null && Integer.valueOf(1).equals(member.getMuted());
         vo.peerUserId = peer == null ? null : peer.getId();
         vo.peerNickname = peer == null ? null : peer.getNickname();
         vo.peerAvatar = peer == null ? null : peer.getAvatar();
-        vo.lastMessageSummary = c.getLastMessageSummary();
-        vo.lastMessageTime = c.getLastMessageTime();
+        if (vo.joinedAfterMessageId == null || (c.getLastMessageId() != null
+                && c.getLastMessageId() > vo.joinedAfterMessageId)) {
+            vo.lastMessageSummary = c.getLastMessageSummary();
+            vo.lastMessageTime = c.getLastMessageTime();
+        }
         vo.unreadCount = member == null ? 0 : member.getUnreadCount();
         vo.contextType = c.getContextType();
         vo.contextId = c.getContextId();

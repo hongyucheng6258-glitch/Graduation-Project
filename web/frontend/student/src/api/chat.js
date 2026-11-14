@@ -16,3 +16,11 @@ export const reportChatMessage = (id, data) => request.post(`/chat/messages/${id
 export const createGroup = (data) => request.post('/chat/groups', data)
 export const listGroupMembers = (id) => request.get(`/chat/groups/${id}/members`)
 export const searchChatUsers = (keyword) => request.get('/chat/users', { params: { keyword } })
+
+export const listGroupInvitations = () => request.get('/chat/group-invitations')
+export const respondToGroupInvite = (id, accept) => request.put(`/chat/groups/${id}/invitation`, { accept })
+export const inviteToGroup = (id, userId) => request.post(`/chat/groups/${id}/invitations`, { userId })
+export const renameGroup = (id, name) => request.put(`/chat/groups/${id}/name`, { name })
+export const leaveGroup = (id) => request.delete(`/chat/groups/${id}/membership`)
+export const removeGroupMember = (id, memberId) => request.delete(`/chat/groups/${id}/members/${memberId}`)
+export const setChatPreferences = (id, data) => request.put(`/chat/conversations/${id}/preferences`, data)

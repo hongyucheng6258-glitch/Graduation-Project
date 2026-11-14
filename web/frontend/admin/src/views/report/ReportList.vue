@@ -60,6 +60,14 @@
 
   <!-- 处置弹窗 -->
   <el-dialog v-model="handleVisible" title="举报处置" width="min(460px, calc(100vw - 32px))">
+    <div v-if="currentRow?.targetType === 'chat_message'" v-loading="evidenceLoading" class="chat-evidence">
+      <template v-if="evidence">
+        <strong>被举报消息 · 发送人 #{{ evidence.senderId }}</strong>
+        <img v-if="evidence.messageType === 'image' && /^(?:data:image\/(?:png|jpeg|gif|webp);base64,|\/api\/assets\/)/.test(evidence.text)" :src="evidence.text" alt="被举报图片" />
+        <p v-else>{{ evidence.messageType === 'image' ? '图片无法预览' : evidence.text }}</p>
+      </template>
+      <p v-else-if="!evidenceLoading">{{ evidenceError }}</p>
+    </div>
     <el-form label-width="90px">
       <el-form-item label="处置动作">
         <el-radio-group v-model="handleForm.action">
@@ -96,7 +104,7 @@ import { useRoute, useRouter } from 'vue-router'
 import WtPageHeader from '../../components/wt/WtPageHeader.vue'
 import AdminRecordCard from '../../components/AdminRecordCard.vue'
 import { ElMessage } from 'element-plus'
-import { reportDetail, reportList, handleReport } from '../../api/report'
+import { reportDetail, reportList, handleReport, reportChatEvidence } from '../../api/report'
 import { formatTime } from '../../utils/date'
 
 const pending = useAdminPendingStore()
@@ -115,9 +123,28 @@ const loadError = ref('')
 const acting = ref(false)
 const handleVisible = ref(false)
 const currentRow = ref(null)
+const evidence = ref(null)
+const evidenceLoading = ref(false)
+const evidenceError = ref('')
+watch(currentRow, async (row, _, onCleanup) => {
+  let active = true
+  onCleanup(() => { active = false })
+  evidence.value = null
+  evidenceError.value = ''
+  evidenceLoading.value = row?.targetType === 'chat_message'
+  if (!evidenceLoading.value) return
+  try {
+    const result = await reportChatEvidence(row.id)
+    if (active) evidence.value = result
+  } catch (error) {
+    if (active) evidenceError.value = error.message || '无法加载被举报消息'
+  } finally {
+    if (active) evidenceLoading.value = false
+  }
+})
 const handleForm = reactive({ action: 'offline', handleResult: '' })
 
-const typeName = (t) => ({ idle: '闲置', activity: '活动', lostfound: '失物', post: '动态', comment: '评论', chat_message: '私信', user: '用户' }[t] || t)
+const typeName = (t) => ({ idle: '闲置', activity: '活动', lostfound: '失物', post: '动态', comment: '评论', chat_message: '聊天消息', user: '用户' }[t] || t)
 
 function changeStatus(value) {
   const view = value === 0 ? 'pending' : value === 1 ? 'handled' : undefined
@@ -188,3 +215,8 @@ watch([status, focusedId, pageNum], () => {
   load()
 }, { immediate: true })
 </script>
+
+<style scoped>
+.chat-evidence { min-height: 40px; margin-bottom: 16px; padding: 12px; border: 1px solid var(--line); overflow-wrap: anywhere; white-space: pre-wrap; }
+.chat-evidence img { display: block; max-width: 100%; max-height: 220px; margin-top: 8px; }
+</style>

@@ -12,3 +12,7 @@ export function reportDetail(id) {
 export function handleReport(id, data) {
   return request.put(`/report/${id}/handle`, data)
 }
+
+export function reportChatEvidence(id) {
+  return request.get(`/report/${id}/chat-evidence`)
+}

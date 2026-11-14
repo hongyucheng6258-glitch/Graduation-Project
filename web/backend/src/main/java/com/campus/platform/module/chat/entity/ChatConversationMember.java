@@ -18,6 +18,8 @@ public class ChatConversationMember {
     private Long lastReadMessageId;
     private LocalDateTime readTime;
     private Integer muted;
+    private Integer pinned;
+    private Long joinedAfterMessageId;
     private Integer hidden;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

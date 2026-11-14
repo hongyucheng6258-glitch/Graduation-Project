@@ -16,7 +16,7 @@
       </div>
       <div class="conversations" v-loading="loading">
         <RouterLink v-for="item in filtered" :key="item.id" class="conversation" :to="`/chat/${item.id}`">
-          <el-badge :value="item.unreadCount" :max="99" :hidden="!item.unreadCount">
+          <el-badge :value="item.unreadCount" :max="99" :hidden="item.muted || !item.unreadCount">
             <el-avatar shape="square" :class="{ group: item.groupName }" :size="44" :src="item.peerAvatar">
               <el-icon v-if="item.groupName"><UserFilled /></el-icon>
               <template v-else>{{ item.peerNickname?.charAt(0) || '同' }}</template>
@@ -24,7 +24,7 @@
           </el-badge>
           <div class="body">
             <div class="top">
-              <strong>{{ item.groupName || item.peerNickname || '校园同学' }}</strong>
+              <strong><span v-if="item.pinned" title="已置顶">↑ </span><span v-if="item.muted" title="消息免打扰">◌ </span>{{ item.groupName || item.peerNickname || '校园同学' }}</strong>
               <time>{{ formatTime(item.lastMessageTime) }}</time>
             </div>
             <div class="bottom">{{ item.lastMessageSummary || (item.groupName ? '群聊已创建' : '开始一段新对话') }}</div>

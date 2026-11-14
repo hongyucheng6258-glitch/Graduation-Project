@@ -4,7 +4,6 @@ import com.campus.platform.module.chat.dto.ChatReadDTO;
 import com.campus.platform.module.chat.dto.ChatReportDTO;
 import com.campus.platform.module.chat.dto.ChatSendDTO;
 import com.campus.platform.module.chat.dto.ConversationCreateDTO;
-import com.campus.platform.module.chat.dto.GroupCreateDTO;
 import com.campus.platform.module.chat.vo.ChatUserVO;
 import com.campus.platform.module.chat.entity.ChatConversation;
 import com.campus.platform.module.chat.entity.ChatMessage;
@@ -35,13 +34,6 @@ public class ChatController {
         ChatConversation value = chatService.createConversation(UserContext.getUid(), dto.getTargetUserId(),
                 dto.getContextType(), dto.getContextId(), dto.getContextTitle());
         return R.ok(chatService.conversation(UserContext.getUid(), value.getId()));
-    }
-
-    @PostMapping("/groups")
-    public R<ConversationVO> createGroup(@Valid @RequestBody GroupCreateDTO dto) {
-        Long userId = UserContext.getUid();
-        Long id = chatService.createGroup(userId, dto).getId();
-        return R.ok(chatService.conversation(userId, id));
     }
 
     @GetMapping("/groups/{id}/members")
