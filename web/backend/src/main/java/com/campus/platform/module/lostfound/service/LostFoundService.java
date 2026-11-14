@@ -77,17 +77,17 @@ public class LostFoundService {
 
     /** 详情 */
     public LostFoundVO detail(Long id, Long currentUid) {
-        LostFound lf = lostFoundMapper.selectById(id);
-        if (lf == null) {
+        LostFound lostFound = lostFoundMapper.selectById(id);
+        if (lostFound == null) {
             throw new BizException(ResultCode.NOT_FOUND, "信息不存在");
         }
-        boolean isOwner = currentUid != null && currentUid.equals(lf.getUserId());
-        if (lf.getAuditStatus() != Constants.AUDIT_PASS && !isOwner) {
+        boolean isOwner = currentUid != null && currentUid.equals(lostFound.getUserId());
+        if (lostFound.getAuditStatus() != Constants.AUDIT_PASS && !isOwner) {
             throw new BizException(ResultCode.AUDIT_PENDING);
         }
-        LostFoundVO vo = toVO(lf);
-        vo.setIsOwner(isOwner);
-        return vo;
+        LostFoundVO detail = toVO(lostFound);
+        detail.setIsOwner(isOwner);
+        return detail;
     }
 
     /** 编辑（仅发布者本人；已完成不可编辑；编辑后重新进入 AI 审核） */

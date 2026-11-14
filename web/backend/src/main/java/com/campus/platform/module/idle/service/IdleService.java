@@ -171,19 +171,19 @@ public class IdleService {
         item.setViewCount(item.getViewCount() + 1);
         idleItemMapper.update(null, new UpdateWrapper<IdleItem>().eq("id", id).setSql("view_count = view_count + 1"));
 
-        IdleDetailVO vo = new IdleDetailVO();
-        BeanUtil.copyProperties(toVO(item), vo);
-        vo.setIsOwner(isOwner);
+        IdleDetailVO detail = new IdleDetailVO();
+        BeanUtil.copyProperties(toVO(item), detail);
+        detail.setIsOwner(isOwner);
         // 当前用户对该物品的进行中预约
         if (currentUid != null && !isOwner) {
-            IdleAppointment my = appointmentMapper.selectOne(new LambdaQueryWrapper<IdleAppointment>()
+            IdleAppointment myAppointment = appointmentMapper.selectOne(new LambdaQueryWrapper<IdleAppointment>()
                     .eq(IdleAppointment::getItemId, id)
                     .eq(IdleAppointment::getBuyerId, currentUid)
                     .in(IdleAppointment::getStatus, Constants.APPOINT_PENDING, Constants.APPOINT_ACCEPTED)
                     .last("LIMIT 1"));
-            vo.setMyAppointmentId(my == null ? null : my.getId());
+            detail.setMyAppointmentId(myAppointment == null ? null : myAppointment.getId());
         }
-        // 卖家视角：返回进行中的预约（待确认→接受/拒绝，已接受→确认完成）
+        // 卖家查看待确认或已接受的预约。
         if (isOwner) {
             IdleAppointment pending = appointmentMapper.selectOne(new LambdaQueryWrapper<IdleAppointment>()
                     .eq(IdleAppointment::getItemId, id)
@@ -197,7 +197,7 @@ public class IdleService {
                 pv.setBuyerNickname(buyer == null ? "校园用户" : buyer.getNickname());
                 pv.setBuyerAvatar(buyer == null ? null : buyer.getAvatar());
                 pv.setMessage(pending.getMessage());
-                vo.setPendingAppointment(pv);
+                detail.setPendingAppointment(pv);
             }
         }
         // 当前用户可评价的已完成预约（买/卖双方都可评价）
@@ -210,19 +210,19 @@ public class IdleService {
                             .eq(IdleAppointment::getSellerId, currentUid))
                     .last("LIMIT 1"));
             if (reviewable != null) {
-                vo.setReviewAppointmentId(reviewable.getId());
+                detail.setReviewAppointmentId(reviewable.getId());
                 Long reviewed = reviewMapper.selectCount(new LambdaQueryWrapper<IdleReview>()
                         .eq(IdleReview::getAppointmentId, reviewable.getId())
                         .eq(IdleReview::getFromUserId, currentUid));
-                vo.setReviewed(reviewed != null && reviewed > 0);
+                detail.setReviewed(reviewed != null && reviewed > 0);
             }
         }
         // 卖家平均评分
         List<IdleReview> reviews = reviewMapper.selectList(new LambdaQueryWrapper<IdleReview>()
                 .eq(IdleReview::getToUserId, item.getUserId()));
-        vo.setSellerAvgScore(reviews.isEmpty() ? null :
+        detail.setSellerAvgScore(reviews.isEmpty() ? null :
                 reviews.stream().mapToInt(IdleReview::getScore).average().orElse(0));
-        return vo;
+        return detail;
     }
 
     /** 编辑（仅本人，编辑后重新待审） */

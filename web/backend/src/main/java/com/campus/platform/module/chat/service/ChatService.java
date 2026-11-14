@@ -163,13 +163,7 @@ public class ChatService {
             return retryMessage(duplicate, conversationId);
         }
         rateLimiter.checkSend(senderId);
-        // 聊天消息长度可由管理端调整。
-        if ("text".equals(dto.getMessageType()) && dto.getContent() != null) {
-            int maxLen = systemConfigHolder.getChatMessageMaxLength();
-            if (dto.getContent().length() > maxLen) {
-                throw new BizException(ResultCode.BAD_REQUEST, "消息内容不能超过 " + maxLen + " 字");
-            }
-        }
+        validateTextLength(dto);
         ChatConversation conversation = requireMemberForUpdate(conversationId, senderId);
         Long receiverId = conversation.isGroup() ? null : peerId(conversation, senderId);
         if (receiverId != null && blockMapper.countEitherDirection(senderId, receiverId) > 0) {
@@ -204,23 +198,43 @@ public class ChatService {
         conversation.setLastMessageTime(message.getCreateTime());
         conversationMapper.updateById(conversation);
         if (conversation.isGroup()) {
-            memberMapper.incrementGroupUnread(conversationId, senderId);
-            Map<Long, Integer> unread = memberMapper.findGroupRecipientsForUpdate(conversationId, senderId).stream()
-                    .collect(Collectors.toMap(ChatConversationMember::getUserId, ChatConversationMember::getUnreadCount));
-            realtimePublisher.groupMessageAfterCommit(message, unread);
-            return message;
+            publishGroupMessage(message, conversationId, senderId);
+        } else {
+            publishPrivateMessage(message, conversationId, senderId, receiverId);
         }
+        return message;
+    }
+
+    private void validateTextLength(ChatSendDTO dto) {
+        // 聊天消息长度可由管理端调整。
+        if ("text".equals(dto.getMessageType()) && dto.getContent() != null) {
+            int maxLength = systemConfigHolder.getChatMessageMaxLength();
+            if (dto.getContent().length() > maxLength) {
+                throw new BizException(ResultCode.BAD_REQUEST, "消息内容不能超过 " + maxLength + " 字");
+            }
+        }
+    }
+
+    private void publishGroupMessage(ChatMessage message, Long conversationId, Long senderId) {
+        memberMapper.incrementGroupUnread(conversationId, senderId);
+        Map<Long, Integer> unread = memberMapper.findGroupRecipientsForUpdate(conversationId, senderId).stream()
+                .collect(Collectors.toMap(ChatConversationMember::getUserId, ChatConversationMember::getUnreadCount));
+        realtimePublisher.groupMessageAfterCommit(message, unread);
+    }
+
+    private void publishPrivateMessage(ChatMessage message, Long conversationId, Long senderId, Long receiverId) {
         if (memberMapper.incrementUnreadAndRestore(conversationId, receiverId) != 1) {
             throw new BizException(ResultCode.SYSTEM_ERROR, "会话成员数据异常");
         }
         ChatConversationMember receiver = memberMapper.findMember(conversationId, receiverId);
-        if (receiver == null) throw new BizException(ResultCode.SYSTEM_ERROR, "会话成员数据异常");
+        if (receiver == null) {
+            throw new BizException(ResultCode.SYSTEM_ERROR, "会话成员数据异常");
+        }
         User sender = userMapper.selectById(senderId);
         if (!Integer.valueOf(1).equals(receiver.getMuted())) {
             notificationService.remind(receiverId, conversationId, sender == null ? null : sender.getNickname());
         }
         realtimePublisher.messageAfterCommit(message, receiver.getUnreadCount());
-        return message;
     }
 
     private ChatMessage retryMessage(ChatMessage previous, Long conversationId) {

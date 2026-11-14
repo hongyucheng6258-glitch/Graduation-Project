@@ -239,10 +239,10 @@ public class ActivityService {
         if (activity.getUserId().equals(userId)) {
             throw new BizException(ResultCode.BAD_REQUEST, "不能报名自己发布的活动");
         }
-        Long exist = memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
+        Long existingSignupCount = memberMapper.selectCount(new LambdaQueryWrapper<ActivityMember>()
                 .eq(ActivityMember::getActivityId, activityId)
                 .eq(ActivityMember::getUserId, userId));
-        if (exist > 0) {
+        if (existingSignupCount > 0) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "你已报名该活动，请等待审批");
         }
         ActivityMember member = new ActivityMember();
@@ -257,6 +257,11 @@ public class ActivityService {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "你已报名该活动，请等待审批");
         }
 
+        sendSignupNotifications(activity, userId);
+    }
+
+    private void sendSignupNotifications(Activity activity, Long userId) {
+        Long activityId = activity.getId();
         User applicant = userMapper.selectById(userId);
         messageService.send(activity.getUserId(), Constants.MSG_INTERACT,
                 "活动有新报名",

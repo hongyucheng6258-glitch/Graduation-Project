@@ -26,7 +26,6 @@ import org.springframework.transaction.annotation.Isolation;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /** 校园互助问答服务：提问→回答→采纳最佳回答 */
 @Service
@@ -66,13 +65,7 @@ public class QuestionService {
                                 .like(CampusQuestion::getTitle, keyword)
                                 .or().like(CampusQuestion::getContent, keyword))
                         .orderByDesc(CampusQuestion::getId));
-        List<CampusQuestion> rows = page.getRecords();
-        Map<Long, Long> answerCounts = countAnswers(rows.stream().map(CampusQuestion::getId).collect(Collectors.toList()));
-        return PageResult.of(page, q -> {
-            QuestionVO vo = toVO(q, null);
-            vo.setAnswerCount(answerCounts.getOrDefault(q.getId(), 0L));
-            return vo;
-        });
+        return toQuestionPage(page, null);
     }
 
     /** 详情 + 回答列表（公开，浏览计数；已下架不可见；第8项修复：回答分页返回） */
@@ -98,25 +91,9 @@ public class QuestionService {
                         .orderByAsc(CampusAnswer::getId));
         List<CampusAnswer> answers = answerPage.getRecords();
         Map<Long, User> authors = userMapper.findPublisherProfiles(answers.stream().map(CampusAnswer::getUserId).distinct().toList());
-        List<AnswerVO> answerVOs = answers.stream().map(a -> {
-            AnswerVO vo = new AnswerVO();
-            vo.setId(a.getId());
-            vo.setQuestionId(a.getQuestionId());
-            vo.setUserId(a.getUserId());
-            vo.setContent(a.getContent());
-            vo.setIsAccepted(a.getIsAccepted());
-            vo.setCreateTime(a.getCreateTime());
-            User u = authors.get(a.getUserId());
-            vo.setAnswererNickname(u == null ? "" : u.getNickname());
-            vo.setAnswererAvatar(u == null ? null : u.getAvatar());
-            return vo;
-        }).collect(Collectors.toList());
+        PageResult<AnswerVO> answerPageResult = PageResult.of(answerPage,
+                answer -> toAnswerView(answer, authors.get(answer.getUserId())));
         qvo.setAnswerCount(answerPage.getTotal());
-
-        PageResult<AnswerVO> answerPageResult = new PageResult<>();
-        answerPageResult.setTotal(answerPage.getTotal());
-        answerPageResult.setPages(answerPage.getPages());
-        answerPageResult.setList(answerVOs);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("question", qvo);
@@ -130,13 +107,7 @@ public class QuestionService {
                 new LambdaQueryWrapper<CampusQuestion>()
                         .eq(CampusQuestion::getUserId, userId)
                         .orderByDesc(CampusQuestion::getId));
-        List<CampusQuestion> rows = page.getRecords();
-        Map<Long, Long> answerCounts = countAnswers(rows.stream().map(CampusQuestion::getId).collect(Collectors.toList()));
-        return PageResult.of(page, q -> {
-            QuestionVO vo = toVO(q, userId);
-            vo.setAnswerCount(answerCounts.getOrDefault(q.getId(), 0L));
-            return vo;
-        });
+        return toQuestionPage(page, userId);
     }
 
     /** 回答 */
@@ -206,6 +177,29 @@ public class QuestionService {
         params.put("q_content", StrUtil.blankToDefault(q.getContent(), ""));
         return aiGatewayService.chat(userId, Constants.SCENE_QA_ANSWER,
                 "请参考回答这个校园互助问题", null, params).trim();
+    }
+
+    private PageResult<QuestionVO> toQuestionPage(Page<CampusQuestion> page, Long currentUid) {
+        List<Long> questionIds = page.getRecords().stream().map(CampusQuestion::getId).toList();
+        Map<Long, Long> answerCounts = countAnswers(questionIds);
+        return PageResult.of(page, question -> {
+            QuestionVO questionView = toVO(question, currentUid);
+            questionView.setAnswerCount(answerCounts.getOrDefault(question.getId(), 0L));
+            return questionView;
+        });
+    }
+
+    private AnswerVO toAnswerView(CampusAnswer answer, User author) {
+        AnswerVO answerView = new AnswerVO();
+        answerView.setId(answer.getId());
+        answerView.setQuestionId(answer.getQuestionId());
+        answerView.setUserId(answer.getUserId());
+        answerView.setContent(answer.getContent());
+        answerView.setIsAccepted(answer.getIsAccepted());
+        answerView.setCreateTime(answer.getCreateTime());
+        answerView.setAnswererNickname(author == null ? "" : author.getNickname());
+        answerView.setAnswererAvatar(author == null ? null : author.getAvatar());
+        return answerView;
     }
 
     private Map<Long, Long> countAnswers(List<Long> questionIds) {

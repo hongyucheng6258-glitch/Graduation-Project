@@ -87,37 +87,58 @@ public class PostService {
                         .eq(Post::getAuditStatus, Constants.AUDIT_PASS)
                         .like(normalizedKeyword != null && !normalizedKeyword.isEmpty(), Post::getContent, normalizedKeyword)
                         .orderByDesc(Post::getId));
-        List<Post> records = page.getRecords();
-        // 批量查作者与当前用户点赞状态
-        Map<Long, User> userMap = records.isEmpty() ? Map.of() :
-                userMapper.selectBatchIds(records.stream().map(Post::getUserId).distinct().toList())
-                        .stream().collect(Collectors.toMap(User::getId, Function.identity()));
-        Map<Long, Boolean> likedMap = (currentUid == null || records.isEmpty()) ? Map.of() :
-                likeMapper.selectList(new LambdaQueryWrapper<PostLike>()
-                        .eq(PostLike::getUserId, currentUid)
-                        .in(PostLike::getPostId, records.stream().map(Post::getId).toList()))
-                        .stream().collect(Collectors.toMap(PostLike::getPostId, l -> true));
-        Map<Long, Boolean> favoritedMap = (currentUid == null || records.isEmpty()) ? Map.of() :
-                favoriteMapper.selectList(new LambdaQueryWrapper<Favorite>()
-                        .eq(Favorite::getUserId, currentUid)
-                        .eq(Favorite::getTargetType, Constants.BIZ_POST)
-                        .in(Favorite::getTargetId, records.stream().map(Post::getId).toList()))
-                        .stream().collect(Collectors.toMap(Favorite::getTargetId, f -> true));
-        return PageResult.of(page, p -> {
-            PostVO vo = new PostVO();
-            BeanUtil.copyProperties(p, vo);
-            List<String> images = IdleService.parseJson(p.getImages());
+        List<Post> posts = page.getRecords();
+        Map<Long, User> authors = Map.of();
+        Map<Long, Boolean> likes = Map.of();
+        Map<Long, Boolean> favorites = Map.of();
+        if (!posts.isEmpty()) {
+            List<Long> authorIds = posts.stream().map(Post::getUserId).distinct().toList();
+            authors = userMapper.selectBatchIds(authorIds).stream()
+                    .collect(Collectors.toMap(User::getId, Function.identity()));
+        }
+        if (currentUid != null && !posts.isEmpty()) {
+            List<Long> postIds = posts.stream().map(Post::getId).toList();
+            likes = likeMapper.selectList(new LambdaQueryWrapper<PostLike>()
+                    .eq(PostLike::getUserId, currentUid)
+                    .in(PostLike::getPostId, postIds))
+                    .stream().collect(Collectors.toMap(PostLike::getPostId, like -> true));
+            favorites = favoriteMapper.selectList(new LambdaQueryWrapper<Favorite>()
+                    .eq(Favorite::getUserId, currentUid)
+                    .eq(Favorite::getTargetType, Constants.BIZ_POST)
+                    .in(Favorite::getTargetId, postIds))
+                    .stream().collect(Collectors.toMap(Favorite::getTargetId, favorite -> true));
+        }
+        return toListPage(page, authors, likes, favorites, compactImages);
+    }
+
+    private PageResult<PostVO> toListPage(Page<Post> page, Map<Long, User> authors,
+                                          Map<Long, Boolean> likes, Map<Long, Boolean> favorites,
+                                          boolean compactImages) {
+        return PageResult.of(page, post -> {
+            PostVO postView = new PostVO();
+            BeanUtil.copyProperties(post, postView);
+            List<String> images = IdleService.parseJson(post.getImages());
             if (compactImages) {
-                images = listedImages(p.getId(), images);
-                vo.setImages(IdleService.toJson(images));
+                images = listedImages(post.getId(), images);
+                postView.setImages(IdleService.toJson(images));
             }
-            vo.setImageList(images);
-            User u = userMap.get(p.getUserId());
-            vo.setNickname(u == null ? "" : u.getNickname());
-            vo.setAvatar(u == null ? null : compactImages ? ListedImages.avatar(u.getId(), u.getAvatar()) : u.getAvatar());
-            vo.setLiked(likedMap.getOrDefault(p.getId(), false));
-            vo.setFavorited(favoritedMap.getOrDefault(p.getId(), false));
-            return vo;
+            postView.setImageList(images);
+
+            User author = authors.get(post.getUserId());
+            if (author == null) {
+                postView.setNickname("");
+                postView.setAvatar(null);
+            } else {
+                postView.setNickname(author.getNickname());
+                String avatar = author.getAvatar();
+                if (compactImages) {
+                    avatar = ListedImages.avatar(author.getId(), avatar);
+                }
+                postView.setAvatar(avatar);
+            }
+            postView.setLiked(likes.getOrDefault(post.getId(), false));
+            postView.setFavorited(favorites.getOrDefault(post.getId(), false));
+            return postView;
         });
     }
 
