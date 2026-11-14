@@ -76,6 +76,7 @@ export const routes = [
       { path: 'notice/detail/:id', name: 'NoticeDetail', component: () => import('../views/notice/Detail.vue'), meta: { public: true } },
       // 消息与个人中心
       { path: 'message', name: 'MessageCenter', component: () => import('../views/message/MessageCenter.vue') },
+      { path: 'friends', name: 'Friends', component: () => import('../views/friends/Friends.vue') },
       { path: 'chat', name: 'ConversationList', component: () => import('../views/chat/ConversationList.vue') },
       { path: 'chat/:conversationId', name: 'ChatRoom', component: () => import('../views/chat/ChatRoom.vue') },
       { path: 'user/:id', name: 'UserHome', component: () => import('../views/user/UserHome.vue') },

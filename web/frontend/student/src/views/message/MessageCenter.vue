@@ -16,6 +16,7 @@
         <span>{{ t.label }}</span>
         <el-badge v-if="t.badge !== undefined" :value="t.badge" :hidden="!t.badge" />
       </button>
+      <RouterLink class="msg-side-item" to="/friends?tab=requests"><span>好友申请</span></RouterLink>
       <RouterLink class="msg-side-item private" to="/chat">
         <span>聊天会话</span>
         <el-badge :value="chatStore.unreadTotal" :hidden="!chatStore.unreadTotal" />

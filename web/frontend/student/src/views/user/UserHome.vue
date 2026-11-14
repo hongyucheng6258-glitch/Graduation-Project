@@ -22,6 +22,10 @@
           <p class="banner-time">加入于 {{ fmtTime(profile.createTime) }}</p>
         </div>
         <div class="banner-ops">
+          <el-button v-if="!isSelf && relationship === 'none'" :loading="requestingFriend" @click="addFriend">加好友</el-button>
+          <el-button v-else-if="!isSelf && relationship === 'incoming'" @click="router.push('/friends?tab=requests')">处理好友申请</el-button>
+          <span v-else-if="!isSelf && relationship === 'outgoing'">已发送好友申请</span>
+          <span v-else-if="!isSelf && relationship === 'friend'">已是好友</span>
           <el-button v-if="!isSelf" type="primary" plain @click="sendMsg">💬 发私信</el-button>
           <el-button v-if="!isSelf" type="danger" plain @click="reportVisible = true">举报</el-button>
           <el-button v-else @click="$router.push('/profile')">编辑我的资料 ›</el-button>
@@ -105,6 +109,7 @@ import { useUserStore } from '../../store/user'
 import { userProfile, userIdles, userPosts, userActivities, userLostfounds, userReviews } from '../../api/user'
 import { submitReport as apiSubmitReport } from '../../api/report'
 import { startChat } from '../../utils/startChat'
+import { friendStatus, requestFriend } from '../../api/friends'
 
 const route = useRoute()
 const router = useRouter()
@@ -112,6 +117,35 @@ const userStore = useUserStore()
 
 const uid = computed(() => Number(route.params.id))
 const isSelf = computed(() => Number(userStore.userInfo?.id) === uid.value)
+
+const relationship = ref(null)
+const requestingFriend = ref(false)
+watch([uid, isSelf], async ([id, self], _, onCleanup) => {
+  let active = true
+  onCleanup(() => { active = false })
+  relationship.value = null
+  if (self || !userStore.isLoggedIn) return
+  try {
+    const result = await friendStatus(id)
+    if (active) relationship.value = result.status
+  } catch (error) {
+    if (active) ElMessage.error(error.message || '好友状态加载失败')
+  }
+}, { immediate: true })
+
+async function addFriend() {
+  const id = uid.value
+  requestingFriend.value = true
+  try {
+    const result = await requestFriend(id)
+    if (uid.value === id) relationship.value = result.status
+    if (result.status === 'outgoing') ElMessage.success('好友申请已发送')
+  } catch (error) {
+    ElMessage.error(error.message || '好友申请发送失败')
+  } finally {
+    requestingFriend.value = false
+  }
+}
 
 const loading = ref(false)
 const profile = ref(null)

@@ -18,7 +18,7 @@
           @change="picker?.blur()"
           :loading="searching"
           :no-data-text="searched ? '未找到匹配的同学' : '输入昵称搜索'"
-          placeholder="输入昵称搜索"
+          placeholder="选择好友或搜索昵称"
           remote
           filterable
           :remote-method="search"
@@ -42,10 +42,11 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createGroup, searchChatUsers } from '../../api/chat'
+import { listFriends } from '../../api/friends'
 import { useChatStore } from '../../store/chat'
 
 defineEmits(['close'])
@@ -58,6 +59,7 @@ const isGroup = computed(() => mode.value === 'group')
 const name = ref('')
 const selected = ref(null)
 const options = ref([])
+const friends = ref([])
 const searching = ref(false)
 const searched = ref(false)
 const saving = ref(false)
@@ -70,6 +72,15 @@ watch(mode, () => {
   selected.value = isGroup.value ? [] : null
   search('')
 })
+onMounted(async () => {
+  const version = searchVersion
+  try {
+    friends.value = (await listFriends()).filter((row) => row.status === 'friend').map((row) => row.user)
+    if (version === searchVersion) options.value = friends.value
+  } catch {
+    // Nickname search remains available if the contacts list fails to load.
+  }
+})
 onBeforeUnmount(() => searchVersion++)
 
 async function search(keyword) {
@@ -79,7 +90,10 @@ async function search(keyword) {
   const picked = isGroup.value ? selected.value : [selected.value]
   const retained = options.value.filter((user) => picked.includes(user.id))
   options.value = retained
-  if (!searched.value) return
+  if (!searched.value) {
+    options.value = [...new Map([...retained, ...friends.value].map((user) => [user.id, user])).values()]
+    return
+  }
   searching.value = true
   try {
     const results = await searchChatUsers(keyword.trim())

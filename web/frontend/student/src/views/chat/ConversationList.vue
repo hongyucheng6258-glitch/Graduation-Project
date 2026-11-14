@@ -11,6 +11,7 @@
         </el-button>
       </header>
       <div class="search">
+        <RouterLink class="contacts-link" to="/friends">通讯录</RouterLink>
         <el-input v-model="filter" :prefix-icon="Search" placeholder="搜索会话" aria-label="搜索会话" clearable />
       </div>
       <div class="conversations" v-loading="loading">
@@ -91,7 +92,8 @@ onMounted(async () => {
 h1 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 22px; }
 header p { margin: 3px 0 0; color: #5e6862; font-size: 12px; }
 .unread-total { padding: 2px 7px; border-radius: 12px; background: #e4f8ec; color: #14613b; font-size: 11px; }
-.search { padding: 0 14px 12px; }
+.search { display: flex; align-items: center; gap: 8px; padding: 0 14px 12px; }
+.contacts-link { flex: none; color: #14613b; font-size: 13px; }
 .search :deep(.el-input__wrapper) { background: #f2f3f2; border-radius: 6px; box-shadow: none; }
 .conversations { flex: 1; min-height: 0; overflow-y: auto; border-top: 1px solid #ededed; }
 .conversation { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; padding: 13px 15px; border-bottom: 1px solid #f1f1f1; color: #202521; text-decoration: none; }

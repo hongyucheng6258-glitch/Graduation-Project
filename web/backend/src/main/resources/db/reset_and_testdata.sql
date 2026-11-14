@@ -67,6 +67,7 @@ DEALLOCATE PREPARE agent_cleanup_stmt;
 
 -- ==================== 1. 清空所有表数据 ====================
 TRUNCATE TABLE `chat_message`;
+TRUNCATE TABLE `friendship`;
 TRUNCATE TABLE `chat_conversation_member`;
 TRUNCATE TABLE `chat_conversation`;
 TRUNCATE TABLE `upload_resource`;
