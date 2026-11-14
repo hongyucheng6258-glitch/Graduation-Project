@@ -297,7 +297,8 @@ public class IdleService {
      */
     @Transactional
     public IdleAppointment appoint(Long userId, Long itemId, AppointDTO dto) {
-        IdleItem item = idleItemMapper.selectById(itemId);
+        // 先锁定物品，同一物品的预约请求按顺序检查状态。
+        IdleItem item = idleItemMapper.lockForAppointment(itemId);
         if (item == null || item.getAuditStatus() != Constants.AUDIT_PASS) {
             throw new BizException(ResultCode.NOT_FOUND, "物品不存在或未通过审核");
         }

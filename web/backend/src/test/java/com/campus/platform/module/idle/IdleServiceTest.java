@@ -179,7 +179,7 @@ class IdleServiceTest {
         @Test
         @DisplayName("正常预约：落库待确认 + 物品转已预约 + 通知卖家")
         void appoint_happyPath() {
-            when(idleItemMapper.selectById(ITEM_ID))
+            when(idleItemMapper.lockForAppointment(ITEM_ID))
                     .thenReturn(item(Constants.AUDIT_PASS, Constants.IDLE_ON_SHELF));
             when(idleItemMapper.changeListing(ITEM_ID, Constants.IDLE_ON_SHELF, Constants.IDLE_RESERVED, true)).thenReturn(1);
             User buyer = new User();
@@ -205,7 +205,7 @@ class IdleServiceTest {
         @Test
         @DisplayName("未过审物品不可预约 → 404")
         void appoint_notAudited() {
-            when(idleItemMapper.selectById(ITEM_ID))
+            when(idleItemMapper.lockForAppointment(ITEM_ID))
                     .thenReturn(item(Constants.AUDIT_PENDING, Constants.IDLE_ON_SHELF));
 
             assertThatThrownBy(() -> idleService.appoint(BUYER, ITEM_ID, appointDto()))
@@ -217,7 +217,7 @@ class IdleServiceTest {
         @Test
         @DisplayName("不能预约自己发布的物品 → 400")
         void appoint_self() {
-            when(idleItemMapper.selectById(ITEM_ID))
+            when(idleItemMapper.lockForAppointment(ITEM_ID))
                     .thenReturn(item(Constants.AUDIT_PASS, Constants.IDLE_ON_SHELF));
 
             assertThatThrownBy(() -> idleService.appoint(SELLER, ITEM_ID, appointDto()))
@@ -228,7 +228,7 @@ class IdleServiceTest {
         @Test
         @DisplayName("已被预约的物品再次预约 → 1005 重复操作")
         void appoint_alreadyReserved() {
-            when(idleItemMapper.selectById(ITEM_ID))
+            when(idleItemMapper.lockForAppointment(ITEM_ID))
                     .thenReturn(item(Constants.AUDIT_PASS, Constants.IDLE_RESERVED));
 
             assertThatThrownBy(() -> idleService.appoint(BUYER, ITEM_ID, appointDto()))
@@ -242,7 +242,7 @@ class IdleServiceTest {
             CountDownLatch readers = new CountDownLatch(2);
             CountDownLatch releaseReaders = new CountDownLatch(1);
             AtomicBoolean claimed = new AtomicBoolean();
-            when(idleItemMapper.selectById(ITEM_ID)).thenAnswer(invocation -> {
+            when(idleItemMapper.lockForAppointment(ITEM_ID)).thenAnswer(invocation -> {
                 readers.countDown();
                 if (!releaseReaders.await(5, TimeUnit.SECONDS)) {
                     throw new AssertionError("两名买家未同时完成商品读取");
@@ -495,6 +495,7 @@ class IdleServiceTest {
     void fullLoop_shouldAdvanceStatusStrictly() {
         // 1) 预约
         IdleItem it = item(Constants.AUDIT_PASS, Constants.IDLE_ON_SHELF);
+        when(idleItemMapper.lockForAppointment(ITEM_ID)).thenReturn(it);
         when(idleItemMapper.selectById(ITEM_ID)).thenReturn(it);
         when(idleItemMapper.changeListing(ITEM_ID, Constants.IDLE_ON_SHELF, Constants.IDLE_RESERVED, true)).thenReturn(1);
         when(userMapper.selectById(BUYER)).thenReturn(new User());

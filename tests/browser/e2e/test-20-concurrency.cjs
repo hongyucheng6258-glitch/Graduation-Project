@@ -61,14 +61,15 @@ async function run(browser, request, ctx) {
       third.post(`/idle/${idleId}/appoint`, { message: `${h.PREFIX}并发买家二` })
     ]);
     const successCount = [first, second].filter(r => r.code === 200).length;
+    const duplicateCount = [first, second].filter(r => r.code === 1009).length;
     const detail = await seller.get(`/idle/${idleId}`);
     const appointments = await seller.get('/idle/appoint/my', { role: 'seller', pageNum: 1, pageSize: 20 });
     const rows = h.unwrapList(appointments).filter(r => String(r.itemId) === String(idleId));
-    if (successCount === 1 && detail.code === 200 && detail.data.status === 1 && rows.length === 1) {
+    if (successCount === 1 && duplicateCount === 1 && detail.code === 200 && detail.data.status === 1 && rows.length === 1) {
       h.record(C, '并发预约同一物品仅成功一次', 'PASS', `responses=${first.code},${second.code}`);
       concurrencyVerified = true;
     } else {
-      h.record(C, '并发预约同一物品仅成功一次', 'FAIL', `successCount=${successCount} status=${detail.data?.status} rows=${rows.length}`);
+      h.record(C, '并发预约同一物品仅成功一次', 'FAIL', `responses=${first.code},${second.code} status=${detail.data?.status} rows=${rows.length}`);
     }
   } else {
     h.record(C, '并发预约同一物品仅成功一次', 'BLOCK', `发布失败: code=${freshItem.code} message=${freshItem.message}`);

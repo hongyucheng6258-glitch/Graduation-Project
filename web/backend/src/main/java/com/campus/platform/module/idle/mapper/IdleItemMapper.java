@@ -18,6 +18,9 @@ public interface IdleItemMapper extends BaseMapper<IdleItem> {
     @Select("SELECT id,user_id,title,audit_status,audit_reason,ai_risk_level FROM idle_item WHERE id=#{id} FOR UPDATE")
     IdleItem lockForAudit(@Param("id") Long id);
 
+    @Select("SELECT * FROM idle_item WHERE id=#{id} FOR UPDATE")
+    IdleItem lockForAppointment(@Param("id") Long id);
+
     @Update("UPDATE idle_item SET audit_status=#{status},audit_reason=#{reason,jdbcType=VARCHAR},audit_source=#{source} WHERE id=#{id}")
     int updateAuditDecision(@Param("id") Long id, @Param("status") int status,
                             @Param("reason") String reason, @Param("source") String source);
