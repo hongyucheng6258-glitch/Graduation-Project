@@ -12,6 +12,9 @@ server:
       force-response: true
 
 spring:
+  threads:
+    virtual:
+      enabled: true
   application:
     name: ai-campus-platform
   # ---- MySQL 数据源（本地默认，库先执行 db/schema.sql 初始化） ----

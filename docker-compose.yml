@@ -61,7 +61,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      SPRING_THREADS_VIRTUAL_ENABLED: "${SPRING_THREADS_VIRTUAL_ENABLED:-false}"
+      SPRING_THREADS_VIRTUAL_ENABLED: "${SPRING_THREADS_VIRTUAL_ENABLED:-true}"
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env (must match redis service)}
       AI_BASE_URL: ${AI_BASE_URL:-https://api.deepseek.com}
       AI_API_KEY: ${AI_API_KEY:-}
