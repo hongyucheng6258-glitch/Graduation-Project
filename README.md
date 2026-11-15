@@ -53,7 +53,7 @@ flowchart LR
     Agent --> Qdrant[(Qdrant)]
 ```
 
-- **后端**使用 Java 17、Spring Boot、MyBatis-Plus、JWT、BCrypt 和 Spring WebSocket。MySQL 保存业务记录、上传资源、文档切片和提示词版本，Redis 用于验证码、缓存与限流。
+- **后端**使用 Java 21、Spring Boot、MyBatis-Plus、JWT、BCrypt 和 Spring WebSocket。MySQL 保存业务记录、上传资源、文档切片和提示词版本，Redis 用于验证码、缓存与限流。
 - **数据库访问**由 Mapper 层负责。常规增删改查使用 MyBatis-Plus，自定义 SQL 放在对应的 Mapper。Service 负责业务规则和事务。
 - **前端**使用 Vue 3、Vite、Pinia、Vue Router、Element Plus 和 ECharts。Three.js 渲染校园场景，Tesseract.js 支持浏览器内的错题 OCR。
 - **部署**使用 Docker Compose、Nginx 和多阶段构建。完整环境包含 MySQL、Redis、Spring Boot、两个 Web 端、Embedding 和 Qdrant，Agent 表结构由一次性迁移任务初始化。
@@ -111,7 +111,7 @@ docker compose @stack down
 
 ## 开发与测试
 
-源码开发需要 Java 17、Maven、Node.js/npm、MySQL 和 Redis。本地 Vite 默认使用 `5173`、`5174`，代理到后端 `8080`。Java 服务的配置和 SQL 初始化见 [部署说明](./部署说明.md)。
+源码开发需要 Java 21、Maven、Node.js/npm、MySQL 和 Redis。本地 Vite 默认使用 `5173`、`5174`，代理到后端 `8080`。Java 服务的配置和 SQL 初始化见 [部署说明](./部署说明.md)。
 
 ### 在 IntelliJ IDEA 启动后端
 
