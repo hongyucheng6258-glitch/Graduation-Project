@@ -124,6 +124,7 @@
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                  <el-dropdown-item command="friends">好友列表</el-dropdown-item>
                   <el-dropdown-item command="wrong">错题本</el-dropdown-item>
                   <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
                 </el-dropdown-menu>
@@ -326,6 +327,7 @@ function onPublishCommand(cmd) {
 
 function onCommand(cmd) {
   if (cmd === 'profile') router.push('/profile')
+  else if (cmd === 'friends') router.push('/friends')
   else if (cmd === 'wrong') router.push('/ai/wrong')
   else if (cmd === 'logout') {
     userStore.logout()
