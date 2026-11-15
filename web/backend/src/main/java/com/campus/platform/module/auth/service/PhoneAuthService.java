@@ -8,8 +8,9 @@ import com.campus.platform.module.user.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,19 +23,8 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class PhoneAuthService {
     private static final SecureRandom RANDOM = new SecureRandom();
-    private static final DefaultRedisScript<Long> VERIFY = new DefaultRedisScript<>("""
-            local value = redis.call('GET', KEYS[1])
-            if not value then return 0 end
-            if string.sub(value,1,6) == ARGV[1] then
-                redis.call('DEL', KEYS[1])
-                return 1
-            end
-            local remaining = tonumber(string.sub(value,7)) - 1
-            local ttl = redis.call('PTTL', KEYS[1])
-            if remaining <= 0 or ttl <= 0 then redis.call('DEL', KEYS[1])
-            else redis.call('PSETEX', KEYS[1], ttl, string.sub(value,1,6)..remaining) end
-            return 0
-            """, Long.class);
+    private static final RedisScript<Long> VERIFY = RedisScript.of(
+            new ClassPathResource("scripts/redis/auth/verify-phone-code.lua"), Long.class);
 
     private final StringRedisTemplate redis;
     private final VerifiedPhoneMapper phones;
