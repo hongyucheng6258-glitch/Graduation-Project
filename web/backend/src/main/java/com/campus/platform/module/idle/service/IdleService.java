@@ -367,9 +367,13 @@ public class IdleService {
             throw new BizException(ResultCode.FORBIDDEN, "无权操作该预约");
         }
         int status = appointment.getStatus();
-        if (status == Constants.APPOINT_CANCELLED) return;
-        if ((status != Constants.APPOINT_PENDING && status != Constants.APPOINT_ACCEPTED)
-                || (status == Constants.APPOINT_ACCEPTED && handoffs.hasCompletionConfirmation(appointId))) {
+        if (status == Constants.APPOINT_CANCELLED) {
+            return;
+        }
+        boolean accepted = status == Constants.APPOINT_ACCEPTED;
+        boolean canCancel = status == Constants.APPOINT_PENDING
+                || (accepted && !handoffs.hasCompletionConfirmation(appointId));
+        if (!canCancel) {
             throw new BizException(ResultCode.BAD_REQUEST, "当前预约不可取消");
         }
         appointment.setStatus(Constants.APPOINT_CANCELLED);
@@ -390,7 +394,10 @@ public class IdleService {
         if (appointment.getStatus() != Constants.APPOINT_ACCEPTED) {
             throw new BizException(ResultCode.BAD_REQUEST, "预约未处于已接受状态");
         }
-        if (!handoffs.markDone(appointment, userId)) return;
+        boolean handoffComplete = handoffs.markDone(appointment, userId);
+        if (!handoffComplete) {
+            return;
+        }
         appointment.setStatus(Constants.APPOINT_FINISHED);
         appointmentMapper.updateById(appointment);
         idleItemMapper.updateAvailability(appointment.getItemId(), Constants.IDLE_FINISHED, null, false);

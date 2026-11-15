@@ -32,7 +32,6 @@ import com.campus.platform.config.SystemConfigHolder;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
 import com.campus.platform.module.user.mapper.UserMapper;
-import com.campus.platform.utils.SignTokenUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -59,7 +58,7 @@ public class ActivityService {
     private final ActivitySigninMapper signinMapper;
     private final UserMapper userMapper;
     private final MessageService messageService;
-    private final SignTokenUtils signTokenUtils;
+    private final ActivitySigninService signinService;
     private final SensitiveWordService sensitiveWordService;
     private final ContentAiAuditService contentAiAuditService;
     private final SystemConfigHolder systemConfigHolder;
@@ -196,7 +195,7 @@ public class ActivityService {
         ActivityDetailVO vo = new ActivityDetailVO();
         BeanUtil.copyProperties(toVO(activity), vo);
         vo.setIsOwner(isOwner);
-        vo.setSigninOpen(signinOpen(activity, LocalDateTime.now()));
+        vo.setSigninOpen(ActivitySigninService.signinOpen(activity, LocalDateTime.now()));
         if (currentUid != null && !isOwner) {
             ActivityMember my = memberMapper.selectOne(MapperQueries.limit(new LambdaQueryWrapper<ActivityMember>()
                     .eq(ActivityMember::getActivityId, id)
@@ -214,12 +213,12 @@ public class ActivityService {
 
     /**
      * 报名（审批制，联合唯一索引防重复报名）。
-     * 时间/人数/下架等校验统一走 checkSignAllowed（最终安全边界）。
+     * 时间/人数/下架等校验统一走 checkSignupAllowed（最终安全边界）。
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void signup(Long userId, Long activityId, SignupDTO dto) {
         Activity activity = activityMapper.selectForUpdate(activityId);
-        checkSignAllowed(activityId, activity);
+        checkSignupAllowed(activityId, activity);
         waitlist.refresh(activity);
         if (waitlist.queued(activityId, userId) || waitlist.reservedForOthers(activity, userId)) {
             throw new BizException(ResultCode.BAD_REQUEST, "请从候补入口操作，当前空位优先用于递补");
@@ -414,60 +413,12 @@ public class ActivityService {
                 .eq(ActivityMember::getStatus, Constants.MEMBER_APPROVED));
     }
 
-    private boolean signinOpen(Activity activity, LocalDateTime now) {
-        return activity.getAuditStatus() == Constants.AUDIT_PASS
-                && activity.getStatus() != Constants.ACTIVITY_OFF
-                && activity.getStatus() != Constants.ACTIVITY_ENDED
-                && activity.getStartTime() != null
-                && !now.isBefore(activity.getStartTime())
-                && (activity.getEndTime() == null || now.isBefore(activity.getEndTime()));
-    }
-
-    /** 发布者获取签到二维码内容（campus://signin/{id}/{token}） */
     public String signinQrCode(Long userId, Long activityId) {
-        checkPublisher(userId, activityId);
-        return signTokenUtils.generateQrContent(activityId);
+        return signinService.signinQrCode(userId, activityId);
     }
 
-    /**
-     * 扫码签到：token 校验 + 必须为已通过报名的成员 + 防重复签到。
-     */
-    @Transactional
     public void signin(Long userId, SigninDTO dto) {
-        if (!signTokenUtils.verify(dto.getActivityId(), dto.getToken())) {
-            throw new BizException(ResultCode.BAD_REQUEST, "签到二维码无效");
-        }
-        Activity activity = activityMapper.selectForUpdate(dto.getActivityId());
-        if (activity == null) {
-            throw new BizException(ResultCode.NOT_FOUND, "活动不存在");
-        }
-        if (!signinOpen(activity, LocalDateTime.now())) {
-            throw new BizException(ResultCode.BAD_REQUEST, "仅可在活动开始后、结束前签到");
-        }
-        ActivityMember member = memberMapper.selectOne(MapperQueries.limit(new LambdaQueryWrapper<ActivityMember>()
-                .eq(ActivityMember::getActivityId, dto.getActivityId())
-                .eq(ActivityMember::getUserId, userId)
-                , 1));
-        if (member == null || member.getStatus() != Constants.MEMBER_APPROVED) {
-            throw new BizException(ResultCode.FORBIDDEN, "报名未通过，无法签到");
-        }
-        Long exist = signinMapper.selectCount(new LambdaQueryWrapper<ActivitySignin>()
-                .eq(ActivitySignin::getActivityId, dto.getActivityId())
-                .eq(ActivitySignin::getUserId, userId));
-        if (exist > 0) {
-            throw new BizException(ResultCode.DUPLICATE_OPERATION, "你已签到，请勿重复操作");
-        }
-        ActivitySignin signin = new ActivitySignin();
-        signin.setActivityId(dto.getActivityId());
-        signin.setUserId(userId);
-        signinMapper.insert(signin);
-        // 通知发布者：有人已扫码签到
-        User signer = userMapper.selectById(userId);
-        messageService.send(activity.getUserId(), Constants.MSG_INTERACT,
-                "成员已签到",
-                String.format("「%s」已扫码签到你的活动「%s」。",
-                        signer == null ? "有成员" : signer.getNickname(), activity.getTitle()),
-                Constants.BIZ_ACTIVITY, dto.getActivityId());
+        signinService.signin(userId, dto);
     }
 
     /** 我的发布 */
@@ -505,7 +456,7 @@ public class ActivityService {
      * 顺序：不存在/未审核 → 已下架 → 已结束 → 报名已截止 → 已开始 → 人数已满。
      * signupDeadline 为空时，默认截止时间 = startTime（活动开始后不允许新报名）。
      */
-    private void checkSignAllowed(Long activityId, Activity activity) {
+    private void checkSignupAllowed(Long activityId, Activity activity) {
         if (activity == null || activity.getAuditStatus() != Constants.AUDIT_PASS) {
             throw new BizException(ResultCode.NOT_FOUND, "活动不存在或未通过审核");
         }

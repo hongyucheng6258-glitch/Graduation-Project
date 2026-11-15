@@ -16,7 +16,7 @@ import com.campus.platform.common.Constants;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
 import com.campus.platform.module.user.mapper.UserMapper;
-import com.campus.platform.utils.SignTokenUtils;
+import com.campus.platform.module.activity.service.ActivitySigninService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeAll;
@@ -70,7 +70,7 @@ class ActivityServiceTest {
     @Mock
     private MessageService messageService;
     @Mock
-    private SignTokenUtils signTokenUtils;
+    private ActivitySigninService signinService;
     @Mock
     private SensitiveWordService sensitiveWordService;
     @Mock

@@ -54,12 +54,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 @Service
@@ -82,8 +78,7 @@ public class DrawGuessRoomService {
     private final com.campus.platform.module.drawgame.websocket.DrawGuessSessionRegistry sessionRegistry;
 
     private final ConcurrentMap<Long, RuntimeRoom> liveRooms = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService timerExecutor = Executors.newScheduledThreadPool(2,
-            new DrawGuessTimerThreadFactory());
+    private final DrawGuessRoundTimer roundTimer = new DrawGuessRoundTimer();
     private final Pattern stripControls = Pattern.compile("[\\p{Cc}&&[^\\n\\t]]");
 
     private static final class RuntimeRoom {
@@ -101,17 +96,6 @@ public class DrawGuessRoomService {
         }
     }
 
-    private static final class DrawGuessTimerThreadFactory implements ThreadFactory {
-        private int sequence;
-
-        @Override
-        public synchronized Thread newThread(Runnable task) {
-            Thread thread = new Thread(task, "draw-guess-timer-" + (++sequence));
-            thread.setDaemon(true);
-            return thread;
-        }
-    }
-
     /** A restart closes transient rooms cleanly while completed rounds remain reviewable. */
     @PostConstruct
     public void closeStaleRooms() {
@@ -125,7 +109,7 @@ public class DrawGuessRoomService {
     @PreDestroy
     public void stopTimers() {
         liveRooms.values().forEach(this::cancelTimer);
-        timerExecutor.shutdownNow();
+        roundTimer.shutdown();
     }
 
     @Transactional
@@ -704,12 +688,12 @@ public class DrawGuessRoomService {
     private void scheduleTimer(RuntimeRoom runtime) {
         cancelTimer(runtime);
         Long roomId = runtime.entity.getId();
-        runtime.timer = timerExecutor.scheduleAtFixedRate(() -> tick(roomId), 1, 1, TimeUnit.SECONDS);
+        runtime.timer = roundTimer.start(() -> tick(roomId));
     }
 
     private void cancelTimer(RuntimeRoom runtime) {
         if (runtime.timer != null) {
-            runtime.timer.cancel(false);
+            roundTimer.cancel(runtime.timer);
             runtime.timer = null;
         }
     }
@@ -762,12 +746,12 @@ public class DrawGuessRoomService {
             cancelTimer(runtime);
             Long roomId = runtime.entity.getId();
             sessionRegistry.broadcast(roomId, event("room_ended", "room", roomView(runtime, null)));
-            timerExecutor.schedule(() -> {
+            roundTimer.scheduleRoomCleanup(() -> {
                 if (liveRooms.remove(roomId, runtime)) {
                     sessionRegistry.onlineUserIds(roomId)
                             .forEach(userId -> sessionRegistry.closeUserSessions(roomId, userId));
                 }
-            }, 30, java.util.concurrent.TimeUnit.MINUTES);
+            });
             return;
         }
         roomMapper.updateById(runtime.entity);
