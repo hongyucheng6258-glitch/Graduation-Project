@@ -2,9 +2,9 @@ FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /build
 COPY web/backend/pom.xml ./pom.xml
-RUN mvn -B -DskipTests dependency:go-offline
 COPY web/backend/src ./src
-RUN mvn -B -DskipTests package
+RUN --mount=type=cache,id=campus-backend-maven,target=/root/.m2/repository,sharing=locked \
+    mvn -B -DskipTests package
 COPY docker/HealthProbe.java /tmp/HealthProbe.java
 RUN javac --release 17 -d /health /tmp/HealthProbe.java
 

@@ -3,6 +3,8 @@
 .dockerignore
 .env
 .env.*
+**/.env
+**/.env.*
 .worktrees
 **/*.pem
 **/*.key
@@ -15,6 +17,7 @@ ui-prototype
 测试素材
 测试截图
 db-backup-*.sql
+database-backups/
 数据库备份/
 .local-browser
 *.log

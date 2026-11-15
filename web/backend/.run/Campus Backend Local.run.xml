@@ -4,7 +4,7 @@
     <module name="platform-server" />
     <option name="VM_PARAMETERS" value="-Duser.timezone=Asia/Shanghai" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-    <option name="PROGRAM_PARAMETERS" value="--server.port=18081 --spring.config.import=optional:file:./.env.idea[.properties]" />
+    <option name="PROGRAM_PARAMETERS" value="--server.port=18081 --spring.config.import=file:./.env.idea[.properties]" />
     <envs>
       <env name="MYSQL_HOST" value="127.0.0.1" />
       <env name="MYSQL_PORT" value="13306" />
