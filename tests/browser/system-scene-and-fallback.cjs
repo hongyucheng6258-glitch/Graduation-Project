@@ -2,9 +2,9 @@ const path = require('node:path');
 const fs = require('node:fs');
 const outputDir = process.env.CAMPUS_TEST_OUTPUT || path.join(require('node:os').tmpdir(), 'campus-browser-checks');
 fs.mkdirSync(outputDir, { recursive: true });
-const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
+const { launchBrowser, STUDENT_WEB } = require('./system-support.cjs');
 const assert = require('node:assert/strict');
-const BASE = 'http://localhost:5173';
+const BASE = STUDENT_WEB;
 
 // 通用：登录态 + 舒适模式（镜头瞬时到位）+ 监听未处理 rejection 与 WebGL 上下文。
 async function seedContext(page) {
@@ -18,12 +18,15 @@ async function seedContext(page) {
     });
     window.__gl = { created: 0, lost: 0 };
     const orig = HTMLCanvasElement.prototype.getContext;
+    const contexts = new WeakSet();
     HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
-      if (typeof type === 'string' && /webgl/i.test(type)) {
+      const context = orig.apply(this, [type, ...rest]);
+      if (context && /webgl/i.test(type) && !contexts.has(this)) {
+        contexts.add(this);
         window.__gl.created += 1;
         this.addEventListener('webglcontextlost', () => { window.__gl.lost += 1; });
       }
-      return orig.apply(this, [type, ...rest]);
+      return context;
     };
   });
 }
@@ -52,7 +55,7 @@ async function closeRoom(page) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const browser = await launchBrowser();
   const passed = [];
 
   // ---------- A. Monaco CDN 被拦截：降级 textarea，可编辑/选语言/可提交，无未处理 rejection ----------
@@ -113,7 +116,8 @@ async function closeRoom(page) {
     await page.locator('.room-prompt').waitFor();
     await page.waitForTimeout(700);
     assert.deepEqual(await page.evaluate(() => window.__rejections), [], '离开页面取消加载不得产生 rejection');
-    assert.ok(await page.evaluate(() => !!window.__campusScene), '离开服务后 3D 场景仍在');
+    assert.equal(await page.locator('canvas.campus-canvas').count(), 1, '离开服务后 3D 场景仍在');
+    assert.deepEqual(await page.evaluate(() => window.__gl), { created: 1, lost: 0 });
     passed.push('编辑器加载挂起时离开页面可安全取消');
     assert.deepEqual(errors, []);
     await page.close();
@@ -162,14 +166,13 @@ async function closeRoom(page) {
     await page.goto(`${BASE}/campus-3d`); // 仅首次整页加载，之后全部走 SPA 挂载/卸载
     for (let cycle = 1; cycle <= 3; cycle += 1) {
       if (cycle > 1) {
-        await page.locator('.campus3d-entry').first().click(); // 从首页 SPA 重新进入
+        await page.getByRole('link', { name: '探索 3D 校园', exact: true }).click(); // 从首页 SPA 重新进入
       }
       await page.locator('canvas.campus-canvas').waitFor();
       assert.equal(await canvasCount(), 1, `第 ${cycle} 次进入应只有 1 个 canvas`);
-      assert.ok(await page.evaluate(() => !!window.__campusScene), 'dev 场景实例应已暴露');
       // 三档画质切换 + 视口缩放，均不得报错。
       for (const quality of ['low', 'balanced', 'high']) {
-        await page.evaluate((q) => window.__campusScene.setQuality(q), quality);
+        await page.getByRole('combobox', { name: '场景画质' }).selectOption(quality);
         await page.setViewportSize({ width: quality === 'low' ? 1280 : 1440, height: quality === 'low' ? 800 : 1000 });
         await page.waitForTimeout(120);
       }
@@ -177,9 +180,8 @@ async function closeRoom(page) {
       await page.getByRole('button', { name: '返回学生端' }).click();
       await page.waitForTimeout(300);
       assert.equal(await canvasCount(), 0, `第 ${cycle} 次退出后 canvas 应被移除`);
-      assert.equal(await page.evaluate(() => window.__campusScene), null, '退出后场景引用应清空');
     }
-    await page.waitForTimeout(800);
+    await page.waitForFunction(() => window.__gl.lost === 3);
     const gl = await page.evaluate(() => window.__gl);
     assert.equal(gl.created, 3, `3 次进入应只创建 3 个 WebGL 上下文，实际 ${gl.created}`);
     assert.equal(gl.lost, 3, `3 次退出应释放 3 个 WebGL 上下文，实际 ${gl.lost}`);
@@ -199,11 +201,14 @@ async function closeRoom(page) {
     await page.getByRole('button', { name: '开始探索' }).click();
     await page.waitForTimeout(400);
     await page.locator('.campus3d-frame').screenshot({ path: path.join(outputDir, 'scene-hall.png') });
-    for (const [id, file] of [['activity', 'scene-room-activity'], ['idle', 'scene-room-idle'], ['lost', 'scene-room-lost'], ['code', 'scene-room-code'], ['wrong', 'scene-room-wrong']]) {
-      await page.evaluate((roomId) => window.__campusScene.navigate(roomId, { instant: true }), id);
-      await page.waitForFunction((roomId) => window.__campusScene && window.__campusScene.getDebug().insideId === roomId, id, { timeout: 5000 });
+    for (const [room, file] of [['校园活动', 'scene-room-activity'], ['闲置互换', 'scene-room-idle'], ['失物招领', 'scene-room-lost'], ['代码纠错', 'scene-room-code'], ['错题本', 'scene-room-wrong']]) {
+      await page.getByRole('button', { name: '校园导览', exact: false }).first().click();
+      await page.locator('.map-room-route').filter({ hasText: room }).click();
+      const prompt = page.locator('.room-prompt').filter({ hasText: room });
+      await prompt.waitFor();
       await page.waitForTimeout(350);
       await page.locator('.campus3d-frame').screenshot({ path: path.join(outputDir, `${file}.png`) });
+      await prompt.getByRole('button', { name: '回到门口' }).click();
     }
     passed.push('已生成大厅与各主题房间截图供穿模/装饰核查');
     assert.deepEqual(errors, []);

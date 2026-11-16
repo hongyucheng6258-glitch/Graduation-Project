@@ -24,8 +24,8 @@ async function browserStudent(browser, token) {
 
 async function ask(page, question, path) {
   const response = page.waitForResponse((item) => item.url().endsWith(path), { timeout: 45000 })
-  await page.locator('.ai-input input').fill(question)
-  await page.locator('.ai-input input').press('Enter')
+  await page.locator('.ai-input textarea').fill(question)
+  await page.locator('.ai-input textarea').press('Enter')
   return jsonResponse(await response)
 }
 
@@ -57,8 +57,8 @@ async function main() {
     })
     await page.getByText(/agent-browser\.pdf.*可问答/).waitFor({ timeout: 55000 })
     const knowledge = page.waitForResponse((response) => /\/ai\/knowledge\/\d+\/ask$/.test(response.url()), { timeout: 45000 })
-    await page.locator('.ai-input input').fill('What is the makerspace access identifier? Give the exact identifier.')
-    await page.locator('.ai-input input').press('Enter')
+    await page.locator('.ai-input textarea').fill('What is the makerspace access identifier? Give the exact identifier.')
+    await page.locator('.ai-input textarea').press('Enter')
     const result = await jsonResponse(await knowledge)
     assert.match(result.answer, new RegExp(fixture.identifier))
     const source = result.citations.find((citation) => citation.page === 2)

@@ -1,10 +1,10 @@
 const path = require('node:path');
 const outputDir = process.env.CAMPUS_TEST_OUTPUT || path.join(require('node:os').tmpdir(), 'campus-browser-checks');
 require('node:fs').mkdirSync(outputDir, { recursive: true });
-const {chromium}=require(process.env.PLAYWRIGHT_PATH || 'playwright');
+const { launchBrowser, STUDENT_WEB } = require('./system-support.cjs');
 const assert=require('node:assert/strict');
 (async()=>{
-const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+const browser=await launchBrowser();
 const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[],writes=[];let signed=false;
 page.on('pageerror',e=>errors.push(e.message));
 await page.addInitScript(()=>{localStorage.setItem('token','browser-test-only');localStorage.setItem('userInfo',JSON.stringify({id:9,nickname:'测试同学'}));localStorage.setItem('wutong-campus-comfort','true')});
@@ -23,7 +23,7 @@ await page.route('**/api/**',async route=>{
  else if(p.endsWith('/list'))data={list:[],total:0};
  await route.fulfill({json:{code:200,data}})
 });
-await page.goto('http://localhost:5173/campus-3d');
+await page.goto(STUDENT_WEB + '/campus-3d');
 await page.getByRole('button',{name:'开始探索'}).click();
 await page.getByRole('button',{name:'校园导览',exact:false}).first().click();
 await page.locator('.map-zone button').filter({hasText:'校园活动'}).click();

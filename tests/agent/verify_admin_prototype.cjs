@@ -168,7 +168,7 @@ async function checkShell(page) {
     for (const [route, table] of routes) {
       await page.goto(admin + route)
       await page.locator('.content h1').waitFor()
-      if (table) await page.locator('.admin-list-table').first().waitFor()
+      if (table) await page.locator('.admin-list-table:visible, .mobile-users:visible').first().waitFor()
       await widthCheck(page, route)
       if (screenshots && width === 1440 && route === '/content') {
         await page.getByText(fixture.activityTitle, { exact: true }).first().waitFor()

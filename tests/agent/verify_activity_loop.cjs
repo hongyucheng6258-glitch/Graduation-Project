@@ -25,7 +25,7 @@ async function main() {
     assert.equal((await result(await capabilities)).enabled, true)
     await page.getByRole('tab', { name: /校园向导/ }).click()
     const asked = page.waitForResponse(r => r.url().endsWith('/api/ai/agent/ask'))
-    await page.locator('.ai-input input').fill(fixture.question)
+    await page.locator('.ai-input textarea').fill(fixture.question)
     await page.getByRole('button', { name: '发送' }).click()
     const draft = (await result(await asked)).activityDrafts?.[0]
     assert.ok(draft, 'The student assistant did not create an activity draft')
@@ -37,7 +37,7 @@ async function main() {
     await page.reload()
     await page.waitForFunction(expected => [...document.querySelectorAll('input')].some(input => input.value === expected), fixture.originalTitle)
     assert.equal(await title.inputValue(), fixture.originalTitle)
-    assert.equal(await page.getByRole('textbox', { name: '地点', exact: true }).inputValue(), fixture.location)
+    assert.equal(await page.getByPlaceholder('如：东区操场 / 图书馆三楼').inputValue(), fixture.location)
     assert.equal(await page.getByRole('spinbutton', { name: '人数上限', exact: true }).inputValue(), '20')
     for (const date of [fixture.startTime, fixture.endTime]) {
       assert.ok(await page.locator('input').evaluateAll((inputs, expected) => inputs.some(input => input.value === expected), date))
@@ -64,7 +64,7 @@ async function main() {
     console.log('PASS student browser opens prefilled activity form, submits edits, and restores receipt')
     if (fixture.adminToken) await reviewInBrowser(browser, page, receipt.activityId)
     const shortRequest = page.waitForResponse(r => r.url().endsWith('/api/ai/agent/ask'))
-    await page.locator('.ai-input input').fill('帮我发布一个读书会')
+    await page.locator('.ai-input textarea').fill('帮我发布一个读书会')
     await page.getByRole('button', { name: '发送' }).click()
     const shortReply = await result(await shortRequest)
     assert.equal(shortReply.activityDrafts[0]?.title, '读书会')
@@ -110,8 +110,8 @@ async function reviewInBrowser(browser, studentPage, activityId) {
   await card.getByRole('status').filter({ hasText: '发布者已收到通知' }).waitFor()
   await studentPage.reload()
   await studentPage.getByRole('tab', { name: /校园向导/ }).click()
-  await studentPage.getByText('活动审核未通过。', { exact: true }).waitFor()
-  await studentPage.getByText('请核对活动地点和校内安排', { exact: true }).waitFor()
+  const receipt = studentPage.getByRole('status').filter({ hasText: '审核未通过' })
+  await receipt.filter({ hasText: '请核对活动地点和校内安排' }).waitFor()
   console.log('PASS same activity in two browsers: evidence, restored confirmation, rejection receipt and student status')
 }
 

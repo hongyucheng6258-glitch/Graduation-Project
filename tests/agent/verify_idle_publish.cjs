@@ -16,7 +16,7 @@ async function main() {
     assert.equal((await (await capabilities).json()).data.enabled, true)
     await page.getByRole('tab', { name: /校园向导/ }).click()
     const ask = page.waitForResponse((res) => res.url().endsWith('/ai/agent/ask'), { timeout: 45000 })
-    const input = page.locator('.ai-input input')
+    const input = page.locator('.ai-input textarea')
     await input.fill(fixture.question)
     await input.press('Enter')
     const result = await (await ask).json()

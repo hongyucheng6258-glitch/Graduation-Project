@@ -34,11 +34,13 @@ async function main() {
     if (!fixture.pdf) return
 
     await page.getByRole('tab', { name: '内部规则' }).click()
+    const fileInput = page.getByLabel('上传规则 PDF').and(page.locator('input:enabled'))
+    await fileInput.waitFor({ state: 'attached' })
     const upload = page.waitForResponse(res => res.url().endsWith('/assistant/rules') && res.request().method() === 'POST')
-    await page.getByLabel('上传规则 PDF').setInputFiles({ name: `${fixture.marker}.pdf`, mimeType: 'application/pdf', buffer: Buffer.from(fixture.pdf, 'base64') })
+    await fileInput.setInputFiles({ name: `${fixture.marker}.pdf`, mimeType: 'application/pdf', buffer: Buffer.from(fixture.pdf, 'base64') })
     const doc = await (await upload).json()
     assert.equal(doc.code, 200, doc.message)
-    const row = page.getByRole('row').filter({ hasText: `${fixture.marker}.pdf` })
+    const row = page.getByRole('region', { name: '内部资料' }).getByRole('listitem').filter({ hasText: `${fixture.marker}.pdf` })
     await row.waitFor()
     for (let retry = 0; retry < 45 && !(await row.getByText('可查询').count()); retry++) {
       const refreshed = page.waitForResponse(res => res.url().endsWith('/assistant/rules') && res.request().method() === 'GET')

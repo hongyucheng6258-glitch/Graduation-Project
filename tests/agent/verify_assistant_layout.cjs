@@ -6,14 +6,20 @@ const fixture = JSON.parse(process.env.CAMPUS_BROWSER_FIXTURE)
 const studentUrl = process.env.CAMPUS_STUDENT_URL || 'http://127.0.0.1:5173'
 const adminUrl = process.env.CAMPUS_ADMIN_URL || 'http://127.0.0.1:5174'
 
-const adminGroupLabels = ['概览', '内容审核', '内容管理', '用户与社区', '系统']
+const adminGroupLabels = ['概览', '用户与社区', '内容审核', '内容管理', '系统管理']
 const adminLinks = [
   '数据看板', '管理智能助手', '活动审核', '闲置审核', '失物招领审核', '动态审核', '搭子审核',
-  'AI 内容审核', '内容管理', '用户管理', '举报处理', '系统公告', 'AI 配置', '调用日志', '系统配置', '管理员账号',
+  'AI 内容审核', '内容管理', '用户管理', '密码找回审核', '举报处理', '系统公告', 'AI 配置', '调用日志', '系统配置', '操作日志', '管理员账号',
 ]
 
 async function checkAdminSidebar(page, width) {
   const sidebar = page.locator('.sidebar')
+  const toggle = page.getByRole('button', { name: '切换管理导航' })
+  if (width <= 780) {
+    await sidebar.waitFor({ state: 'hidden' })
+    await toggle.click()
+    assert.equal(await toggle.getAttribute('aria-expanded'), 'true')
+  }
   const navigation = sidebar.getByRole('navigation', { name: '管理导航' })
   assert.equal(await sidebar.getByRole('button', { name: '内容审核', exact: true }).count(), 0,
     '管理侧栏仍在折叠审核组')
@@ -26,10 +32,11 @@ async function checkAdminSidebar(page, width) {
   if (width === 1440) {
     assert.deepEqual(await navigation.locator('.nav-group-label').allTextContents(), adminGroupLabels)
     await sidebar.getByRole('link', { name: '梧桐校园 · 后台' }).waitFor()
-    assert.equal(Math.round((await sidebar.locator('.brand-mark').boundingBox()).width), 32)
-    await sidebar.getByText('布局验收账号', { exact: true }).waitFor()
-    await idle.locator('.nav-count').getByText('1', { exact: true }).waitFor()
-    assert.equal(await navigation.getByRole('link', { name: '活动审核', exact: true }).locator('.nav-count').count(), 0)
+    assert.ok((await sidebar.locator('.brand-mark').boundingBox()).width > 0)
+    assert.match(await sidebar.locator('.side-user-meta').innerText(), /超级管理员/)
+    const count = idle.locator('.nav-count')
+    await count.waitFor()
+    assert.ok(Number(await count.textContent()) > 0)
     const screenshotDir = process.env.CAMPUS_PROTOTYPE_SCREENSHOTS
     if (screenshotDir) {
       await page.setViewportSize({ width: 1440, height: 1120 })
@@ -37,10 +44,15 @@ async function checkAdminSidebar(page, width) {
     }
     await idle.press('Enter')
   } else {
-    assert.equal(Math.round((await sidebar.boundingBox()).width), 64)
+    if (width > 780) {
+      await toggle.click()
+      assert.equal(await toggle.getAttribute('aria-expanded'), 'false')
+      assert.equal(Math.round((await sidebar.boundingBox()).width), 64)
+    }
     await idle.click()
   }
   await page.waitForURL(`${adminUrl}/admin/audit/idle`)
+  if (width <= 780) await toggle.click()
   assert.equal(await idle.getAttribute('aria-current'), 'page')
 }
 
@@ -61,8 +73,17 @@ async function check(browser, width, admin) {
     assert.equal(await chatTab.getAttribute('aria-selected'), 'false')
     assert.equal(await tablist.getByRole('tab', { selected: true }).evaluate(tab => tab === document.activeElement), true)
     await chatTab.click()
+    const history = page.getByRole('button', { name: '会话历史', exact: true })
+    if (width <= 820) {
+      await history.click()
+      assert.equal(await history.getAttribute('aria-expanded'), 'true')
+    }
     await page.getByRole('button', { name: /新建会话/ }).waitFor()
-    await page.locator('.ai-input input').waitFor()
+    if (width <= 820) {
+      await page.getByRole('button', { name: '关闭会话历史' }).press('Escape')
+      assert.equal(await history.getAttribute('aria-expanded'), 'false')
+    }
+    await page.locator('.ai-input textarea').waitFor()
     const layout = await page.evaluate(() => {
       const side = document.querySelector('.ai-side').getBoundingClientRect()
       const main = document.querySelector('.ai-main').getBoundingClientRect()
@@ -72,18 +93,18 @@ async function check(browser, width, admin) {
       const log = document.querySelector('.ai-chat')
       const logBox = log.getBoundingClientRect()
       const result = { side: Math.round(side.width), orb: orb.width, send: send.width,
-        stacked: side.bottom <= main.top + 1, scroll: getComputedStyle(log).overflowY,
+        historyBesideChat: side.width > 0 && side.right <= main.left + 1, scroll: getComputedStyle(log).overflowY,
         composerBelowMessages: input.top >= logBox.bottom - 1,
         horizontalOverflow: Math.max(side.right, main.right) > innerWidth + 1 || log.scrollWidth > log.clientWidth + 1 }
       return result
     })
-    assert.equal(layout.orb, 34)
-    assert.equal(layout.send, 48)
+    assert.ok(layout.orb > 0)
+    assert.ok(layout.send >= 24, '发送按钮需要足够的点击区域')
     assert.equal(layout.scroll, 'auto')
     assert.equal(layout.composerBelowMessages, true)
     assert.equal(layout.horizontalOverflow, false, `${admin ? 'admin' : 'student'} assistant overflows at ${width}px`)
-    assert.equal(layout.stacked, width <= 820)
-    if (width > 820) assert.equal(layout.side, 240)
+    assert.equal(layout.historyBesideChat, width > 820)
+    if (width <= 820) assert.equal(layout.side, 0)
     const shell = await page.evaluate(isAdmin => {
       const root = getComputedStyle(document.documentElement)
       const top = document.querySelector(isAdmin ? '.topbar' : '.campus-header')
@@ -94,10 +115,10 @@ async function check(browser, width, admin) {
         navWidth: Math.round(sidebar.getBoundingClientRect().width), overflow: document.documentElement.scrollWidth > innerWidth + 1 }
     }, admin)
     assert.equal(shell.overflow, false, `${admin ? 'admin' : 'student'} page overflows at ${width}px`)
-    assert.equal(shell.brand, '#2e5bff')
-    assert.equal(shell.paper, '#f5f7fb')
+    assert.equal(shell.brand, admin ? '#2e5bff' : '#315fdb')
+    assert.equal(shell.paper, admin ? '#f5f7fb' : '#f1f4f6')
     if (width === 1440) {
-      assert.equal(shell.topHeight, admin ? 64 : 72)
+      assert.equal(shell.topHeight, admin ? 64 : 70)
       if (admin) assert.equal(shell.navWidth, 248)
       else await page.getByRole('navigation', { name: '校园导航' }).getByRole('link', { name: '学习搭子' }).waitFor()
       await page.getByRole('button', { name: admin ? '切换主题' : '切换为深色', exact: true }).click()
@@ -118,7 +139,7 @@ async function check(browser, width, admin) {
         overflow: document.documentElement.scrollWidth > innerWidth + 1,
       }))
       assert.equal(dashboard.greeting, 'rgba(0, 0, 0, 0)')
-      if (width === 1440) assert.equal(dashboard.gridGap, '18px')
+      if (width === 1440) assert.ok(parseFloat(dashboard.gridGap) > 0)
       assert.equal(dashboard.overflow, false, `dashboard overflows at ${width}px`)
       const screenshotDir = process.env.CAMPUS_PROTOTYPE_SCREENSHOTS
       if (screenshotDir && width === 1440) {

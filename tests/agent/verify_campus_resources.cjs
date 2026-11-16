@@ -23,7 +23,7 @@ async function main() {
     for (const entry of fixture.rows) {
       await openGuide()
       const response = page.waitForResponse(res => res.url().endsWith('/ai/agent/ask'), { timeout: 45000 })
-      const input = page.locator('.ai-input input')
+      const input = page.locator('.ai-input textarea')
       await input.fill(entry.question)
       await page.getByRole('button', { name: '发送' }).click()
       const result = await (await response).json()
