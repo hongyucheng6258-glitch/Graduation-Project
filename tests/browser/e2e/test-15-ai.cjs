@@ -121,7 +121,22 @@ async function run(browser, request, ctx) {
     h.record(C, '复习功能记录', 'FAIL', reviewRes.message);
   }
 
-  // 8. 历史会话恢复
+  // 8. 同类练习依赖部署时预置的结构化提示词。
+  if (wrongId && aiCallCount < 5) {
+    aiCallCount++;
+    const practice = await buyer.post(`/wrong-question/${wrongId}/practice`, {});
+    if (practice.code === 200 && practice.data?.id && practice.data?.question) {
+      const path = `/wrong-question/practice/${practice.data.id}/save`;
+      const saved = await buyer.post(path, {});
+      const duplicate = await buyer.post(path, {});
+      h.record(C, '生成并保存同类练习', saved.code === 200 && duplicate.code === 1009 ? 'PASS' : 'FAIL',
+        `保存=${saved.code}，重复保存=${duplicate.code}`);
+    } else {
+      h.record(C, '生成并保存同类练习', 'FAIL', practice.message);
+    }
+  }
+
+  // 9. 历史会话恢复
   if (sessionId) {
     const history = await buyer.get(`/ai/session/${sessionId}/messages`, { pageNum: 1, pageSize: 20 });
     if (history.code === 200) {

@@ -37,6 +37,7 @@ services:
       - ./web/backend/src/main/resources/db/2026-11-14-chat-groups.sql:/migrations/18-chat-groups.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-14-friendships.sql:/migrations/19-friendships.sql:ro
       - ./web/backend/src/main/resources/db/2026-11-14-social-closure.sql:/migrations/20-social-closure.sql:ro
+      - ./web/backend/src/main/resources/db/2026-11-16-practice-template.sql:/migrations/21-practice-template.sql:ro
       - ./docker/mysql/run-migrations.sh:/usr/local/bin/campus-migrate:ro
     command: ["/bin/sh", "/usr/local/bin/campus-migrate"]
 
