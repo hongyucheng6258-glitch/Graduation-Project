@@ -69,3 +69,6 @@ overview.md
 /ui-prototype/qa/**/*.json
 /前端UI-原型-HTML版/qa/**/*.png
 /前端UI-原型-HTML版/qa/**/*.json
+
+# 本地 UI 设计回归产物（截图 / 生成的 JSON 与 HTML），不入库
+ui-design-runs/

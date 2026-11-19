@@ -1,7 +1,21 @@
 <template>
   <div class="login-page">
     <el-card class="login-card">
-      <div class="brand">🎓 校园平台 · 管理后台</div>
+      <div class="login-brand">
+        <span class="login-brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" fill="currentColor" focusable="false">
+            <path d="M4 5h13a3 3 0 0 1 3 3v12H8a4 4 0 0 1-4-4Z" />
+            <path d="M23 4h13v12a4 4 0 0 1-4 4H23Z" opacity=".65" />
+            <path d="M4 23h16v13H8a4 4 0 0 1-4-4Z" opacity=".65" />
+            <path d="M23 23h13v13H23Z" opacity=".3" />
+          </svg>
+        </span>
+        <span class="login-brand-name">梧桐校园<small>CAMPUS OPERATIONS</small></span>
+      </div>
+      <div class="login-heading">
+        <h1>欢迎回来</h1>
+        <p>登录管理后台，继续处理今日校园运营事务。</p>
+      </div>
       <el-form :model="form" size="large" @keyup.enter="submit">
         <el-form-item>
           <el-input v-model="form.username" placeholder="管理员账号" :prefix-icon="User" />
@@ -116,19 +130,27 @@ onMounted(() => {
     var(--paper);
 }
 .login-card {
-  width: 380px;
-  padding: 16px;
-  border-radius: var(--r-lg);
+  width: min(430px, calc(100vw - 32px));
+  padding: 14px;
+  /* 用 token 派生描边：亮色是白边高光，暗色自动降为浅品牌色，不再出现亮白圈 */
+  border: 1px solid color-mix(in srgb, var(--brand) 14%, var(--line));
+  border-radius: var(--r-xl);
   box-shadow: var(--shadow-lg);
 }
-.brand {
-  font-size: 20px;
-  font-weight: 600;
-  font-family: var(--font-display);
-  text-align: center;
-  margin-bottom: 24px;
-  color: var(--brand);
+.login-card :deep(.el-card__body) { padding: 28px; }
+.login-page :deep(.el-input__wrapper) { min-height: 44px; }
+.login-page :deep(.el-form-item) { margin-bottom: 18px; }
+.login-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 32px; }
+.login-brand-mark {
+  width: 40px; height: 40px; padding: 9px; border-radius: 12px;
+  background: var(--brand-gradient); color: #fff;
+  box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--brand) 75%, transparent);
 }
+.login-brand-name { color: var(--ink); font-size: 17px; font-weight: 700; }
+.login-brand-name small { display: block; color: var(--ink-3); font-size: 11px; font-weight: 500; letter-spacing: .12em; }
+.login-heading { margin-bottom: 24px; }
+.login-heading h1 { font-family: var(--font-display); font-size: 28px; line-height: 1.25; color: var(--ink); }
+.login-heading p { margin-top: 8px; color: var(--ink-3); font-size: var(--fs-sm); }
 .captcha-row {
   display: flex;
   width: 100%;
@@ -188,7 +210,14 @@ onMounted(() => {
 }
 .submit {
   width: 100%;
+  min-height: 44px;
+  margin-top: 2px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--brand-gradient);
+  letter-spacing: .12em;
 }
+.submit:hover { background: var(--brand-gradient-hover); }
 .tip {
   margin-top: 14px;
   text-align: center;

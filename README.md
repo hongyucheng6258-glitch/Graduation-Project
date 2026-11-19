@@ -121,6 +121,8 @@ docker compose @stack down
 
 联调前端时，在各自启动 Vite 的终端中设置 `CAMPUS_BACKEND_URL=http://127.0.0.1:18081`。用 PowerShell 时可执行 `$env:CAMPUS_BACKEND_URL = 'http://127.0.0.1:18081'`。
 
+需要保留正式学生端、管理端和数据服务，并在 IDEA 中调试后端时，使用 [正式环境切换说明](./部署说明.md#正式环境切换到-idea-后端)。
+
 ### 前端与测试命令
 
 ```powershell

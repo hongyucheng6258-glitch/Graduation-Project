@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Campus Backend Production Docker" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.campus.platform.PlatformApplication" />
+    <module name="platform-server" />
+    <option name="VM_PARAMETERS" value="-Duser.timezone=Asia/Shanghai" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="PROGRAM_PARAMETERS" value="--spring.config.import=file:./.env.idea-production[.properties]" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

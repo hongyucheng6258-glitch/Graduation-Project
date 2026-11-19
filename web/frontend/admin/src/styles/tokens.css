@@ -6,23 +6,23 @@
    ============================================================ */
 :root {
   /* —— 中性 / 表面（云白偏蓝） —— */
-  --paper:        #F5F7FB;
+  --paper:        #F4F4FA;
   --surface:      #FFFFFF;
-  --surface-2:    #F1F4FA;
-  --surface-3:    #E9EEF6;
-  --ink:          #1B2437;
-  --ink-2:        #46536B;
-  --ink-3:        #69768D;
-  --line:         #E2E8F1;
-  --line-strong:  #CBD6E4;
+  --surface-2:    #F7F6FB;
+  --surface-3:    #ECEAF4;
+  --ink:          #252233;
+  --ink-2:        #504C62;
+  --ink-3:        #767187;
+  --line:         #E8E5F0;
+  --line-strong:  #D8D3E5;
 
-  /* —— 品牌：校园蓝（与学生端一致） —— */
-  --brand:        #2E5BFF;
-  --brand-strong: #1E47D6;
-  --brand-deep:   #1737A8;
+  /* —— 品牌：取自参考图的蓝紫导航与数据强调 —— */
+  --brand:        #5B4BD1;
+  --brand-strong: #493AB8;
+  --brand-deep:   #382A8A;
   --brand-ink:    #FFFFFF;
-  --brand-soft:   #EDF1FF;
-  --brand-line:   #C4D2FF;
+  --brand-soft:   #F0EDFC;
+  --brand-line:   #D8D1F4;
 
   /* —— 强调：杏色（温暖 / 高亮） —— */
   --accent:        oklch(86% 0.055 65);
@@ -62,34 +62,38 @@
   --error:        oklch(58% 0.17 20);
   --error-soft:   oklch(95% 0.04 20);
 
-  /* —— 深蓝侧栏（管理端特征，双主题恒定） —— */
-  --side-bg:  #142139;
-  --side-ink: #B9C4DA;
-  --side-ink-3: #7D8CA8;
-  --side-line: oklch(100% 0 0 / .08);
-  --side-active: #2E5BFF;
-  --side-hover: oklch(100% 0 0 / .06);
+  /* —— 品牌渐变（按钮 / 图标底 / 选中态共用，避免各页面硬编码） —— */
+  --brand-gradient: linear-gradient(135deg, #7160E5 0%, #5542C6 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #6554D8 0%, #493AB8 100%);
+
+  /* —— 浅色侧栏（暗色主题仍保留深色导航） —— */
+  --side-bg:  #FCFBFF;
+  --side-ink: #625D73;
+  --side-ink-3: #767187;
+  --side-line: #EAE6F2;
+  --side-active: var(--brand-gradient);
+  --side-hover: #F1EEF9;
 
   /* —— 间距（4pt 基准） —— */
   --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px;
   --s-6:32px; --s-7:48px; --s-8:64px; --s-9:96px;
 
-  /* —— 圆角（与学生端一致） —— */
-  --r-xs:6px; --r-sm:8px; --r-md:12px; --r-lg:20px; --r-xl:24px; --r-pill:999px;
+  /* —— 圆角（容器 / 卡片 / 控件 / 胶囊分层） —— */
+  --r-xs:6px; --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:26px; --r-pill:999px;
 
-  /* —— 字体（V2：中文优先、无衬线） —— */
-  --font-sans: "Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
-  --font-display: "Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+  /* —— 字体（界面正文 + 几何感标题） —— */
+  --font-sans: "PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;
+  --font-display: "Avenir Next","PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;
   --font-mono: ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
 
-  /* —— 字阶（与学生端一致） —— */
+  /* —— 字阶 —— */
   --fs-display:2.25rem; --fs-h1:1.75rem; --fs-h2:1.375rem; --fs-h3:1.125rem;
   --fs-body:.9375rem; --fs-sm:.8125rem; --fs-xs:0.75rem; --fs-cap:0.6875rem;
 
-  /* —— 阴影（与学生端一致） —— */
-  --shadow-sm: 0 1px 2px oklch(25% 0.04 265 / .05), 0 1px 3px oklch(25% 0.04 265 / .04);
-  --shadow-md: 0 6px 16px oklch(25% 0.04 265 / .08);
-  --shadow-lg: 0 18px 40px oklch(25% 0.04 265 / .11);
+  /* —— 带蓝紫色相的接触影 / 形体影 / 环境影 —— */
+  --shadow-sm: 0 1px 2px rgba(62, 52, 120, .04), 0 5px 14px -6px rgba(62, 52, 120, .10);
+  --shadow-md: 0 2px 5px rgba(62, 52, 120, .04), 0 14px 30px -12px rgba(62, 52, 120, .16);
+  --shadow-lg: 0 3px 8px rgba(62, 52, 120, .04), 0 24px 55px -18px rgba(62, 52, 120, .22);
 
   --ease-out: cubic-bezier(0.16,1,0.3,1);
   --ease-quart: cubic-bezier(0.25,1,0.5,1);
@@ -106,12 +110,12 @@
   --line:         oklch(35% 0.03 255);
   --line-strong:  oklch(42% 0.03 255);
 
-  --brand:        oklch(75% 0.12 265);
-  --brand-strong: oklch(68% 0.12 265);
-  --brand-deep:   oklch(55% 0.12 265);
-  --brand-ink:    oklch(16% 0.04 265);
-  --brand-soft:   oklch(30% 0.06 265);
-  --brand-line:   oklch(40% 0.08 265);
+  --brand:        #9B85FF;
+  --brand-strong: #B3A4FF;
+  --brand-deep:   #7B68D8;
+  --brand-ink:    #211A3D;
+  --brand-soft:   #30294D;
+  --brand-line:   #4C4270;
 
   --accent:        oklch(74% 0.06 65);
   --accent-strong: oklch(66% 0.06 60);
@@ -149,8 +153,11 @@
   --side-ink: oklch(90% 0.01 250);
   --side-ink-3: oklch(64% 0.02 255);
   --side-line: oklch(100% 0 0 / .07);
-  --side-active: oklch(75% 0.12 265 / .24);
+  --side-active: var(--brand-gradient);
   --side-hover: oklch(100% 0 0 / .05);
+
+  --brand-gradient: linear-gradient(135deg, #7160E5 0%, #5542C6 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #6554D8 0%, #493AB8 100%);
 
   --shadow-sm: 0 1px 2px oklch(0% 0 0 / .3), 0 1px 3px oklch(0% 0 0 / .25);
   --shadow-md: 0 6px 16px oklch(0% 0 0 / .4);

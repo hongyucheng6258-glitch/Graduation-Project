@@ -4,10 +4,11 @@
    ============================================================ */
 :root {
   --el-color-primary: var(--brand);
-  --el-color-primary-light-3: oklch(63% 0.12 265);
-  --el-color-primary-light-5: oklch(71% 0.11 265);
-  --el-color-primary-light-7: oklch(82% 0.09 265);
-  --el-color-primary-light-8: oklch(88% 0.08 265);
+  /* 由品牌色派生，品牌色调整时无需再手动同步 4 组浅色阶梯 */
+  --el-color-primary-light-3: color-mix(in srgb, var(--brand) 71%, #fff);
+  --el-color-primary-light-5: color-mix(in srgb, var(--brand) 54%, #fff);
+  --el-color-primary-light-7: color-mix(in srgb, var(--brand) 34%, #fff);
+  --el-color-primary-light-8: color-mix(in srgb, var(--brand) 21%, #fff);
   --el-color-primary-light-9: var(--brand-soft);
   --el-color-primary-dark-2: var(--brand-strong);
 
@@ -88,6 +89,41 @@
   --el-font-family: var(--font-sans);
 }
 
+/* 统一的控件、表格与浮层质感：只改外观，不改变组件行为。 */
+.el-button { font-weight: 600; transition: color .18s, background .18s, border-color .18s, box-shadow .18s, transform .12s; }
+.el-button:not(.is-disabled):active { transform: translateY(1px); }
+.el-button--primary { --el-button-bg-color: var(--brand); --el-button-border-color: var(--brand); --el-button-hover-bg-color: var(--brand-strong); --el-button-hover-border-color: var(--brand-strong); }
+.el-button--primary:not(.is-disabled):hover { box-shadow: 0 8px 18px -8px rgba(91, 75, 209, .65); }
+.el-input__wrapper, .el-select__wrapper, .el-textarea__inner {
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line) inset;
+  transition: box-shadow .18s, background .18s;
+}
+.el-input__wrapper:hover, .el-select__wrapper:hover, .el-textarea__inner:hover { box-shadow: 0 0 0 1px var(--line-strong) inset; }
+.el-input__wrapper.is-focus, .el-select__wrapper.is-focused, .el-textarea__inner:focus { box-shadow: 0 0 0 1px var(--brand) inset, 0 0 0 3px var(--brand-soft); }
+.el-form-item__label { color: var(--ink-2); font-weight: 600; }
+.el-card { border-color: var(--line); border-radius: 16px; box-shadow: var(--shadow-sm); }
+.el-table { --el-table-border-color: var(--line); --el-table-header-bg-color: var(--surface-2); --el-table-row-hover-bg-color: var(--brand-soft); color: var(--ink-2); }
+.el-table .el-table__cell { padding: 12px 0; }
+.el-table th.el-table__cell { padding: 11px 0; font-size: var(--fs-xs); letter-spacing: .02em; }
+.el-table .cell { line-height: 1.5; }
+.admin-list-table { box-shadow: var(--shadow-sm); }
+.el-dialog { border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-lg); overflow: hidden; }
+.el-dialog__header { padding: 22px 24px 16px; border-bottom: 1px solid var(--line); }
+.el-dialog__title { color: var(--ink); font-weight: 700; }
+.el-dialog__body { padding: 22px 24px; }
+.el-dialog__footer { padding: 16px 24px 22px; }
+.el-message-box { border-color: var(--line); border-radius: 18px; box-shadow: var(--shadow-lg); }
+.el-dropdown-menu { border: 1px solid var(--line); border-radius: 12px; padding: 6px; box-shadow: var(--shadow-md); }
+.el-dropdown-menu__item { border-radius: 8px; min-height: 34px; }
+.el-dropdown-menu__item:not(.is-disabled):hover { background: var(--brand-soft); color: var(--brand-strong); }
+.el-pagination { --el-pagination-hover-color: var(--brand-strong); }
+.el-pagination .el-pager li.is-active { background: var(--brand); color: var(--brand-ink); }
+.el-pagination .el-pager li { border-radius: 8px; }
+.el-tag { border-radius: 7px; font-weight: 600; }
+.el-loading-mask { background-color: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: blur(2px); }
+.el-alert { border-radius: 12px; }
+
 /* 管理端列表容器对齐原型，宽表格在容器内部滚动。 */
 .admin-list-toolbar {
   display: flex;
@@ -118,3 +154,11 @@
   margin-top: 16px;
 }
 .el-dialog, .el-message-box { max-width: calc(100vw - 24px); }
+
+/* 暗色主题：白字压 #9B85FF 只有约 2.9:1，主按钮改用深色字提高可读性。
+   .submit 这类自带渐变底色的按钮保持白字，避免对比度反而下降。 */
+:root[data-theme="dark"] .el-button--primary:not(.submit) {
+  --el-button-text-color: var(--brand-ink);
+  --el-button-hover-text-color: var(--brand-ink);
+  --el-button-active-text-color: var(--brand-ink);
+}

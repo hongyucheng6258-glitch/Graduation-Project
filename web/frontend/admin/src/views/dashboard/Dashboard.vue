@@ -4,8 +4,8 @@
     <section class="admin-greeting">
       <div>
         <p class="greet-date">{{ dateLabel }}</p>
-        <h1>今天的校园，也交给你了。</h1>
-        <span class="greet-sub">辛苦啦，这里是今日的运营概览。</span>
+        <h1>欢迎回来，校园管理员</h1>
+        <span class="greet-sub">今天的校园，也交给你了。这里是今日运营概览。</span>
       </div>
       <span class="system-pill" :class="{ warn: errors.length }">
         <i></i>
@@ -17,6 +17,19 @@
       <span>未能加载：{{ errors.join('、') }}。空白区域不代表没有数据。</span>
       <button class="text-btn" :disabled="loading" @click="loadDashboard">重新加载</button>
     </div>
+    <!-- 统计卡 -->
+    <section class="stat-grid">
+      <div v-for="c in cards" :key="c.label" class="stat-card">
+        <span class="stat-icon" :style="{ background: c.soft, color: c.color }">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" v-html="c.icon"></svg>
+        </span>
+        <div class="stat-copy">
+          <small>{{ c.label }}</small>
+          <DashboardCount :value="c.value" />
+        </div>
+      </div>
+    </section>
+
     <section class="chart-panel pending-panel" aria-labelledby="pending-title">
       <div class="panel-head">
         <div>
@@ -34,19 +47,6 @@
           <span>{{ queue.label }}</span>
           <DashboardCount class="pending-count" :value="pending.counts ? pending.counts[queue.key] ?? 0 : '—'" />
         </RouterLink>
-      </div>
-    </section>
-
-    <!-- 统计卡 -->
-    <section class="stat-grid">
-      <div v-for="c in cards" :key="c.label" class="stat-card">
-        <span class="stat-icon" :style="{ background: c.soft, color: c.color }">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" v-html="c.icon"></svg>
-        </span>
-        <div>
-          <DashboardCount :value="c.value" />
-          <small>{{ c.label }}</small>
-        </div>
       </div>
     </section>
 
@@ -120,7 +120,7 @@ echarts.use([
 import DashboardCount from './DashboardCount.vue'
 import { statsOverview, statsTrend, statsModule, statsPie } from '../../api/stats'
 import { auditList } from '../../api/audit'
-import { chartPalette, seriesColors, chartBase } from '../../utils/chartTheme'
+import { readChartPalette, chartSeries, chartBase } from '../../utils/chartTheme'
 import { formatTime } from '../../utils/date'
 import { adminRoutes } from '../../router'
 import { pendingQueues } from '../../layout/adminNavigation.mjs'
@@ -135,11 +135,20 @@ const moduleRef = ref()
 const pieRef = ref()
 const pendingList = ref([])
 let charts = []
+const chartBuilders = new Map()
+const palette = ref(readChartPalette())
+const seriesColors = computed(() => chartSeries(palette.value))
+const softOf = (color, percent) => `color-mix(in srgb, ${color} ${percent}%, transparent)`
 const loading = ref(true)
 const errors = ref([])
 let disposed = false
 const resizeObserver = new ResizeObserver(() => charts.forEach(chart => chart.resize()))
-function disposeCharts() { resizeObserver.disconnect(); charts.forEach(chart => chart.dispose()); charts = [] }
+function disposeCharts() {
+  resizeObserver.disconnect()
+  charts.forEach(chart => chart.dispose())
+  charts = []
+  chartBuilders.clear()
+}
 
 const ICONS = {
   users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
@@ -154,12 +163,15 @@ const dateLabel = (() => {
   return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日 · 周${week}`
 })()
 
-const cards = computed(() => [
-  { label: '总用户数', value: overview.value.totalUsers ?? '-', icon: ICONS.users, color: chartPalette.brand, soft: 'rgba(49,92,245,0.1)' },
-  { label: '今日活跃', value: overview.value.todayActiveUsers ?? '-', icon: ICONS.spark, color: chartPalette.success, soft: 'rgba(76,164,106,0.12)' },
-  { label: '今日AI调用', value: overview.value.todayAiCalls ?? '-', icon: ICONS.ai, color: chartPalette.accent, soft: 'rgba(242,161,92,0.14)' },
-  { label: '待审核内容', value: overview.value.pendingAudits ?? '-', icon: ICONS.clock, color: chartPalette.warning, soft: 'rgba(224,169,63,0.13)' }
-])
+const cards = computed(() => {
+  const p = palette.value
+  return [
+    { label: '总用户数', value: overview.value.totalUsers ?? '-', icon: ICONS.users, color: p.brand, soft: softOf(p.brand, 10) },
+    { label: '今日活跃', value: overview.value.todayActiveUsers ?? '-', icon: ICONS.spark, color: p.success, soft: softOf(p.success, 10) },
+    { label: '今日AI调用', value: overview.value.todayAiCalls ?? '-', icon: ICONS.ai, color: p.accent, soft: softOf(p.accent, 13) },
+    { label: '待审核内容', value: overview.value.pendingAudits ?? '-', icon: ICONS.clock, color: p.warning, soft: softOf(p.warning, 11) }
+  ]
+})
 
 async function loadDashboard() {
   pending.refresh()
@@ -182,52 +194,69 @@ async function loadDashboard() {
     if (!Array.isArray(trend.dailyActiveUsers) || trend.dailyActiveUsers.length !== trend.dates.length) {
       throw new Error('活跃趋势数据不可用')
     }
-    renderChart(trendRef.value, {
-      tooltip: { trigger: 'axis', valueFormatter: value => `${value} 人` },
-      xAxis: { type: 'category', data: trend.dates, axisLine: { lineStyle: { color: chartPalette.line } }, axisLabel: { color: chartPalette.ink2 } },
-      yAxis: { type: 'value', name: '人', minInterval: 1, axisLabel: { color: chartPalette.ink2 }, splitLine: { lineStyle: { color: chartPalette.line } } },
-      series: [
-        { name: '每日活跃用户', type: 'line', smooth: true, data: trend.dailyActiveUsers, areaStyle: { color: 'rgba(49,92,245,0.12)' }, color: seriesColors[0] }
-      ],
-      grid: { left: 48, right: 24, bottom: 30, top: 36 }
+    renderChart(trendRef.value, () => {
+      const p = palette.value
+      return {
+        tooltip: { trigger: 'axis', valueFormatter: value => `${value} 人` },
+        xAxis: { type: 'category', data: trend.dates, axisLine: { lineStyle: { color: p.line } }, axisLabel: { color: p.ink2 } },
+        yAxis: { type: 'value', name: '人', minInterval: 1, axisLabel: { color: p.ink2 }, splitLine: { lineStyle: { color: p.line } } },
+        series: [
+          { name: '每日活跃用户', type: 'line', smooth: true, data: trend.dailyActiveUsers, areaStyle: { color: softOf(p.brand, 12) }, color: seriesColors.value[0] }
+        ],
+        grid: { left: 48, right: 24, bottom: 30, top: 36 }
+      }
     })
   } catch (e) { errors.value.push('趋势图') }
   })(), (async () => {
   // 模块发布量柱状
   try {
     const moduleData = await statsModule()
-    renderChart(moduleRef.value, {
-      tooltip: {},
-      xAxis: { type: 'category', data: moduleData.map((d) => d.name), axisLine: { lineStyle: { color: chartPalette.line } }, axisLabel: { color: chartPalette.ink2 } },
-      yAxis: { type: 'value', axisLine: { lineStyle: { color: chartPalette.line } }, axisLabel: { color: chartPalette.ink2 }, splitLine: { lineStyle: { color: chartPalette.line } } },
-      series: [{ type: 'bar', data: moduleData.map((d) => d.value), color: seriesColors[0], barWidth: 34, itemStyle: { borderRadius: [6, 6, 0, 0] } }],
-      grid: { left: 35, right: 15, bottom: 25, top: 15 }
+    renderChart(moduleRef.value, () => {
+      const p = palette.value
+      return {
+        tooltip: {},
+        xAxis: { type: 'category', data: moduleData.map((d) => d.name), axisLine: { lineStyle: { color: p.line } }, axisLabel: { color: p.ink2 } },
+        yAxis: { type: 'value', axisLine: { lineStyle: { color: p.line } }, axisLabel: { color: p.ink2 }, splitLine: { lineStyle: { color: p.line } } },
+        series: [{ type: 'bar', data: moduleData.map((d) => d.value), color: seriesColors.value[0], barWidth: 34, itemStyle: { borderRadius: [6, 6, 0, 0] } }],
+        grid: { left: 35, right: 15, bottom: 25, top: 15 }
+      }
     })
   } catch (e) { errors.value.push('模块发布量') }
   })(), (async () => {
   // 双饼图
   try {
     const pie = await statsPie()
-    renderChart(pieRef.value, {
-      tooltip: { trigger: 'item' },
-      legend: { bottom: 0, textStyle: { color: chartPalette.ink2 } },
-      series: [
-        {
-          name: '失物状态', type: 'pie', radius: ['46%', '74%'], center: ['50%', '43%'],
-          data: pie.lostStatus, label: { show: false }, emphasis: { label: { show: true, formatter: '{b}: {c}' } }, color: seriesColors
-        }
-      ]
+    renderChart(pieRef.value, () => {
+      const p = palette.value
+      return {
+        tooltip: { trigger: 'item' },
+        legend: { bottom: 0, textStyle: { color: p.ink2 } },
+        series: [
+          {
+            name: '失物状态', type: 'pie', radius: ['46%', '74%'], center: ['50%', '43%'],
+            data: pie.lostStatus, label: { show: false }, emphasis: { label: { show: true, formatter: '{b}: {c}' } }, color: seriesColors.value
+          }
+        ]
+      }
     })
   } catch (e) { errors.value.push('失物状态') }
   })() ])
   loading.value = false
 }
-onMounted(loadDashboard)
-onBeforeUnmount(() => { disposed = true; disposeCharts() })
+const themeObserver = new MutationObserver(() => {
+  if (disposed) return
+  rebuildCharts()
+})
+
+onMounted(() => {
+  loadDashboard()
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+})
+onBeforeUnmount(() => { disposed = true; themeObserver.disconnect(); disposeCharts() })
 
 // 合并梧桐校园图表基底（文字/提示框/图例色），保证大屏观感统一
 function mergeTheme(option) {
-  const base = chartBase()
+  const base = chartBase(palette.value)
   return {
     ...base,
     ...option,
@@ -238,12 +267,21 @@ function mergeTheme(option) {
   }
 }
 
-function renderChart(el, option) {
+// build 是"按当前调色板生成 option"的函数：主题切换后重新执行即可换色，不需要重新请求数据
+function renderChart(el, build) {
   if (!el || disposed) return
+  chartBuilders.set(el, build)
   const chart = echarts.init(el)
-  chart.setOption(mergeTheme(option))
+  chart.setOption(mergeTheme(build()))
   charts.push(chart)
   resizeObserver.observe(el)
+}
+
+function rebuildCharts() {
+  const builds = new Map(chartBuilders)
+  palette.value = readChartPalette()
+  disposeCharts()
+  builds.forEach((build, el) => renderChart(el, build))
 }
 </script>
 
@@ -253,20 +291,29 @@ function renderChart(el, option) {
 
 /* —— V2 问候头 —— */
 .admin-greeting {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 110px;
-  padding: 20px 24px;
+  min-height: 126px;
+  padding: 25px 28px;
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: linear-gradient(105deg, var(--surface) 45%, var(--brand-soft));
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(circle at 88% 10%, color-mix(in srgb, var(--brand) 12%, transparent), transparent 34%),
+    linear-gradient(110deg, var(--surface) 42%, var(--brand-soft));
   box-shadow: var(--shadow-sm);
 }
-.greet-date { font-size: 12px; color: var(--brand-strong); margin: 0 0 7px; }
-.admin-greeting h1 { font-size: 26px; font-weight: 700; color: var(--ink); letter-spacing: -.4px; margin: 0; }
-.greet-sub { display: block; font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+.admin-greeting::after {
+  content: ""; position: absolute; right: 13%; bottom: -58px; width: 150px; height: 150px;
+  border: 22px solid color-mix(in srgb, var(--brand) 5%, transparent); border-radius: 50%; pointer-events: none;
+}
+.admin-greeting > * { position: relative; z-index: 1; }
+.greet-date { font-size: 12px; color: var(--brand-strong); margin: 0 0 7px; font-weight: 600; }
+.admin-greeting h1 { font-family: var(--font-display); font-size: 27px; font-weight: 700; color: var(--ink); margin: 0; }
+.greet-sub { display: block; font-size: 12px; color: var(--ink-3); margin-top: 9px; }
 .system-pill {
   display: inline-flex;
   align-items: center;
@@ -283,28 +330,36 @@ function renderChart(el, option) {
 .system-pill.warn i { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, .18); }
 
 /* —— 统计卡 —— */
-.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .stat-card {
   display: flex;
   align-items: center;
   gap: 15px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  padding: 18px 19px;
+  border-radius: 16px;
+  padding: 20px;
   min-width: 0;
+  box-shadow: var(--shadow-sm);
+  transition: transform .2s var(--ease-out), box-shadow .2s, border-color .2s;
 }
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--brand-line); }
+.stat-card:nth-child(1) { background: linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--surface) 72%, var(--brand-soft))); }
+.stat-card:nth-child(2) { background: linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--surface) 82%, var(--info-soft))); }
+.stat-card:nth-child(3) { background: linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--surface) 72%, var(--accent-soft))); }
+.stat-card:nth-child(4) { background: linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--surface) 84%, var(--surface-3))); }
 .stat-icon {
-  width: 45px;
-  height: 45px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
-.stat-icon svg { width: 21px; height: 21px; }
-.stat-card b { display: block; font-size: 27px; font-weight: 700; color: var(--ink); letter-spacing: -.6px; line-height: 1.1; }
-.stat-card small { display: block; font-size: 11px; color: var(--ink-3); margin-top: 4px; }
+.stat-icon svg { width: 21px; height: 21px; stroke-width: 1.8; }
+.stat-copy { min-width: 0; }
+.stat-card b { display: block; font-family: var(--font-display); font-size: 29px; font-weight: 700; color: var(--ink); line-height: 1.1; }
+.stat-card small { display: block; font-size: 12px; color: var(--ink-3); margin: 0 0 7px; }
 
 /* —— 图表 —— */
 .admin-charts { display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(280px, 1fr); gap: 14px; }
@@ -312,9 +367,10 @@ function renderChart(el, option) {
 .chart-panel {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  padding: 18px 19px;
+  border-radius: 16px;
+  padding: 20px;
   min-width: 0;
+  box-shadow: var(--shadow-sm);
 }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 13px; }
 .panel-head h3 { font-size: 15px; font-weight: 650; color: var(--ink); margin: 0; }
