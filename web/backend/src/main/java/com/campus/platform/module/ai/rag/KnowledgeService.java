@@ -34,17 +34,19 @@ public class KnowledgeService {
     private final TransactionTemplate transaction;
     private final PdfDocumentMapper pdfs;
     private final KnowledgeVectorClient vectors;
+    private final PythonRagClient python;
     private final PdfChunker chunker;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final AtomicBoolean working = new AtomicBoolean();
 
     KnowledgeService(KnowledgeMapper knowledge, TransactionTemplate transaction, PdfDocumentMapper pdfs,
-                     KnowledgeVectorClient vectors,
+                     KnowledgeVectorClient vectors, PythonRagClient python,
                      @Value("${campus.agent.rag.chunk-chars:640}") int chunkChars) {
         this.knowledge = knowledge;
         this.transaction = transaction;
         this.pdfs = pdfs;
         this.vectors = vectors;
+        this.python = python;
         this.chunker = new PdfChunker(chunkChars);
     }
 
@@ -109,8 +111,7 @@ public class KnowledgeService {
     }
 
     private List<Evidence> retrieve(Long userId, Long docId, String question, long deadline, boolean internal) {
-        var ids = internal ? vectors.search(userId, docId, question, deadline, true)
-                : vectors.search(userId, docId, question, deadline);
+        var ids = vectorIds(userId, docId, question, deadline, internal);
         List<Evidence> evidence = new ArrayList<>();
         for (String id : ids) {
             if (System.nanoTime() >= deadline) {
@@ -128,6 +129,27 @@ public class KnowledgeService {
             }
         }
         return evidence;
+    }
+
+    /**
+     * 检索向量 id。provider=python 时调用 Python 服务，失败且开启降级时回退本地实现，
+     * 保证新服务异常不影响现有问答能力。
+     */
+    private List<String> vectorIds(Long userId, Long docId, String question, long deadline, boolean internal) {
+        if (!python.enabled()) {
+            return internal ? vectors.search(userId, docId, question, deadline, true)
+                    : vectors.search(userId, docId, question, deadline);
+        }
+        try {
+            return python.search(userId == null ? 0L : userId, docId, question, deadline, internal);
+        } catch (RuntimeException e) {
+            if (!python.fallback()) {
+                throw e;
+            }
+            log.warn("AI 检索服务不可用，回退本地检索: {}", e.getMessage());
+            return internal ? vectors.search(userId, docId, question, deadline, true)
+                    : vectors.search(userId, docId, question, deadline);
+        }
     }
 
     public void verifyVersion(Long uid, long id, String version) {
@@ -260,17 +282,25 @@ public class KnowledgeService {
             if (doc == null) {
                 return;
             }
-            var parts = chunker.split(fileBytes(pdfs.selectById(doc.pdfId())));
-            for (int start = 0; start < parts.size(); start += BATCH_SIZE) {
-                var batch = parts.subList(start, Math.min(parts.size(), start + BATCH_SIZE));
-                var embeddings = vectors.embed(batch.stream().map(PdfChunker.Part::text).toList());
-                List<String> ids = batch.stream().map(part -> UUID.randomUUID().toString()).toList();
-                List<ChunkRow> rows = new ArrayList<>();
-                for (int i = 0; i < batch.size(); i++) {
-                    rows.add(new ChunkRow(ids.get(i), job.id(), job.version(), batch.get(i).page(), batch.get(i).text()));
-                }
+            byte[] content = fileBytes(pdfs.selectById(doc.pdfId()));
+            if (python.enabled()) {
+                // Python 接管解析、切片、向量化与写入；切片正文仍由本方法落库
+                List<ChunkRow> rows = python.index(doc.id(), doc.ownerId(), doc.scope(), job.version(),
+                        content, System.nanoTime() + Duration.ofMinutes(2).toNanos());
                 knowledge.insertChunks(rows);
-                vectors.upsert(doc.id(), doc.ownerId(), doc.scope(), job.version(), ids, embeddings);
+            } else {
+                var parts = chunker.split(content);
+                for (int start = 0; start < parts.size(); start += BATCH_SIZE) {
+                    var batch = parts.subList(start, Math.min(parts.size(), start + BATCH_SIZE));
+                    var embeddings = vectors.embed(batch.stream().map(PdfChunker.Part::text).toList());
+                    List<String> ids = batch.stream().map(part -> UUID.randomUUID().toString()).toList();
+                    List<ChunkRow> rows = new ArrayList<>();
+                    for (int i = 0; i < batch.size(); i++) {
+                        rows.add(new ChunkRow(ids.get(i), job.id(), job.version(), batch.get(i).page(), batch.get(i).text()));
+                    }
+                    knowledge.insertChunks(rows);
+                    vectors.upsert(doc.id(), doc.ownerId(), doc.scope(), job.version(), ids, embeddings);
+                }
             }
             Boolean published = transaction.execute(tx -> {
                 if (!lockDocument(job.id())) {
@@ -308,6 +338,13 @@ public class KnowledgeService {
     private void cleanVersion(long id, String version) {
         try {
             vectors.delete(id, version);
+            if (python.enabled()) {
+                try {
+                    python.delete(id, version);
+                } catch (RuntimeException e) {
+                    log.warn("AI 检索服务的未发布索引未能清理: {}", e.getMessage());
+                }
+            }
             knowledge.deleteVersion(id, version);
         } catch (RuntimeException e) {
             log.warn("知识库文档 {} 的未发布索引未能清理", id);
@@ -319,6 +356,13 @@ public class KnowledgeService {
         if (!ids.isEmpty()) {
             long id = ids.get(0);
             vectors.delete(id, null);
+            if (python.enabled()) {
+                try {
+                    python.delete(id, null);
+                } catch (RuntimeException e) {
+                    log.warn("AI 检索服务的已删除文档向量未能清理: {}", e.getMessage());
+                }
+            }
             knowledge.deleteChunks(id);
             knowledge.markPurged(id);
         }

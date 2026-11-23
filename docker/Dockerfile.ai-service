@@ -1,0 +1,25 @@
+# AI 检索服务（Python 第二后端）。构建上下文为仓库根目录，与其它 Dockerfile 一致。
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+COPY web/ai-service/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN useradd --uid 10001 --create-home --shell /usr/sbin/nologin appuser
+
+# 源码在部分开发机上为 600，复制后统一归属运行用户并保证可读
+COPY --chown=10001:10001 web/ai-service/app ./app
+RUN chmod -R a+rX /app/app
+
+USER 10001
+
+# 只在容器网络内暴露，不映射宿主机端口
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

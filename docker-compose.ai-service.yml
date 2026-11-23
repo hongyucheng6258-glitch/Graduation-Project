@@ -1,0 +1,60 @@
+# AI 检索服务叠加文件。不修改 docker-compose.yml 与 docker-compose.agent.yml，
+# 只有显式追加本文件时才会启动 ai-service：
+#
+#   docker compose -f docker-compose.yml -f docker-compose.agent.yml \
+#     -f docker-compose.ai-service.yml up -d
+#
+# 省略最后一个 -f 参数即为原有部署方式。默认 CAMPUS_AGENT_RAG_PROVIDER=local，
+# 后端仍走原实现，ai-service 只是待命。
+
+services:
+  ai-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ai-service
+    restart: unless-stopped
+    # 仅容器内网，不映射宿主机端口，避免端口冲突
+    expose:
+      - "8000"
+    environment:
+      CAMPUS_AI_SERVICE_TOKEN: ${CAMPUS_AI_SERVICE_TOKEN:?Set CAMPUS_AI_SERVICE_TOKEN in .env}
+      CAMPUS_AI_RAG_COLLECTION: ${CAMPUS_AI_RAG_COLLECTION:-campus_bge_small_onnx_v1_py}
+      CAMPUS_AI_MAX_JOBS: ${CAMPUS_AI_MAX_JOBS:-2}
+      # 以下取值必须与 docker-compose.agent.yml 中 backend 的 RAG 配置一致，
+      # 否则切片长度、查询截断与向量维度会与现有实现不同。
+      CAMPUS_AGENT_RAG_EMBEDDING_URL: http://embedding:11434
+      CAMPUS_AGENT_RAG_EMBEDDING_MODEL: bge-small-zh-v1.5-onnx
+      CAMPUS_AGENT_RAG_QDRANT_URL: http://qdrant:6333
+      CAMPUS_AGENT_RAG_CHUNK_CHARS: "400"
+      CAMPUS_AGENT_RAG_QUERY_CHARS: "400"
+      CAMPUS_AGENT_RAG_MIN_SCORE: "0.40"
+      TZ: ${CAMPUS_TIMEZONE:-Asia/Shanghai}
+    depends_on:
+      embedding:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    # 限制解析占用的 CPU/内存，避免影响同机的 MySQL 与后端
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  backend:
+    # 仅新增开关与调用地址，默认 local 保持现有行为
+    environment:
+      CAMPUS_AGENT_RAG_PROVIDER: ${CAMPUS_AGENT_RAG_PROVIDER:-local}
+      CAMPUS_AGENT_RAG_FALLBACK: ${CAMPUS_AGENT_RAG_FALLBACK:-true}
+      CAMPUS_AI_SERVICE_URL: http://ai-service:8000
+      CAMPUS_AI_SERVICE_TOKEN: ${CAMPUS_AI_SERVICE_TOKEN:-}

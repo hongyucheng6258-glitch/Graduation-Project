@@ -1,6 +1,6 @@
 # 梧桐校园 · 三维交互式智慧校园服务平台
 
-梧桐校园由 **Vue 3 学生端、Vue 3 管理端和 Spring Boot 后端**组成。学生可以在普通网页或 Three.js 校园里使用活动报名、闲置互换、失物认领、学习互助和实时交流。学生端校园向导连接实时业务和知识库，管理端智能助手连接待办查询、审核确认与公告草稿。
+梧桐校园由 **Vue 3 学生端、Vue 3 管理端、Spring Boot 业务后端和 Python 检索服务**组成。学生可以在普通网页或 Three.js 校园里使用活动报名、闲置互换、失物认领、学习互助和实时交流。学生端校园向导连接实时业务和知识库，管理端智能助手连接待办查询、审核确认与公告草稿；文档解析与向量检索由独立的 Python 服务承担，业务与事务仍全部在 Java 后端。
 
 [功能](#功能) · [智能助手与 RAG](#智能助手与-rag) · [技术架构](#技术架构) · [Docker 快速启动](#docker-快速启动) · [开发与测试](#开发与测试) · [部署说明](./部署说明.md)
 
@@ -49,14 +49,44 @@ flowchart LR
     API --> Redis[(Redis)]
     API --> Agent[校园向导与管理助手]
     Agent --> Model[DeepSeek 兼容模型接口]
-    Agent --> Embedding[BGE ONNX Embedding]
-    Agent --> Qdrant[(Qdrant)]
+    Agent -->|provider=python| RAG[Python 检索服务]
+    RAG --> Embedding[BGE ONNX Embedding]
+    RAG --> Qdrant[(Qdrant)]
+    Agent -.provider=local 默认直连.-> Embedding
+    Agent -.provider=local 默认直连.-> Qdrant
 ```
 
 - **后端**使用 Java 21、Spring Boot、MyBatis-Plus、JWT、BCrypt 和 Spring WebSocket。MySQL 保存业务记录、上传资源、文档切片和提示词版本，Redis 用于验证码、缓存与限流。
+- **检索服务**使用 Python 3.11、FastAPI、PyMuPDF 和 Qdrant 客户端，只负责 PDF 解析、切片、向量化与向量检索；不直连 MySQL，切片正文仍由 Java 落库。
 - **数据库访问**由 Mapper 层负责。常规增删改查使用 MyBatis-Plus，自定义 SQL 放在对应的 Mapper。Service 负责业务规则和事务。
 - **前端**使用 Vue 3、Vite、Pinia、Vue Router、Element Plus 和 ECharts。Three.js 渲染校园场景，Tesseract.js 支持浏览器内的错题 OCR。
-- **部署**使用 Docker Compose、Nginx 和多阶段构建。完整环境包含 MySQL、Redis、Spring Boot、两个 Web 端、Embedding 和 Qdrant，Agent 表结构由一次性迁移任务初始化。
+- **部署**使用 Docker Compose、Nginx 和多阶段构建。完整环境包含 MySQL、Redis、Spring Boot、两个 Web 端、Embedding、Qdrant 和可选的 Python 检索服务，Agent 表结构由一次性迁移任务初始化。
+
+### Java + Python 双后端
+
+业务后端保持单一写入口，Python 服务是只做检索的内部下游：不映射宿主机端口，只接受 Java 的
+`X-Service-Token` 请求，使用独立向量集合（默认 `campus_bge_small_onnx_v1_py`），与现有集合完全隔离。
+
+| 能力 | Java | Python |
+| --- | --- | --- |
+| 上传、发布、撤回、权限、配额、审核流 | 负责 | — |
+| 切片正文写入 MySQL | 唯一写入方 | — |
+| PDF 解析、切片、向量化、向量检索 | 保留为降级路径 | 负责 |
+| 提示词、答案生成、引用格式、Function Calling | 负责 | — |
+
+默认 `CAMPUS_AGENT_RAG_PROVIDER=local`，行为与引入服务前一致。切换与回退：
+
+```bash
+# 启用 Python 检索（.env 中需设置 CAMPUS_AI_SERVICE_TOKEN）
+CAMPUS_AGENT_RAG_PROVIDER=python
+CAMPUS_AGENT_RAG_FALLBACK=true
+
+# 回退：改回 local 并重启 backend，无需数据迁移
+```
+
+服务异常时会自动回退本地实现，问答不中断（HTTP 200，日志记录“回退本地检索”）。实现细节与
+验证记录见 [AI 检索服务双后端拆分方案](./文档/02-系统设计/AI检索服务双后端拆分方案.md)，
+服务说明见 [web/ai-service/README.md](./web/ai-service/README.md)。
 
 ## Docker 快速启动
 
@@ -80,11 +110,19 @@ notepad .env
 | `AI_BASE_URL`、`AI_MODEL` | 模板使用 DeepSeek 和 `deepseek-chat`，可按服务配置调整 |
 | `STUDENT_PORT`、`ADMIN_PORT`、`BACKEND_PORT` | 建议设置为 `15173`、`15174`、`18080`。模板的后端端口是 `8080`，如沿用模板则使用 `8080` 检查后端 |
 | `TRUSTED_ORIGINS` | 模板已含本机默认前端地址。修改端口或域名时同步更新 |
+| `CAMPUS_AI_SERVICE_TOKEN` | 仅在叠加 Python 检索服务时必填，生成方式 `openssl rand -hex 32`；其余 `CAMPUS_AGENT_RAG_*` 保持模板默认即可 |
 
 ```powershell
 $stack = @('-f', 'docker-compose.yml', '-f', 'docker-compose.agent.yml')
 docker compose @stack up -d --build --wait
 docker compose @stack ps -a
+```
+
+需要同时启动 Python 检索服务时，追加叠加文件（省略最后一项即为上面的基础部署，默认 `provider=local` 不启用新服务）：
+
+```powershell
+$stack = @('-f', 'docker-compose.yml', '-f', 'docker-compose.agent.yml', '-f', 'docker-compose.ai-service.yml')
+docker compose @stack up -d --build --wait
 ```
 
 已运行且完成数据库迁移登记的正式环境可执行 `bash scripts/deploy-backend.sh` 发布后端。数据库迁移、备份和回退步骤见 [部署说明](./部署说明.md#后端发布与回退)。
@@ -158,6 +196,7 @@ node --test @frontendTests @runnerTests
 
 ```text
 web/backend/            Spring Boot、数据库迁移与后端测试
+web/ai-service/         Python 检索服务（FastAPI、PDF 解析与向量检索）
 web/frontend/student/   学生端、Three.js 校园和实时画板
 web/frontend/admin/     管理后台和管理智能助手
 web/frontend/shared/    两端共用的助手界面
