@@ -4,7 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
-import com.campus.platform.module.ai.gateway.AiGatewayService;
+import com.campus.platform.module.ai.gateway.IAiGatewayService;
 import com.campus.platform.module.idle.vo.IdleEstimateVO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

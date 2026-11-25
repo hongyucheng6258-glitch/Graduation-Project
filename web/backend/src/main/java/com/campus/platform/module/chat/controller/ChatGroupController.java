@@ -3,8 +3,8 @@ package com.campus.platform.module.chat.controller;
 import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import com.campus.platform.module.chat.dto.GroupCreateDTO;
-import com.campus.platform.module.chat.service.ChatGroupService;
-import com.campus.platform.module.chat.service.ChatService;
+import com.campus.platform.module.chat.service.IChatGroupService;
+import com.campus.platform.module.chat.service.IChatService;
 import com.campus.platform.module.chat.vo.ConversationVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -20,8 +20,8 @@ import java.util.List;
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
 public class ChatGroupController {
-    private final ChatGroupService groups;
-    private final ChatService chat;
+    private final IChatGroupService groups;
+    private final IChatService chat;
 
     public record Invite(@NotNull @Positive Long userId) {}
     public record Decision(@NotNull Boolean accept) {}
@@ -35,7 +35,7 @@ public class ChatGroupController {
     }
 
     @GetMapping("/group-invitations")
-    public Result<List<ChatGroupService.Invitation>> invitations() {
+    public Result<List<IChatGroupService.Invitation>> invitations() {
         return Result.ok(groups.invitations(UserContext.getUid()));
     }
 

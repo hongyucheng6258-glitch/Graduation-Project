@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/ai/agent")
 public class AgentController {
-    private final AgentService agent;
+    private final IAgentService agent;
     private final ActivitySignupActions actions;
     private final ActivityPublishDrafts activityDrafts;
     private final IdlePublishDrafts idleDrafts;
@@ -29,7 +29,7 @@ public class AgentController {
     private final boolean enabled;
     private final boolean ragEnabled;
 
-    public AgentController(AgentService agent, ActivitySignupActions actions, ActivityPublishDrafts activityDrafts,
+    public AgentController(IAgentService agent, ActivitySignupActions actions, ActivityPublishDrafts activityDrafts,
                            IdlePublishDrafts idleDrafts,
                            IdleAppointmentActions idleAppointments, CampusPublishDrafts campusDrafts,
                            @Value("${campus.agent.enabled:false}") boolean enabled,
@@ -50,7 +50,7 @@ public class AgentController {
     }
 
     @PostMapping("/ask")
-    public Result<AgentService.Reply> ask(@Valid @RequestBody Question request) {
+    public Result<IAgentService.Reply> ask(@Valid @RequestBody Question request) {
         checkEnabled();
         return Result.ok(agent.ask(UserContext.getUid(), request.question().strip(), request.sessionId()));
     }

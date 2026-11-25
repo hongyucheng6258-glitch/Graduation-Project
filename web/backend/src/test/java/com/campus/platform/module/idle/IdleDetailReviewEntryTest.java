@@ -1,8 +1,12 @@
 package com.campus.platform.module.idle;
 
+import com.campus.platform.module.ai.service.ContentAiAuditServiceImpl;
+
+import com.campus.platform.module.message.service.impl.MessageServiceImpl;
+
 import com.campus.platform.module.idle.service.impl.IdleServiceImpl;
 
-import com.campus.platform.module.ai.service.ContentAiAuditService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
 import com.campus.platform.module.message.service.IMessageService;
 
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
@@ -45,11 +49,11 @@ class IdleDetailReviewEntryTest {
     @Mock
     private UserMapper userMapper;
     @Mock
-    private IMessageService messageService;
+    private MessageServiceImpl messageService;
     @Mock
     private SensitiveWordService sensitiveWordService;
     @Mock
-    private ContentAiAuditService contentAiAuditService;
+    private ContentAiAuditServiceImpl contentAiAuditService;
 
     @org.mockito.InjectMocks
     private IdleServiceImpl idleService;

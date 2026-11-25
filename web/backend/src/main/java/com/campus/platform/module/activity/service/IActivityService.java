@@ -13,7 +13,7 @@ import com.campus.platform.module.activity.dto.SigninDTO;
 import com.campus.platform.module.activity.dto.SignupDTO;
 import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.activity.vo.MemberVO;
-import com.campus.platform.module.ai.service.ContentAiAuditService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
 import com.campus.platform.module.message.service.IMessageService;
 import com.campus.platform.utils.ImageListJson;
 import cn.hutool.core.bean.BeanUtil;

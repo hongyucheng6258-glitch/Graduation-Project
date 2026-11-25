@@ -1,5 +1,7 @@
 package com.campus.platform.module.chat.websocket;
 
+import com.campus.platform.module.chat.websocket.impl.ChatWsTicketServiceImpl;
+
 
 import com.campus.platform.utils.RedisUtils;
 import org.junit.jupiter.api.Test;
@@ -18,7 +20,7 @@ class ChatWsTicketServiceTest {
 
     @Test
     void ticketIsSingleUseAndCarriesUserId() {
-        ChatWsTicketService service = new ChatWsTicketService(redisUtils);
+        IChatWsTicketService service = new ChatWsTicketServiceImpl(redisUtils);
         when(redisUtils.getAndDelete("chat:ws-ticket:t-1")).thenReturn(7L, null);
 
         assertEquals(7L, service.consume("t-1"));
@@ -28,7 +30,7 @@ class ChatWsTicketServiceTest {
 
     @Test
     void expiredOrForgedTicketIsRejected() {
-        ChatWsTicketService service = new ChatWsTicketService(redisUtils);
+        IChatWsTicketService service = new ChatWsTicketServiceImpl(redisUtils);
         when(redisUtils.getAndDelete("chat:ws-ticket:bad")).thenReturn(null);
 
         assertNull(service.consume("bad"));

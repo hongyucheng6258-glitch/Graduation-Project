@@ -1,0 +1,217 @@
+package com.campus.platform.module.admin.service.impl;
+
+import com.campus.platform.module.admin.service.IStatsService;
+import jakarta.annotation.Resource;
+import com.campus.platform.module.admin.vo.StatsOverviewVO;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.campus.platform.common.Constants;
+import com.campus.platform.common.DailyCount;
+import com.campus.platform.module.activity.entity.Activity;
+import com.campus.platform.module.ai.entity.AiCallLog;
+import com.campus.platform.module.idle.entity.IdleItem;
+import com.campus.platform.module.lostfound.entity.LostFound;
+import com.campus.platform.module.post.entity.Post;
+import com.campus.platform.module.report.entity.Report;
+import com.campus.platform.module.user.entity.User;
+import com.campus.platform.module.activity.mapper.ActivityMapper;
+import com.campus.platform.module.ai.mapper.AiCallLogMapper;
+import com.campus.platform.module.idle.mapper.IdleItemMapper;
+import com.campus.platform.module.lostfound.mapper.LostFoundMapper;
+import com.campus.platform.module.post.mapper.PostMapper;
+import com.campus.platform.module.report.mapper.ReportMapper;
+import com.campus.platform.module.user.mapper.UserMapper;
+import com.campus.platform.module.partner.entity.StudyPartner;
+import com.campus.platform.module.partner.mapper.StudyPartnerMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * 数据大屏统计服务（D7）。
+ * 活跃口径：最近登录、注册、AI 调用与内容发布按日合并去重。
+ */
+@Service
+public class StatsServiceImpl implements IStatsService {
+
+    @Resource
+    private UserMapper userMapper;
+    @Resource
+    private AiCallLogMapper aiCallLogMapper;
+    @Resource
+    private IdleItemMapper idleItemMapper;
+    @Resource
+    private ActivityMapper activityMapper;
+    @Resource
+    private LostFoundMapper lostFoundMapper;
+    @Resource
+    private PostMapper postMapper;
+    @Resource
+    private ReportMapper reportMapper;
+    @Resource
+    private StudyPartnerMapper studyPartnerMapper;
+
+    /**
+     * 管理端待办数（第3项修复：后端准确 COUNT，不再由前端翻页推算）。
+     * <p>口径：各审核类型 = 对应业务表 audit_status=0 的总数；report = 待处理举报数；
+     * ai = 待审内容中 ai_risk_level>=1 的子集（与业务数同源，相加会重复计数，
+     * 前端做待办角标合计时不得把 ai 再累加一遍）。
+     */
+    @Override
+    public Map<String, Long> pendingCounts() {
+        Map<String, Long> m = new HashMap<>();
+        m.put("idle", idleItemMapper.selectCount(new LambdaQueryWrapper<IdleItem>()
+                .eq(IdleItem::getAuditStatus, Constants.AUDIT_PENDING)));
+        m.put("activity", activityMapper.selectCount(new LambdaQueryWrapper<Activity>()
+                .eq(Activity::getAuditStatus, Constants.AUDIT_PENDING)));
+        m.put("lostfound", lostFoundMapper.selectCount(new LambdaQueryWrapper<LostFound>()
+                .eq(LostFound::getAuditStatus, Constants.AUDIT_PENDING)));
+        m.put("post", postMapper.selectCount(new LambdaQueryWrapper<Post>()
+                .eq(Post::getAuditStatus, Constants.AUDIT_PENDING)));
+        m.put("partner", studyPartnerMapper.selectCount(new LambdaQueryWrapper<StudyPartner>()
+                .eq(StudyPartner::getAuditStatus, Constants.AUDIT_PENDING)));
+        m.put("report", reportMapper.selectCount(new LambdaQueryWrapper<Report>()
+                .eq(Report::getStatus, Constants.REPORT_PENDING)));
+        long ai = 0;
+        ai += idleItemMapper.selectCount(new LambdaQueryWrapper<IdleItem>()
+                .eq(IdleItem::getAuditStatus, Constants.AUDIT_PENDING)
+                .ge(IdleItem::getAiRiskLevel, 1));
+        ai += activityMapper.selectCount(new LambdaQueryWrapper<Activity>()
+                .eq(Activity::getAuditStatus, Constants.AUDIT_PENDING)
+                .ge(Activity::getAiRiskLevel, 1));
+        ai += lostFoundMapper.selectCount(new LambdaQueryWrapper<LostFound>()
+                .eq(LostFound::getAuditStatus, Constants.AUDIT_PENDING)
+                .ge(LostFound::getAiRiskLevel, 1));
+        ai += postMapper.selectCount(new LambdaQueryWrapper<Post>()
+                .eq(Post::getAuditStatus, Constants.AUDIT_PENDING)
+                .ge(Post::getAiRiskLevel, 1));
+        ai += studyPartnerMapper.selectCount(new LambdaQueryWrapper<StudyPartner>()
+                .eq(StudyPartner::getAuditStatus, Constants.AUDIT_PENDING)
+                .ge(StudyPartner::getAiRiskLevel, 1));
+        m.put("ai", ai);
+        return m;
+    }
+
+    /** 数字卡片：总用户/今日活跃/今日AI调用/待审核数 */
+    @Override
+    public StatsOverviewVO overview() {
+        StatsOverviewVO vo = new StatsOverviewVO();
+        vo.setTotalUsers(userMapper.selectCount(null));
+
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        long active = userMapper.countObservedActiveByDay(todayStart, todayStart.plusDays(1)).stream()
+                .mapToLong(DailyCount::total).sum();
+        vo.setTodayActiveUsers(active);
+
+        vo.setTodayAiCalls(aiCallLogMapper.selectCount(new LambdaQueryWrapper<AiCallLog>()
+                .ge(AiCallLog::getCreateTime, todayStart)));
+
+        long pending = idleItemMapper.selectCount(new LambdaQueryWrapper<IdleItem>()
+                        .eq(IdleItem::getAuditStatus, Constants.AUDIT_PENDING))
+                + activityMapper.selectCount(new LambdaQueryWrapper<Activity>()
+                        .eq(Activity::getAuditStatus, Constants.AUDIT_PENDING))
+                + lostFoundMapper.selectCount(new LambdaQueryWrapper<LostFound>()
+                        .eq(LostFound::getAuditStatus, Constants.AUDIT_PENDING))
+                + postMapper.selectCount(new LambdaQueryWrapper<Post>()
+                        .eq(Post::getAuditStatus, Constants.AUDIT_PENDING));
+        vo.setPendingAudits(pending);
+        return vo;
+    }
+
+    /**
+     * 近30天趋势：每日可观测活跃用户、累计用户和 AI 调用数。
+     * 返回 {dates:[], dailyActiveUsers:[], userGrowth:[], aiCalls:[]}
+     */
+    @Override
+    public Map<String, Object> trend() {
+        List<String> dates = new ArrayList<>();
+        List<Long> userGrowth = new ArrayList<>();
+        List<Long> aiCalls = new ArrayList<>();
+        List<Long> dailyActiveUsers = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        LocalDate firstDay = today.minusDays(29);
+        LocalDateTime start = firstDay.atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+        long cumulativeUsers = userMapper.selectCount(new LambdaQueryWrapper<User>()
+                .lt(User::getCreateTime, start));
+        Map<LocalDate, Long> registrationsByDay = userMapper.countByDay(start, end).stream()
+                .collect(Collectors.toMap(DailyCount::day, DailyCount::total));
+        Map<LocalDate, Long> callsByDay = aiCallLogMapper.countByDay(start, end).stream()
+                .collect(Collectors.toMap(DailyCount::day, DailyCount::total));
+        Map<LocalDate, Long> activeByDay = userMapper.countObservedActiveByDay(start, end).stream()
+                .collect(Collectors.toMap(DailyCount::day, DailyCount::total));
+        for (LocalDate day = firstDay; !day.isAfter(today); day = day.plusDays(1)) {
+            dates.add(day.toString());
+            cumulativeUsers += registrationsByDay.getOrDefault(day, 0L);
+            userGrowth.add(cumulativeUsers);
+            aiCalls.add(callsByDay.getOrDefault(day, 0L));
+            dailyActiveUsers.add(activeByDay.getOrDefault(day, 0L));
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("dates", dates);
+        result.put("dailyActiveUsers", dailyActiveUsers);
+        result.put("userGrowth", userGrowth);
+        result.put("aiCalls", aiCalls);
+        return result;
+    }
+
+    /**
+     * 各模块发布量柱状图。
+     * 返回 [{name:'闲置',value:n}, ...]
+     */
+    @Override
+    public List<Map<String, Object>> moduleStats() {
+        List<Map<String, Object>> list = new ArrayList<>();
+        list.add(bar("闲置互换", idleItemMapper.selectCount(null)));
+        list.add(bar("活动组队", activityMapper.selectCount(null)));
+        list.add(bar("失物招领", lostFoundMapper.selectCount(null)));
+        list.add(bar("动态广场", postMapper.selectCount(null)));
+        list.add(bar("AI会话", aiCallLogMapper.selectCount(null)));
+        return list;
+    }
+
+    /**
+     * 饼图数据：失物状态分布 + 举报类型分布。
+     * 返回 {lostStatus:[{name,value}], reportTypes:[{name,value}]}
+     */
+    @Override
+    public Map<String, Object> pieStats() {
+        Map<String, Object> result = new HashMap<>();
+        // 失物：进行中/已完成/已下架
+        List<Map<String, Object>> lostStatus = new ArrayList<>();
+        lostStatus.add(pie("进行中", lostFoundMapper.selectCount(
+                new LambdaQueryWrapper<LostFound>().eq(LostFound::getStatus, Constants.LF_DOING))));
+        lostStatus.add(pie("已完成", lostFoundMapper.selectCount(
+                new LambdaQueryWrapper<LostFound>().eq(LostFound::getStatus, Constants.LF_DONE))));
+        lostStatus.add(pie("已下架", lostFoundMapper.selectCount(
+                new LambdaQueryWrapper<LostFound>().eq(LostFound::getStatus, Constants.LF_OFF))));
+        result.put("lostStatus", lostStatus);
+        // 举报类型分布
+        List<Report> reports = reportMapper.selectList(
+                new LambdaQueryWrapper<Report>().select(Report::getReasonType));
+        Map<String, Long> typeCount = new HashMap<>();
+        reports.forEach(r -> typeCount.merge(r.getReasonType(), 1L, Long::sum));
+        List<Map<String, Object>> reportTypes = new ArrayList<>();
+        typeCount.forEach((k, v) -> reportTypes.add(pie(k, v)));
+        result.put("reportTypes", reportTypes);
+        return result;
+    }
+
+    private Map<String, Object> bar(String name, Long value) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("name", name);
+        m.put("value", value);
+        return m;
+    }
+
+    private Map<String, Object> pie(String name, Long value) {
+        return bar(name, value);
+    }
+}

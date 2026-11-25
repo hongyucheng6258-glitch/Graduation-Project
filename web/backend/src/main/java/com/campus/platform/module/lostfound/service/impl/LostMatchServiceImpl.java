@@ -7,7 +7,7 @@ import cn.hutool.core.util.StrUtil;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
-import com.campus.platform.module.ai.gateway.AiGatewayService;
+import com.campus.platform.module.ai.gateway.IAiGatewayService;
 import com.campus.platform.module.lostfound.entity.LostFound;
 import com.campus.platform.module.lostfound.mapper.LostFoundMapper;
 import com.campus.platform.module.lostfound.vo.LostMatchVO;
@@ -40,7 +40,7 @@ public class LostMatchServiceImpl implements ILostMatchService {
     @Resource
     private UserMapper userMapper;
     @Resource
-    private AiGatewayService aiGatewayService;
+    private IAiGatewayService aiGatewayService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** 智能匹配：返回可能的拾到记录（最多 3 条，AI 排序） */

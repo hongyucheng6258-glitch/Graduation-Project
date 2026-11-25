@@ -19,7 +19,7 @@ import com.campus.platform.module.idle.vo.IdleGuideCard;
 import com.campus.platform.module.idle.entity.IdleReview;
 import com.campus.platform.module.idle.entity.IdleItem;
 
-import com.campus.platform.module.ai.service.ContentAiAuditService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
 import com.campus.platform.module.message.service.IMessageService;
 
 import cn.hutool.core.bean.BeanUtil;
@@ -68,7 +68,7 @@ public class IdleServiceImpl extends ServiceImpl<IdleItemMapper, IdleItem> imple
     @Resource
     private SensitiveWordService sensitiveWordService;
     @Resource
-    private ContentAiAuditService contentAiAuditService;
+    private IContentAiAuditService contentAiAuditService;
     @Resource
     private IIdleHandoffService handoffs;
 

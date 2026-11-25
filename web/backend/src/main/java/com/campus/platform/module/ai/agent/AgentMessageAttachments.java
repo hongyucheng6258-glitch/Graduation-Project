@@ -3,7 +3,7 @@ package com.campus.platform.module.ai.agent;
 import com.campus.platform.module.ai.mapper.AgentMessageAttachmentMapper;
 import com.campus.platform.common.BizException;
 import com.campus.platform.module.ai.entity.AiMessage;
-import com.campus.platform.module.ai.rag.KnowledgeService;
+import com.campus.platform.module.ai.rag.IKnowledgeService;
 import com.campus.platform.module.idle.service.IIdleService;
 import com.campus.platform.module.idle.vo.IdleGuideCard;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -22,7 +22,7 @@ import java.util.Objects;
 public class AgentMessageAttachments {
     private final AgentMessageAttachmentMapper attachments;
     private final ObjectMapper json;
-    private final ObjectProvider<KnowledgeService> knowledge;
+    private final ObjectProvider<IKnowledgeService> knowledge;
     private final ActivitySignupActions actions;
     private final IIdleService idle;
     private final IdlePublishDrafts idleDrafts;
@@ -31,7 +31,7 @@ public class AgentMessageAttachments {
     private final ActivityPublishDrafts activityDrafts;
     private final CampusPublishDrafts campusDrafts;
 
-    public void save(long messageId, List<AgentService.Citation> citations, List<String> actionIds) {
+    public void save(long messageId, List<IAgentService.Citation> citations, List<String> actionIds) {
         save(messageId, new Stored(citations, actionIds, List.of(), false, List.of(), List.of(), List.of(), List.of(), List.of()));
     }
 
@@ -90,10 +90,10 @@ public class AgentMessageAttachments {
         }
     }
 
-    record Stored(List<AgentService.Citation> citations, List<String> actionIds, List<Long> idleIds,
+    record Stored(List<IAgentService.Citation> citations, List<String> actionIds, List<Long> idleIds,
                   boolean idleSearch, List<String> idleDraftIds, List<String> idleAppointmentIds,
                   List<CampusResourceTools.Ref> resourceRefs, List<String> activityDraftIds, List<String> campusDraftIds) {}
-    public record View(List<AgentService.Citation> citations, List<ActivitySignupActions.Card> actions,
+    public record View(List<IAgentService.Citation> citations, List<ActivitySignupActions.Card> actions,
                        List<IdleGuideCard> idleItems, boolean idleSearch, List<IdlePublishDrafts.Draft> idleDrafts,
                        List<IdleAppointmentActions.Card> idleAppointments, List<CampusResourceTools.Card> resources,
                        List<ActivityPublishDrafts.Draft> activityDrafts, List<CampusPublishDrafts.Draft> campusDrafts) {}

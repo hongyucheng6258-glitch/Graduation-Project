@@ -18,11 +18,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "campus.agent.enabled", havingValue = "true")
 public class AdminAgentController {
-    private final AgentPromptService prompts;
+    private final IAgentPromptService prompts;
     private final AgentRunMapper runs;
 
     @GetMapping("/prompts/{scene}")
-    public Result<List<AgentPromptService.Version>> list(@PathVariable String scene) {
+    public Result<List<IAgentPromptService.Version>> list(@PathVariable String scene) {
         return Result.ok(prompts.versions(scene));
     }
 

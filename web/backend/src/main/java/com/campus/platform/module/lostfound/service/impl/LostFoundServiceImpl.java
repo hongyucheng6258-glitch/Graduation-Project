@@ -13,7 +13,7 @@ import com.campus.platform.module.lostfound.vo.ClaimVO;
 import com.campus.platform.module.lostfound.vo.LostFoundVO;
 import com.campus.platform.module.lostfound.entity.LostFound;
 
-import com.campus.platform.module.ai.service.ContentAiAuditService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
 import com.campus.platform.utils.ImageListJson;
 import com.campus.platform.module.message.service.IMessageService;
 
@@ -48,7 +48,7 @@ public class LostFoundServiceImpl extends ServiceImpl<LostFoundMapper, LostFound
     @Resource
     private SensitiveWordService sensitiveWordService;
     @Resource
-    private ContentAiAuditService contentAiAuditService;
+    private IContentAiAuditService contentAiAuditService;
     @Resource
     private LostFoundClaimMapper claimMapper;
     @Resource

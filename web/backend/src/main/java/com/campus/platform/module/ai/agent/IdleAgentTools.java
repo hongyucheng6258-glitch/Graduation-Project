@@ -15,7 +15,7 @@ import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
-class IdleAgentTools implements AgentToolSource {
+public class IdleAgentTools implements AgentToolSource {
     static final String SEARCH = "search_idle_items";
     static final String DETAIL = "get_idle_detail";
 

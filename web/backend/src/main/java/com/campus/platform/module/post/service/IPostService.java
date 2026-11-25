@@ -10,7 +10,7 @@ import com.campus.platform.module.post.vo.CommentVO;
 import com.campus.platform.module.post.entity.PostLike;
 import com.campus.platform.module.post.vo.PostVO;
 import com.campus.platform.module.post.entity.Post;
-import com.campus.platform.module.ai.service.ContentAiAuditService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
 import com.campus.platform.module.favorite.entity.Favorite;
 import com.campus.platform.module.favorite.mapper.FavoriteMapper;
 import com.campus.platform.module.message.service.IMessageService;

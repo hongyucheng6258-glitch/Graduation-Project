@@ -5,7 +5,7 @@ import com.campus.platform.module.admin.audit.AdminOperationTarget;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
-import com.campus.platform.module.admin.service.AuditService;
+import com.campus.platform.module.admin.service.IAuditService;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -25,7 +25,7 @@ import java.util.UUID;
 class AdminAssistantReviewActions {
     private final AdminAssistantReviewMapper reviews;
     private final AdminAssistantSessions sessions;
-    private final AuditService audit;
+    private final IAuditService audit;
 
     Card prepare(Long adminId, Request request) {
         String kind = request.kind() == null ? Constants.BIZ_IDLE : request.kind();

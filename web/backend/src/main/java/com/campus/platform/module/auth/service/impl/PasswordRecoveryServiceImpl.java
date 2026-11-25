@@ -2,7 +2,7 @@ package com.campus.platform.module.auth.service.impl;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
-import com.campus.platform.module.admin.service.AdminUserService;
+import com.campus.platform.module.admin.service.IAdminUserService;
 import com.campus.platform.module.auth.mapper.PasswordRecoveryMapper;
 import com.campus.platform.module.auth.service.IPasswordRecoveryService;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -26,7 +26,7 @@ public class PasswordRecoveryServiceImpl implements IPasswordRecoveryService {
     private StringRedisTemplate redis;
 
     @Resource
-    private AdminUserService accounts;
+    private IAdminUserService accounts;
 
     @Override
     public String submit(Application application) {

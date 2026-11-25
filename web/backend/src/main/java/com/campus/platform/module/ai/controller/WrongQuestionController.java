@@ -1,11 +1,11 @@
 package com.campus.platform.module.ai.controller;
 
-import com.campus.platform.module.ai.service.WrongQuestionService;
+import com.campus.platform.module.ai.service.IWrongQuestionService;
 import com.campus.platform.module.ai.vo.WrongQuestionStatsVO;
 import com.campus.platform.module.ai.vo.GeneratedQuestionVO;
 import com.campus.platform.module.ai.dto.WrongQuestionDTO;
 import com.campus.platform.module.ai.dto.WrongReviewDTO;
-import com.campus.platform.module.ai.service.AiChatService;
+import com.campus.platform.module.ai.service.IAiChatService;
 import com.campus.platform.module.ai.entity.WrongQuestion;
 import com.campus.platform.module.ai.vo.WeakPointsVO;
 
@@ -23,8 +23,8 @@ import java.util.Map;
 @RequestMapping("/api/wrong-question")
 @RequiredArgsConstructor
 public class WrongQuestionController {
-    private final WrongQuestionService wrongQuestionService;
-    private final AiChatService aiChatService;
+    private final IWrongQuestionService wrongQuestionService;
+    private final IAiChatService aiChatService;
 
     /** 分页列表：subject / status 筛选 + sort 排序 */
     @GetMapping("/list")

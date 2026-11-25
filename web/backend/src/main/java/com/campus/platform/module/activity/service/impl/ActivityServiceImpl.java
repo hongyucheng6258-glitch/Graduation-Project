@@ -19,7 +19,7 @@ import com.campus.platform.module.activity.dto.SignupDTO;
 import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.activity.vo.MemberVO;
 
-import com.campus.platform.module.ai.service.ContentAiAuditService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
 import com.campus.platform.module.message.service.IMessageService;
 import com.campus.platform.utils.ImageListJson;
 
@@ -72,7 +72,7 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
     @Resource
     private SensitiveWordService sensitiveWordService;
     @Resource
-    private ContentAiAuditService contentAiAuditService;
+    private IContentAiAuditService contentAiAuditService;
     @Resource
     private SystemConfigHolder systemConfigHolder;
     @Resource

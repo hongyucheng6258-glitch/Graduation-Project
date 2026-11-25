@@ -1,5 +1,11 @@
 package com.campus.platform.module.activity;
 
+import com.campus.platform.module.ai.service.ContentAiAuditServiceImpl;
+
+import com.campus.platform.module.activity.service.impl.ActivitySigninServiceImpl;
+
+import com.campus.platform.module.message.service.impl.MessageServiceImpl;
+
 import com.campus.platform.module.activity.mapper.ActivityMemberMapper;
 import com.campus.platform.module.activity.mapper.ActivitySigninMapper;
 import com.campus.platform.module.activity.service.impl.ActivityServiceImpl;
@@ -8,7 +14,7 @@ import com.campus.platform.module.activity.entity.ActivityMember;
 import com.campus.platform.module.activity.dto.SignupDTO;
 import com.campus.platform.module.activity.entity.Activity;
 
-import com.campus.platform.module.ai.service.ContentAiAuditService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
 import com.campus.platform.module.message.service.IMessageService;
 
 import com.campus.platform.common.BizException;
@@ -68,13 +74,13 @@ class ActivityServiceTest {
     @Mock
     private UserMapper userMapper;
     @Mock
-    private IMessageService messageService;
+    private MessageServiceImpl messageService;
     @Mock
-    private IActivitySigninService signinService;
+    private ActivitySigninServiceImpl signinService;
     @Mock
     private SensitiveWordService sensitiveWordService;
     @Mock
-    private ContentAiAuditService contentAiAuditService;
+    private ContentAiAuditServiceImpl contentAiAuditService;
 
     @Mock
     private com.campus.platform.module.activity.service.ActivityWaitlist waitlist;

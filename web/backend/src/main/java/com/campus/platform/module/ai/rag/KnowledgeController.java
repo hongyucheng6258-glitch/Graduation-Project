@@ -20,22 +20,22 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "campus.agent.rag.enabled", havingValue = "true")
 public class KnowledgeController {
-    private final KnowledgeService knowledge;
-    private final KnowledgeAnswerService answers;
+    private final IKnowledgeService knowledge;
+    private final IKnowledgeAnswerService answers;
 
     @PostMapping("/pdf/{pdfId}/index")
-    public Result<KnowledgeService.Status> index(@PathVariable long pdfId,
+    public Result<IKnowledgeService.Status> index(@PathVariable long pdfId,
                                             @RequestParam(defaultValue = "false") boolean rebuild) {
         return Result.ok(knowledge.enqueue(UserContext.getUid(), pdfId, rebuild));
     }
 
     @GetMapping("/{id}")
-    public Result<KnowledgeService.Status> status(@PathVariable long id) {
+    public Result<IKnowledgeService.Status> status(@PathVariable long id) {
         return Result.ok(knowledge.status(id, UserContext.getUid()));
     }
 
     @PostMapping("/{id}/ask")
-    public Result<KnowledgeAnswerService.Reply> ask(@PathVariable long id, @Valid @RequestBody Question request) {
+    public Result<IKnowledgeAnswerService.Reply> ask(@PathVariable long id, @Valid @RequestBody Question request) {
         return Result.ok(answers.ask(UserContext.getUid(), id, request.question().strip(), request.sessionId()));
     }
 

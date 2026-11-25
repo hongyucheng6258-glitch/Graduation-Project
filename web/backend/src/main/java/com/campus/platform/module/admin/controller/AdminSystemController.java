@@ -1,7 +1,7 @@
 package com.campus.platform.module.admin.controller;
 
 import com.campus.platform.module.admin.service.AdminPermissionService;
-import com.campus.platform.module.admin.service.AdminUserService;
+import com.campus.platform.module.admin.service.IAdminUserService;
 import com.campus.platform.module.admin.dto.AdminSaveDTO;
 import com.campus.platform.module.admin.entity.Admin;
 
@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/system/admin")
 @RequiredArgsConstructor
 public class AdminSystemController {
-    private final AdminUserService adminUserService;
+    private final IAdminUserService adminUserService;
     private final AdminPermissionService adminPermissionService;
 
     @GetMapping

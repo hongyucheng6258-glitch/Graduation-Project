@@ -3,7 +3,7 @@ package com.campus.platform.module.admin.controller;
 import com.campus.platform.module.admin.audit.AdminOperation;
 import com.campus.platform.module.admin.audit.AdminPermission;
 
-import com.campus.platform.module.admin.service.AdminExportService;
+import com.campus.platform.module.admin.service.IAdminExportService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +18,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class AdminExportController {
 
-    private final AdminExportService adminExportService;
+    private final IAdminExportService adminExportService;
 
     @GetMapping("/activity/{id}/members")
     @AdminOperation(permission = AdminPermission.ACTIVITY_EXPORT, module = "activity", action = "export-members", idArgument = 0)

@@ -1,6 +1,6 @@
 package com.campus.platform.module.ai.controller;
 
-import com.campus.platform.module.ai.service.PdfService;
+import com.campus.platform.module.ai.service.IPdfService;
 import com.campus.platform.module.ai.vo.PdfDocVO;
 
 import com.campus.platform.common.Result;
@@ -13,7 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/pdf")
 @RequiredArgsConstructor
 public class PdfController {
-    private final PdfService pdfService;
+    private final IPdfService pdfService;
 
     @PostMapping("/upload")
     public Result<PdfDocVO> upload(@RequestParam("file") MultipartFile file) {

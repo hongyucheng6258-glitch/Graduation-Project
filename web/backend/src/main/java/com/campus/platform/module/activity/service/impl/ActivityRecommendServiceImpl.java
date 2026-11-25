@@ -13,7 +13,7 @@ import com.campus.platform.module.activity.entity.ActivityMember;
 import com.campus.platform.module.activity.mapper.ActivityMapper;
 import com.campus.platform.module.activity.mapper.ActivityMemberMapper;
 import com.campus.platform.module.activity.vo.ActivityRecommendVO;
-import com.campus.platform.module.ai.gateway.AiGatewayService;
+import com.campus.platform.module.ai.gateway.IAiGatewayService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +37,7 @@ public class ActivityRecommendServiceImpl implements IActivityRecommendService {
     @Resource
     private ActivityMemberMapper memberMapper;
     @Resource
-    private AiGatewayService aiGatewayService;
+    private IAiGatewayService aiGatewayService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override

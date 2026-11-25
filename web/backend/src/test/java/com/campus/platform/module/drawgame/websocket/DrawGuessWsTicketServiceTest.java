@@ -1,5 +1,7 @@
 package com.campus.platform.module.drawgame.websocket;
 
+import com.campus.platform.module.drawgame.websocket.impl.DrawGuessWsTicketServiceImpl;
+
 import com.campus.platform.utils.RedisUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +22,7 @@ class DrawGuessWsTicketServiceTest {
 
     @Test
     void issuedTicketIsShortLivedAndBindsBothUserAndRoom() {
-        DrawGuessWsTicketService service = new DrawGuessWsTicketService(redisUtils);
+        IDrawGuessWsTicketService service = new DrawGuessWsTicketServiceImpl(redisUtils);
         ArgumentCaptor<String> key = ArgumentCaptor.forClass(String.class);
 
         String ticket = service.issue(19L, 7L);
@@ -29,12 +31,12 @@ class DrawGuessWsTicketServiceTest {
         assertTrue(key.getValue().startsWith("draw-guess:ws-ticket:"));
         assertEquals(36, ticket.length());
         when(redisUtils.getAndDelete(key.getValue())).thenReturn("19:7");
-        assertEquals(new DrawGuessWsTicketService.TicketClaims(19L, 7L), service.consume(ticket));
+        assertEquals(new IDrawGuessWsTicketService.TicketClaims(19L, 7L), service.consume(ticket));
     }
 
     @Test
     void missingExpiredOrMalformedTicketIsRejected() {
-        DrawGuessWsTicketService service = new DrawGuessWsTicketService(redisUtils);
+        IDrawGuessWsTicketService service = new DrawGuessWsTicketServiceImpl(redisUtils);
         when(redisUtils.getAndDelete("draw-guess:ws-ticket:expired")).thenReturn(null);
         when(redisUtils.getAndDelete("draw-guess:ws-ticket:forged")).thenReturn("19:not-a-room");
 

@@ -4,7 +4,7 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.Result;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.admin.entity.AdminOperationLog;
-import com.campus.platform.module.admin.service.AdminOperationLogService;
+import com.campus.platform.module.admin.service.IAdminOperationLogService;
 import com.campus.platform.module.admin.service.AdminPermissionService;
 import com.campus.platform.module.ai.entity.PromptTemplate;
 import com.campus.platform.module.notice.entity.Notice;
@@ -26,7 +26,7 @@ public class AdminOperationAspect {
     private static final Set<String> REVIEW_TYPES = Set.of("idle", "activity", "lostfound", "post", "partner");
 
     private final AdminPermissionService permissions;
-    private final AdminOperationLogService logs;
+    private final IAdminOperationLogService logs;
 
     @Around("@annotation(operation)")
     public Object authorizeAndRecord(ProceedingJoinPoint call, AdminOperation operation) throws Throwable {

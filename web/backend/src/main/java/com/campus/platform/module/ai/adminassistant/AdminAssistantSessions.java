@@ -24,7 +24,7 @@ public class AdminAssistantSessions {
         return sessions.findSessions(adminId);
     }
 
-    List<AdminAssistantService.Turn> history(Long adminId, String sessionId, int limit) {
+    public List<IAdminAssistantService.Turn> history(Long adminId, String sessionId, int limit) {
         if (sessionId == null) return List.of();
         requireOwner(adminId, sessionId, false);
         var turns = new java.util.ArrayList<>(sessions.findHistory(sessionId, adminId, limit)
@@ -34,7 +34,7 @@ public class AdminAssistantSessions {
     }
 
     @Transactional
-    String save(Long adminId, String sessionId, AdminAssistantService.Turn turn) {
+    public String save(Long adminId, String sessionId, IAdminAssistantService.Turn turn) {
         if (sessionId == null) {
             sessionId = UUID.randomUUID().toString();
             String title = turn.question().codePoints().limit(32)
@@ -60,15 +60,15 @@ public class AdminAssistantSessions {
         }
     }
 
-    private AdminAssistantService.Turn readTurn(String content) {
+    private IAdminAssistantService.Turn readTurn(String content) {
         try {
-            return json.readValue(content, AdminAssistantService.Turn.class);
+            return json.readValue(content, IAdminAssistantService.Turn.class);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("无法读取管理助手会话", e);
         }
     }
 
-    private String writeTurn(AdminAssistantService.Turn turn) {
+    private String writeTurn(IAdminAssistantService.Turn turn) {
         try {
             return json.writeValueAsString(turn);
         } catch (JsonProcessingException e) {

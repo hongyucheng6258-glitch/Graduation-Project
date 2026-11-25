@@ -15,8 +15,8 @@ import com.campus.platform.common.PageResult;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.chat.mapper.ChatMessageMapper;
-import com.campus.platform.module.admin.service.AdminUserService;
-import com.campus.platform.module.admin.service.AdminContentService;
+import com.campus.platform.module.admin.service.IAdminUserService;
+import com.campus.platform.module.admin.service.IAdminContentService;
 import com.campus.platform.module.idle.entity.IdleItem;
 import com.campus.platform.module.lostfound.entity.LostFound;
 import com.campus.platform.module.post.entity.Post;
@@ -64,10 +64,10 @@ public class ReportAdminServiceImpl extends ServiceImpl<ReportMapper, Report>
     private ChatMessageMapper chatMessageMapper;
 
     @Resource
-    private AdminUserService adminUserService;
+    private IAdminUserService adminUserService;
 
     @Resource
-    private AdminContentService adminContentService;
+    private IAdminContentService adminContentService;
 
     @Resource
     private IMessageService messageService;

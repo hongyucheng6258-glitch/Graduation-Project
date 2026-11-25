@@ -4,7 +4,7 @@ import com.campus.platform.common.PageResult;
 import com.campus.platform.common.Result;
 import com.campus.platform.module.admin.audit.AdminPermission;
 import com.campus.platform.module.admin.entity.AdminOperationLog;
-import com.campus.platform.module.admin.service.AdminOperationLogService;
+import com.campus.platform.module.admin.service.IAdminOperationLogService;
 import com.campus.platform.module.admin.service.AdminPermissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AdminOperationLogController {
     private final AdminPermissionService permissions;
-    private final AdminOperationLogService logs;
+    private final IAdminOperationLogService logs;
 
     @GetMapping
     public Result<PageResult<AdminOperationLog>> list(

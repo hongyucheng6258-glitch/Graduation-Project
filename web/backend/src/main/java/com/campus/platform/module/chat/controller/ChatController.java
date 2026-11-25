@@ -7,11 +7,11 @@ import com.campus.platform.module.chat.dto.ConversationCreateDTO;
 import com.campus.platform.module.chat.vo.ChatUserVO;
 import com.campus.platform.module.chat.entity.ChatConversation;
 import com.campus.platform.module.chat.entity.ChatMessage;
-import com.campus.platform.module.chat.service.ChatService;
+import com.campus.platform.module.chat.service.IChatService;
 import com.campus.platform.module.chat.vo.BlockedUserVO;
 import com.campus.platform.module.chat.vo.ChatMessageVO;
 import com.campus.platform.module.chat.vo.ConversationVO;
-import com.campus.platform.module.chat.websocket.ChatWsTicketService;
+import com.campus.platform.module.chat.websocket.IChatWsTicketService;
 import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import com.campus.platform.module.report.entity.Report;
@@ -26,8 +26,8 @@ import java.util.Map;
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
 public class ChatController {
-    private final ChatService chatService;
-    private final ChatWsTicketService ticketService;
+    private final IChatService chatService;
+    private final IChatWsTicketService ticketService;
 
     @PostMapping("/conversations")
     public Result<ConversationVO> create(@Valid @RequestBody ConversationCreateDTO dto) {

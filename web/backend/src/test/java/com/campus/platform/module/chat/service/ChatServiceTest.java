@@ -1,5 +1,11 @@
 package com.campus.platform.module.chat.service;
 
+import com.campus.platform.module.chat.service.impl.ChatServiceImpl;
+
+import com.campus.platform.module.chat.service.impl.UploadResourceServiceImpl;
+
+import com.campus.platform.module.chat.service.impl.ChatNotificationServiceImpl;
+
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
@@ -47,14 +53,14 @@ class ChatServiceTest {
     @Mock private UserMapper userMapper;
     @Mock private ReportMapper reportMapper;
     @Mock private SensitiveWordService sensitiveWordService;
-    @Mock private ChatNotificationService notificationService;
+    @Mock private ChatNotificationServiceImpl notificationService;
     @Mock private ChatRealtimePublisher realtimePublisher;
-    @Mock private UploadResourceService uploadResourceService;
+    @Mock private UploadResourceServiceImpl uploadResourceService;
     @Mock private ChatContextValidator contextValidator;
     @Mock private SystemConfigHolder systemConfigHolder;
     @Mock private ChatRateLimiter rateLimiter;
 
-    @InjectMocks private ChatService chatService;
+    @InjectMocks private ChatServiceImpl chatService;
 
     @BeforeEach
     void setUpSystemConfigDefaults() {

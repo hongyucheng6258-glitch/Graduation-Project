@@ -1,7 +1,7 @@
 package com.campus.platform.module.ai.mapper;
 
-import com.campus.platform.module.ai.agent.AgentPromptService.Snapshot;
-import com.campus.platform.module.ai.agent.AgentPromptService.Version;
+import com.campus.platform.module.ai.agent.IAgentPromptService.Snapshot;
+import com.campus.platform.module.ai.agent.IAgentPromptService.Version;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

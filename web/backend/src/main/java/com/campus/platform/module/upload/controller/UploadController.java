@@ -1,6 +1,6 @@
 package com.campus.platform.module.upload.controller;
 
-import com.campus.platform.module.upload.service.UploadService;
+import com.campus.platform.module.upload.service.IUploadService;
 import com.campus.platform.module.upload.vo.UploadVO;
 
 import com.campus.platform.common.Result;
@@ -13,7 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/upload")
 @RequiredArgsConstructor
 public class UploadController {
-    private final UploadService uploadService;
+    private final IUploadService uploadService;
 
     @PostMapping("/image")
     public Result<UploadVO> uploadImage(@RequestParam("file") MultipartFile file) {

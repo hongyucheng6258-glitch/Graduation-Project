@@ -8,8 +8,8 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.ResultCode;
-import com.campus.platform.module.ai.gateway.AiGatewayService;
-import com.campus.platform.module.ai.service.ContentAiAuditService;
+import com.campus.platform.module.ai.gateway.IAiGatewayService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
 import com.campus.platform.module.partner.dto.StudyPartnerDTO;
 import com.campus.platform.module.partner.entity.StudyPartner;
 import com.campus.platform.module.partner.mapper.StudyPartnerMapper;
@@ -34,10 +34,10 @@ public class StudyPartnerServiceImpl extends ServiceImpl<StudyPartnerMapper, Stu
     private UserMapper userMapper;
 
     @Resource
-    private AiGatewayService aiGatewayService;
+    private IAiGatewayService aiGatewayService;
 
     @Resource
-    private ContentAiAuditService contentAiAuditService;
+    private IContentAiAuditService contentAiAuditService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

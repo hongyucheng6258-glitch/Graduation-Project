@@ -1,10 +1,14 @@
 package com.campus.platform.module.post;
 
+import com.campus.platform.module.ai.service.ContentAiAuditServiceImpl;
+
+import com.campus.platform.module.message.service.impl.MessageServiceImpl;
+
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
-import com.campus.platform.module.ai.service.ContentAiAuditService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
 import com.campus.platform.module.favorite.mapper.FavoriteMapper;
 import com.campus.platform.module.idle.service.IIdleService;
 import com.campus.platform.module.message.service.IMessageService;
@@ -52,9 +56,9 @@ class PostServiceConcurrencyTest {
     @Mock private PostLikeMapper likeMapper;
     @Mock private UserMapper userMapper;
     @Mock private SensitiveWordService sensitiveWordService;
-    @Mock private IMessageService messageService;
+    @Mock private MessageServiceImpl messageService;
     @Mock private FavoriteMapper favoriteMapper;
-    @Mock private ContentAiAuditService contentAiAuditService;
+    @Mock private ContentAiAuditServiceImpl contentAiAuditService;
 
     @InjectMocks
     private PostServiceImpl postService;

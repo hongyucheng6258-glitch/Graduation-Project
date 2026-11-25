@@ -1,12 +1,16 @@
 package com.campus.platform.module.post;
 
+import com.campus.platform.module.ai.service.ContentAiAuditServiceImpl;
+
+import com.campus.platform.module.message.service.impl.MessageServiceImpl;
+
 import com.campus.platform.module.post.mapper.PostCommentMapper;
 import com.campus.platform.module.post.mapper.PostLikeMapper;
 import com.campus.platform.module.post.service.impl.PostServiceImpl;
 import com.campus.platform.module.post.mapper.PostMapper;
 import com.campus.platform.module.post.entity.Post;
 
-import com.campus.platform.module.ai.service.ContentAiAuditService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
 import com.campus.platform.module.message.service.IMessageService;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
@@ -35,8 +39,8 @@ class PostServiceSearchTest {
     @Mock private PostLikeMapper likeMapper;
     @Mock private UserMapper userMapper;
     @Mock private SensitiveWordService sensitiveWordService;
-    @Mock private IMessageService messageService;
-    @Mock private ContentAiAuditService contentAiAuditService;
+    @Mock private MessageServiceImpl messageService;
+    @Mock private ContentAiAuditServiceImpl contentAiAuditService;
     @InjectMocks private PostServiceImpl postService;
 
     @Test

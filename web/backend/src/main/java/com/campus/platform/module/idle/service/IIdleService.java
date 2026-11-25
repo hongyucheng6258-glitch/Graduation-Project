@@ -14,7 +14,7 @@ import com.campus.platform.module.idle.vo.IdleItemVO;
 import com.campus.platform.module.idle.vo.IdleGuideCard;
 import com.campus.platform.module.idle.entity.IdleReview;
 import com.campus.platform.module.idle.entity.IdleItem;
-import com.campus.platform.module.ai.service.ContentAiAuditService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
 import com.campus.platform.module.message.service.IMessageService;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;

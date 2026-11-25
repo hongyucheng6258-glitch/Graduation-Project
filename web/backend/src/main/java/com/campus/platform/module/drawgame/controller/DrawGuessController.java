@@ -6,10 +6,10 @@ import com.campus.platform.common.UserContext;
 import com.campus.platform.module.drawgame.dto.DrawGuessCreateRoomDTO;
 import com.campus.platform.module.drawgame.dto.DrawGuessJoinRoomDTO;
 import com.campus.platform.module.drawgame.dto.DrawGuessWsTicketDTO;
-import com.campus.platform.module.drawgame.service.DrawGuessRoomService;
+import com.campus.platform.module.drawgame.service.IDrawGuessRoomService;
 import com.campus.platform.module.drawgame.vo.DrawGuessRecordVO;
 import com.campus.platform.module.drawgame.vo.DrawGuessRoomVO;
-import com.campus.platform.module.drawgame.websocket.DrawGuessWsTicketService;
+import com.campus.platform.module.drawgame.websocket.IDrawGuessWsTicketService;
 import com.campus.platform.module.upload.vo.UploadVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +29,8 @@ import java.util.Map;
 @RequestMapping("/api/draw-guess")
 @RequiredArgsConstructor
 public class DrawGuessController {
-    private final DrawGuessRoomService roomService;
-    private final DrawGuessWsTicketService ticketService;
+    private final IDrawGuessRoomService roomService;
+    private final IDrawGuessWsTicketService ticketService;
 
     @GetMapping("/rooms")
     public Result<List<DrawGuessRoomVO>> publicRooms() {

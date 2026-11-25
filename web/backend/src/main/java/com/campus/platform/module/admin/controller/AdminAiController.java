@@ -3,7 +3,7 @@ package com.campus.platform.module.admin.controller;
 import com.campus.platform.module.admin.audit.AdminOperation;
 import com.campus.platform.module.admin.audit.AdminPermission;
 
-import com.campus.platform.module.admin.service.AiAdminService;
+import com.campus.platform.module.admin.service.IAiAdminService;
 
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.Result;
@@ -24,7 +24,7 @@ import org.springframework.beans.factory.annotation.Value;
 @RequestMapping("/api/admin/ai")
 @RequiredArgsConstructor
 public class AdminAiController {
-    private final AiAdminService aiAdminService;
+    private final IAiAdminService aiAdminService;
     @Value("${campus.agent.enabled:false}")
     private boolean agentEnabled;
     @Value("${campus.agent.rag.enabled:false}")

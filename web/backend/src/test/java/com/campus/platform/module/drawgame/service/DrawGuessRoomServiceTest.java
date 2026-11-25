@@ -1,5 +1,7 @@
 package com.campus.platform.module.drawgame.service;
 
+import com.campus.platform.module.drawgame.service.impl.DrawGuessRoomServiceImpl;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.campus.platform.common.BizException;
 import com.campus.platform.module.drawgame.dto.DrawGuessCreateRoomDTO;
@@ -13,7 +15,7 @@ import com.campus.platform.module.drawgame.mapper.DrawGuessWordMapper;
 import com.campus.platform.module.drawgame.vo.DrawGuessRoomVO;
 import com.campus.platform.module.drawgame.websocket.DrawGuessSessionRegistry;
 import com.campus.platform.module.upload.mapper.UploadResourceMapper;
-import com.campus.platform.module.upload.service.UploadService;
+import com.campus.platform.module.upload.service.IUploadService;
 import com.campus.platform.module.upload.vo.UploadVO;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
@@ -48,15 +50,15 @@ class DrawGuessRoomServiceTest {
     private final DrawGuessWordMapper wordMapper = mock(DrawGuessWordMapper.class);
     private final UserMapper userMapper = mock(UserMapper.class);
     private final UploadResourceMapper uploadResourceMapper = mock(UploadResourceMapper.class);
-    private final UploadService uploadService = mock(UploadService.class);
+    private final IUploadService uploadService = mock(IUploadService.class);
     private final DrawGuessSessionRegistry sessions = new DrawGuessSessionRegistry(new ObjectMapper());
     private final List<DrawGuessMember> members = new ArrayList<>();
-    private DrawGuessRoomService service;
+    private DrawGuessRoomServiceImpl service;
     private DrawGuessRoom insertedRoom;
 
     @BeforeEach
     void setUp() {
-        service = new DrawGuessRoomService(roomMapper, memberMapper, roundMapper, wordMapper,
+        service = new DrawGuessRoomServiceImpl(roomMapper, memberMapper, roundMapper, wordMapper,
                 userMapper, uploadResourceMapper, uploadService, sessions);
         User owner = new User();
         owner.setId(7L);

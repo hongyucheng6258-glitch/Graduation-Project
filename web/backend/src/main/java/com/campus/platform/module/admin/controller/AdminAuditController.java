@@ -3,7 +3,7 @@ package com.campus.platform.module.admin.controller;
 import com.campus.platform.module.admin.audit.AdminOperation;
 import com.campus.platform.module.admin.audit.AdminPermission;
 
-import com.campus.platform.module.admin.service.AuditService;
+import com.campus.platform.module.admin.service.IAuditService;
 import com.campus.platform.module.admin.dto.AuditDTO;
 
 import com.campus.platform.common.PageResult;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/audit")
 @RequiredArgsConstructor
 public class AdminAuditController {
-    private final AuditService auditService;
+    private final IAuditService auditService;
 
     @GetMapping("/pending")
     public Result<PageResult<?>> pendingList(

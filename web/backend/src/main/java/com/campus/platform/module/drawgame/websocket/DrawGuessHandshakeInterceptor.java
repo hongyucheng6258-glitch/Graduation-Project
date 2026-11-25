@@ -1,6 +1,6 @@
 package com.campus.platform.module.drawgame.websocket;
 
-import com.campus.platform.module.drawgame.service.DrawGuessRoomService;
+import com.campus.platform.module.drawgame.service.IDrawGuessRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -14,15 +14,15 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class DrawGuessHandshakeInterceptor implements HandshakeInterceptor {
-    private final DrawGuessWsTicketService ticketService;
-    private final DrawGuessRoomService roomService;
+    private final IDrawGuessWsTicketService ticketService;
+    private final IDrawGuessRoomService roomService;
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                    WebSocketHandler wsHandler, Map<String, Object> attributes) {
         if (!(request instanceof ServletServerHttpRequest servletRequest)) return false;
         String ticket = servletRequest.getServletRequest().getParameter("ticket");
-        DrawGuessWsTicketService.TicketClaims claims = ticketService.consume(ticket);
+        IDrawGuessWsTicketService.TicketClaims claims = ticketService.consume(ticket);
         if (claims == null || !roomService.isActiveMember(claims.roomId(), claims.userId())) return false;
         attributes.put(DrawGuessSessionRegistry.USER_ID_ATTRIBUTE, claims.userId());
         attributes.put(DrawGuessSessionRegistry.ROOM_ID_ATTRIBUTE, claims.roomId());

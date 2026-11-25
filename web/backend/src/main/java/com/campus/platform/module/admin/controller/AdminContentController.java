@@ -1,7 +1,7 @@
 package com.campus.platform.module.admin.controller;
 
 import com.campus.platform.common.Result;
-import com.campus.platform.module.admin.service.AdminContentService;
+import com.campus.platform.module.admin.service.IAdminContentService;
 import com.campus.platform.module.admin.vo.SigninReportVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AdminContentController {
 
-    private final AdminContentService adminContentService;
+    private final IAdminContentService adminContentService;
 
     /** 下架 */
     @PutMapping("/{type}/{id}/off")

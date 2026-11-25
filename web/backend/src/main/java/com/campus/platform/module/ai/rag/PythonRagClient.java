@@ -23,12 +23,12 @@ import java.util.concurrent.TimeUnit;
 /**
  * 调用 Python 检索服务（web/ai-service）。
  *
- * 只有 {@code campus.agent.rag.provider=python} 时才会被 KnowledgeService 使用；
+ * 只有 {@code campus.agent.rag.provider=python} 时才会被 IKnowledgeService 使用；
  * 默认 local 时本类不参与任何请求，系统行为与加开关前完全一致。
- * 本类不写 MySQL：切片正文仍由 KnowledgeService 落库，保证单一真源。
+ * 本类不写 MySQL：切片正文仍由 IKnowledgeService 落库，保证单一真源。
  */
 @Component
-class PythonRagClient {
+public class PythonRagClient {
     private static final MediaType JSON = MediaType.get("application/json");
     private final OkHttpClient http = new OkHttpClient.Builder().followRedirects(false).build();
     private final ObjectMapper json;

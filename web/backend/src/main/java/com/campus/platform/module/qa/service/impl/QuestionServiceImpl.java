@@ -7,7 +7,7 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.ResultCode;
-import com.campus.platform.module.ai.gateway.AiGatewayService;
+import com.campus.platform.module.ai.gateway.IAiGatewayService;
 import com.campus.platform.module.message.service.IMessageService;
 import com.campus.platform.module.qa.dto.AnswerDTO;
 import com.campus.platform.module.qa.dto.QuestionDTO;
@@ -44,7 +44,7 @@ public class QuestionServiceImpl extends ServiceImpl<CampusQuestionMapper, Campu
     private IMessageService messageService;
 
     @Resource
-    private AiGatewayService aiGatewayService;
+    private IAiGatewayService aiGatewayService;
 
     private static final List<String> CATEGORIES = List.of("课程", "考试", "技术", "生活", "其他");
 

@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-final class PdfChunker {
+public final class PdfChunker {
     static final int DEFAULT_SIZE = 640;
     private static final int OVERLAP = 80;
     private static final int MAX_PARTS = 500;

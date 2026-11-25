@@ -3,7 +3,7 @@ package com.campus.platform.module.admin.controller;
 import com.campus.platform.module.admin.audit.AdminOperation;
 import com.campus.platform.module.admin.audit.AdminPermission;
 
-import com.campus.platform.module.admin.service.AdminUserService;
+import com.campus.platform.module.admin.service.IAdminUserService;
 
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.Result;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/user")
 @RequiredArgsConstructor
 public class AdminUserController {
-    private final AdminUserService adminUserService;
+    private final IAdminUserService adminUserService;
 
     @GetMapping("/list")
     public Result<PageResult<User>> list(

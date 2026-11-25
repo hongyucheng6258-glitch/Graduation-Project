@@ -1,7 +1,7 @@
 package com.campus.platform.module.ai.controller;
 
 import com.campus.platform.module.ai.dto.SessionCreateDTO;
-import com.campus.platform.module.ai.service.AiChatService;
+import com.campus.platform.module.ai.service.IAiChatService;
 import com.campus.platform.module.ai.dto.CodeFixDTO;
 import com.campus.platform.module.ai.dto.OutlineDTO;
 import com.campus.platform.module.ai.dto.AiChatDTO;
@@ -12,8 +12,8 @@ import com.campus.platform.module.ai.dto.QuizDTO;
 import com.campus.platform.module.ai.dto.AssistComposeDTO;
 import com.campus.platform.module.ai.dto.AssistPolishDTO;
 import com.campus.platform.module.ai.dto.GuideAskDTO;
-import com.campus.platform.module.ai.service.AiAssistService;
-import com.campus.platform.module.ai.service.CampusGuideService;
+import com.campus.platform.module.ai.service.IAiAssistService;
+import com.campus.platform.module.ai.service.ICampusGuideService;
 import com.campus.platform.module.ai.agent.AgentMessageAttachments;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -32,9 +32,9 @@ import java.util.Map;
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
 public class AiController {
-    private final AiChatService aiChatService;
-    private final AiAssistService aiAssistService;
-    private final CampusGuideService campusGuideService;
+    private final IAiChatService aiChatService;
+    private final IAiAssistService aiAssistService;
+    private final ICampusGuideService campusGuideService;
     private final AgentMessageAttachments attachments;
     @Value("${campus.agent.enabled:false}")
     private boolean agentEnabled;

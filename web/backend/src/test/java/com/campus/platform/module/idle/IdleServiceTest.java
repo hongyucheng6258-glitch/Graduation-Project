@@ -1,5 +1,7 @@
 package com.campus.platform.module.idle;
 
+import com.campus.platform.module.message.service.impl.MessageServiceImpl;
+
 import com.campus.platform.module.idle.mapper.IdleAppointmentMapper;
 import com.campus.platform.module.idle.mapper.IdleReviewMapper;
 import com.campus.platform.module.idle.entity.IdleAppointment;
@@ -73,7 +75,7 @@ class IdleServiceTest {
     @Mock
     private UserMapper userMapper;
     @Mock
-    private IMessageService messageService;
+    private MessageServiceImpl messageService;
 
     @Mock
     private com.campus.platform.module.idle.service.IIdleHandoffService handoffs;

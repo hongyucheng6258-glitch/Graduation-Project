@@ -40,7 +40,7 @@ public class PhoneAuthServiceImpl implements IPhoneAuthService {
     private IAuthService auth;
 
     @Resource
-    private com.campus.platform.module.admin.service.AdminUserService accountAdministration;
+    private com.campus.platform.module.admin.service.IAdminUserService accountAdministration;
 
     @Value("${platform.sms.console-enabled:false}")
     private boolean consoleEnabled;

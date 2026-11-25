@@ -1,7 +1,7 @@
 package com.campus.platform.module.admin.controller;
 
 import com.campus.platform.module.admin.vo.StatsOverviewVO;
-import com.campus.platform.module.admin.service.StatsService;
+import com.campus.platform.module.admin.service.IStatsService;
 
 import com.campus.platform.common.Result;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import java.util.Map;
 @RequestMapping("/api/admin/stats")
 @RequiredArgsConstructor
 public class AdminStatsController {
-    private final StatsService statsService;
+    private final IStatsService statsService;
 
     @GetMapping("/overview")
     public Result<StatsOverviewVO> overview() {

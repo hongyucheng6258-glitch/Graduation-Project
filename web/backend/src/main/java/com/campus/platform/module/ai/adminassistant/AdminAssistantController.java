@@ -26,7 +26,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AdminAssistantController {
     private final AdminAssistantSessions sessions;
-    private final AdminAssistantService assistant;
+    private final IAdminAssistantService assistant;
     private final AdminAssistantAccess access;
     private final AdminAssistantReviewActions reviews;
     private final AdminAssistantNoticeDrafts notices;
@@ -48,12 +48,12 @@ public class AdminAssistantController {
     }
 
     @GetMapping("/sessions/{id}")
-    public Result<List<AdminAssistantService.TurnView>> history(@PathVariable String id) {
+    public Result<List<IAdminAssistantService.TurnView>> history(@PathVariable String id) {
         return Result.ok(assistant.history(adminId(), id));
     }
 
     @PostMapping("/ask")
-    public Result<AdminAssistantService.Reply> ask(@Valid @RequestBody Question question) {
+    public Result<IAdminAssistantService.Reply> ask(@Valid @RequestBody Question question) {
         return Result.ok(assistant.ask(adminId(), question.sessionId(), question.question().strip()));
     }
 

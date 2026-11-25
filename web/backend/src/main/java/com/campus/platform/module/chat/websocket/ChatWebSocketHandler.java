@@ -3,7 +3,7 @@ package com.campus.platform.module.chat.websocket;
 
 import com.campus.platform.module.chat.dto.ChatSendDTO;
 import com.campus.platform.module.chat.entity.ChatMessage;
-import com.campus.platform.module.chat.service.ChatService;
+import com.campus.platform.module.chat.service.IChatService;
 import com.campus.platform.module.chat.vo.ChatMessageVO;
 import com.campus.platform.common.BizException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -23,7 +23,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
-    private final ChatService chatService;
+    private final IChatService chatService;
     private final ChatSessionRegistry registry;
 
     @Override

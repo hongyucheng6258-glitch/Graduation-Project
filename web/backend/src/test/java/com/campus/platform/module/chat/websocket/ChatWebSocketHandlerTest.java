@@ -1,7 +1,7 @@
 package com.campus.platform.module.chat.websocket;
 
 
-import com.campus.platform.module.chat.service.ChatService;
+import com.campus.platform.module.chat.service.IChatService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.TextMessage;
@@ -18,7 +18,7 @@ class ChatWebSocketHandlerTest {
 
     @Test
     void malformedInboundFrameAndErrorWriteFailureStayInsideUnifiedBoundary() throws Exception {
-        ChatService chatService = mock(ChatService.class);
+        IChatService chatService = mock(IChatService.class);
         ChatSessionRegistry registry = mock(ChatSessionRegistry.class);
         ChatWebSocketHandler handler = new ChatWebSocketHandler(new ObjectMapper(), chatService, registry);
         WebSocketSession session = mock(WebSocketSession.class);

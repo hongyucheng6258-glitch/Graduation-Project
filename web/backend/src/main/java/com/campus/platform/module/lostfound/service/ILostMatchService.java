@@ -5,7 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
-import com.campus.platform.module.ai.gateway.AiGatewayService;
+import com.campus.platform.module.ai.gateway.IAiGatewayService;
 import com.campus.platform.module.lostfound.entity.LostFound;
 import com.campus.platform.module.lostfound.mapper.LostFoundMapper;
 import com.campus.platform.module.lostfound.vo.LostMatchVO;

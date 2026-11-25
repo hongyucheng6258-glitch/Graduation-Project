@@ -2,7 +2,7 @@ package com.campus.platform.module.ai.agent;
 
 import com.campus.platform.module.ai.entity.AiMessage;
 import com.campus.platform.module.ai.gateway.AiConfigHolder;
-import com.campus.platform.module.ai.rag.KnowledgeService;
+import com.campus.platform.module.ai.rag.IKnowledgeService;
 import com.campus.platform.module.idle.service.IIdleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -23,7 +23,7 @@ class AgentActivityPublishRoutingTest {
     private final ObjectMapper json = new ObjectMapper();
     private final AgentModelClient model = mock(AgentModelClient.class);
     private final AgentConversation conversation = mock(AgentConversation.class);
-    private final AgentPromptService prompts = mock(AgentPromptService.class);
+    private final IAgentPromptService prompts = mock(IAgentPromptService.class);
 
     @Test
     void preparesNamedActivityDespiteAnOldRefusalInTheSameConversation() {
@@ -67,15 +67,15 @@ class AgentActivityPublishRoutingTest {
         verify(model).complete(anyList(), anyList(), any());
     }
 
-    private AgentService service() {
+    private IAgentService service() {
         when(model.complete(anyList(), anyList(), any())).thenReturn(json.createObjectNode().put("content", "没有发布活动的功能。"));
         when(conversation.latestIdleSearch(nullable(Long.class))).thenReturn("");
-        when(prompts.active("campus_agent", "")).thenReturn(new AgentPromptService.Snapshot(0L, ""));
+        when(prompts.active("campus_agent", "")).thenReturn(new IAgentPromptService.Snapshot(0L, ""));
         var tool = new AgentTool(ActivityPublishDrafts.PREPARE, "test", Map.of("title", "string"), List.of("title"),
                 (user, args) -> json.createObjectNode().put("id", "test-draft").put("state", "DRAFT")
                         .put("title", args.path("title").asText()));
-        ObjectProvider<KnowledgeService> knowledge = mock();
-        return new AgentService(model, json, mock(AgentQuota.class), conversation, prompts, mock(AiConfigHolder.class),
+        ObjectProvider<IKnowledgeService> knowledge = mock();
+        return new AgentServiceImpl(model, json, mock(AgentQuota.class), conversation, prompts, mock(AiConfigHolder.class),
                 mock(AgentRunMapper.class), List.of(() -> List.of(tool)), knowledge, mock(IIdleService.class), mock(CampusResourceTools.class));
     }
 }

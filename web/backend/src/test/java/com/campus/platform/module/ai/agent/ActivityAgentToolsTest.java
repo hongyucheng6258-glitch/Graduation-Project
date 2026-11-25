@@ -4,7 +4,7 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.module.activity.service.IActivityService;
 import com.campus.platform.module.activity.vo.MemberVO;
-import com.campus.platform.module.ai.service.CampusGuideService;
+import com.campus.platform.module.ai.service.ICampusGuideService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +19,7 @@ class ActivityAgentToolsTest {
     void signupToolUsesOnlyAuthenticatedIdentityAndRedactsPrivateFields() throws Exception {
         IActivityService activity = mock(IActivityService.class);
         ObjectMapper json = new ObjectMapper();
-        AgentTool tool = new ActivityAgentTools(activity, json, mock(CampusGuideService.class)).tools().stream()
+        AgentTool tool = new ActivityAgentTools(activity, json, mock(ICampusGuideService.class)).tools().stream()
                 .filter(candidate -> candidate.name().equals("get_my_signups")).findFirst().orElseThrow();
         assertThatThrownBy(() -> tool.run(17L, json.readTree("{\"userId\":19}")))
                 .isInstanceOf(BizException.class);

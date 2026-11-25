@@ -3,7 +3,7 @@ package com.campus.platform.module.admin.controller;
 import com.campus.platform.module.admin.audit.AdminOperation;
 import com.campus.platform.module.admin.audit.AdminPermission;
 
-import com.campus.platform.module.admin.service.AdminNoticeService;
+import com.campus.platform.module.admin.service.IAdminNoticeService;
 
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.Result;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/notice")
 @RequiredArgsConstructor
 public class AdminNoticeController {
-    private final AdminNoticeService adminNoticeService;
+    private final IAdminNoticeService adminNoticeService;
 
     @GetMapping("/list")
     public Result<PageResult<Notice>> list(

@@ -1,10 +1,14 @@
 package com.campus.platform.module.lostfound;
 
+import com.campus.platform.module.message.service.impl.MessageServiceImpl;
+
+import com.campus.platform.module.ai.service.ContentAiAuditServiceImpl;
+
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
-import com.campus.platform.module.ai.service.ContentAiAuditService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
 import com.campus.platform.module.idle.service.IIdleService;
 import com.campus.platform.module.lostfound.dto.ClaimDTO;
 import com.campus.platform.module.lostfound.entity.LostFound;
@@ -45,8 +49,8 @@ class LostFoundServiceTest {
     @Mock private LostFoundClaimMapper claimMapper;
     @Mock private UserMapper userMapper;
     @Mock private SensitiveWordService sensitiveWordService;
-    @Mock private ContentAiAuditService contentAiAuditService;
-    @Mock private IMessageService messageService;
+    @Mock private ContentAiAuditServiceImpl contentAiAuditService;
+    @Mock private MessageServiceImpl messageService;
 
     @InjectMocks
     private LostFoundServiceImpl lostFoundService;

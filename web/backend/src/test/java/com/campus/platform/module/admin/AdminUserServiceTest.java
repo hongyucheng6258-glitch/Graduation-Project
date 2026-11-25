@@ -1,10 +1,14 @@
 package com.campus.platform.module.admin;
 
+import com.campus.platform.module.admin.service.impl.AdminUserServiceImpl;
+
+import com.campus.platform.module.auth.service.impl.AuthServiceImpl;
+
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.admin.mapper.AdminMapper;
-import com.campus.platform.module.admin.service.AdminUserService;
+import com.campus.platform.module.admin.service.IAdminUserService;
 import com.campus.platform.module.auth.service.IAuthService;
 import com.campus.platform.module.auth.service.TokenService;
 import com.campus.platform.module.user.entity.User;
@@ -34,7 +38,7 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("AdminUserService 禁用/解封与登录态联动")
+@DisplayName("IAdminUserService 禁用/解封与登录态联动")
 class AdminUserServiceTest {
 
     @Mock
@@ -42,7 +46,7 @@ class AdminUserServiceTest {
     @Mock
     private AdminMapper adminMapper;
     @Mock
-    private IAuthService authService;
+    private AuthServiceImpl authService;
     @Mock
     private TokenService tokenService;
 
@@ -50,7 +54,7 @@ class AdminUserServiceTest {
     @Mock private com.campus.platform.module.drawgame.websocket.DrawGuessSessionRegistry drawSessions;
 
     @InjectMocks
-    private AdminUserService adminUserService;
+    private AdminUserServiceImpl adminUserService;
 
     private User existingUser(long id) {
         User u = new User();
