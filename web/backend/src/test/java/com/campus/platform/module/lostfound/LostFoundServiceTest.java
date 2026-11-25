@@ -5,13 +5,13 @@ import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
 import com.campus.platform.module.ai.service.ContentAiAuditService;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.IIdleService;
 import com.campus.platform.module.lostfound.dto.ClaimDTO;
 import com.campus.platform.module.lostfound.entity.LostFound;
 import com.campus.platform.module.lostfound.entity.LostFoundClaim;
 import com.campus.platform.module.lostfound.mapper.LostFoundClaimMapper;
 import com.campus.platform.module.lostfound.mapper.LostFoundMapper;
-import com.campus.platform.module.lostfound.service.LostFoundService;
+import com.campus.platform.module.lostfound.service.impl.LostFoundServiceImpl;
 import com.campus.platform.module.message.service.IMessageService;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("P1 LostFoundService 认领并发与状态机")
+@DisplayName("P1 ILostFoundService 认领并发与状态机")
 class LostFoundServiceTest {
 
     @Mock private LostFoundMapper lostFoundMapper;
@@ -49,7 +49,7 @@ class LostFoundServiceTest {
     @Mock private IMessageService messageService;
 
     @InjectMocks
-    private LostFoundService lostFoundService;
+    private LostFoundServiceImpl lostFoundService;
 
     private LostFound claimableLf(Long id, Long ownerId) {
         LostFound lf = new LostFound();

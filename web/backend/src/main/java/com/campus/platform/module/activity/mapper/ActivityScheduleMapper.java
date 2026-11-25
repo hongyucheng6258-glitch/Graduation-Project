@@ -1,6 +1,6 @@
 package com.campus.platform.module.activity.mapper;
 
-import com.campus.platform.module.activity.service.ActivityScheduleService.Entry;
+import com.campus.platform.module.activity.service.IActivityScheduleService.Entry;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 

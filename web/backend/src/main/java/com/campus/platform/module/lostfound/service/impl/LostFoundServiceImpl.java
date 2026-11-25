@@ -1,5 +1,8 @@
-package com.campus.platform.module.lostfound.service;
+package com.campus.platform.module.lostfound.service.impl;
 
+import com.campus.platform.module.lostfound.service.ILostFoundService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import com.campus.platform.common.mapper.MapperQueries;
 import com.campus.platform.module.lostfound.dto.ClaimDTO;
 import com.campus.platform.module.lostfound.dto.LostFoundPublishDTO;
@@ -36,17 +39,23 @@ import java.util.Map;
  * 失物招领服务（C4）：发布→审核→检索→认领标记完成。
  */
 @Service
-@RequiredArgsConstructor
-public class LostFoundService {
+public class LostFoundServiceImpl extends ServiceImpl<LostFoundMapper, LostFound> implements ILostFoundService {
 
-    private final LostFoundMapper lostFoundMapper;
-    private final UserMapper userMapper;
-    private final SensitiveWordService sensitiveWordService;
-    private final ContentAiAuditService contentAiAuditService;
-    private final LostFoundClaimMapper claimMapper;
-    private final IMessageService messageService;
+    @Resource
+    private LostFoundMapper lostFoundMapper;
+    @Resource
+    private UserMapper userMapper;
+    @Resource
+    private SensitiveWordService sensitiveWordService;
+    @Resource
+    private ContentAiAuditService contentAiAuditService;
+    @Resource
+    private LostFoundClaimMapper claimMapper;
+    @Resource
+    private IMessageService messageService;
 
     /** 发布（待审核） */
+    @Override
     public LostFound publish(Long userId, LostFoundPublishDTO dto) {
         if (sensitiveWordService.contains(dto.getTitle()) || sensitiveWordService.contains(dto.getDescription())) {
             throw new BizException(ResultCode.SENSITIVE_WORD);
@@ -63,6 +72,7 @@ public class LostFoundService {
     }
 
     /** 列表检索（公开，仅审核通过，type 筛选） */
+    @Override
     public PageResult<LostFoundVO> list(Integer type, String keyword, int pageNum, int pageSize) {
         Page<LostFound> page = lostFoundMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<LostFound>()
@@ -77,6 +87,7 @@ public class LostFoundService {
     }
 
     /** 详情 */
+    @Override
     public LostFoundVO detail(Long id, Long currentUid) {
         LostFound lostFound = lostFoundMapper.selectById(id);
         if (lostFound == null) {
@@ -92,6 +103,7 @@ public class LostFoundService {
     }
 
     /** 编辑（仅发布者本人；已完成不可编辑；编辑后重新进入 AI 审核） */
+    @Override
     public LostFound update(Long userId, Long id, LostFoundPublishDTO dto) {
         LostFound lf = lostFoundMapper.selectById(id);
         if (lf == null) {
@@ -127,6 +139,7 @@ public class LostFoundService {
      * 已提交，当前读必然可见，彻底消除 REPEATABLE READ 快照窗口。
      */
     @Transactional
+    @Override
     public LostFoundClaim claim(Long userId, Long lfId, ClaimDTO dto) {
         // 1) 第一时间锁父行：同一招领信息上的并发申请在此排队，且这是当前读
         LostFound lf = lostFoundMapper.selectByIdForUpdate(lfId);
@@ -165,6 +178,7 @@ public class LostFoundService {
     }
 
     /** 认领申请列表（仅发布者可见；第8项修复：分页返回） */
+    @Override
     public PageResult<ClaimVO> claims(Long userId, Long lfId, int pageNum, int pageSize) {
         LostFound lf = lostFoundMapper.selectById(lfId);
         if (lf == null) {
@@ -193,6 +207,7 @@ public class LostFoundService {
      * 并发双击只生效一次；同意后其余待确认申请用一条 UPDATE 原子驳回，避免逐条读改写。
      */
     @Transactional
+    @Override
     public void handleClaim(Long userId, Long claimId, boolean accept) {
         LostFoundClaim claim = claimMapper.selectById(claimId);
         if (claim == null) {
@@ -222,6 +237,7 @@ public class LostFoundService {
     }
 
     /** 当前用户对该信息的认领申请（无则返回 null；多次申请时取最新一条） */
+    @Override
     public ClaimVO myClaim(Long userId, Long lfId) {
         LostFoundClaim claim = claimMapper.selectOne(MapperQueries.limit(new LambdaQueryWrapper<LostFoundClaim>()
                 .eq(LostFoundClaim::getLostFoundId, lfId)
@@ -243,6 +259,7 @@ public class LostFoundService {
      * P1 第6项修复：条件更新（仅 status=1 可转 3）+ 条件更新招领状态，防并发重复完成。
      */
     @Transactional
+    @Override
     public void confirmReturn(Long userId, Long claimId) {
         LostFoundClaim claim = claimMapper.selectById(claimId);
         if (claim == null) {
@@ -273,6 +290,7 @@ public class LostFoundService {
 
     /** 标记完成（仅本人） */
     @Transactional
+    @Override
     public void finish(Long userId, Long id) {
         LostFound lf = lostFoundMapper.selectByIdForUpdate(id);
         if (lf == null) {
@@ -289,6 +307,7 @@ public class LostFoundService {
     }
 
     /** 我的发布 */
+    @Override
     public PageResult<LostFoundVO> myList(Long userId, int pageNum, int pageSize) {
         Page<LostFound> page = lostFoundMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<LostFound>()

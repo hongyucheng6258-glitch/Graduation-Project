@@ -2,7 +2,7 @@ package com.campus.platform.module.ai.agent;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.PageResult;
-import com.campus.platform.module.activity.service.ActivityService;
+import com.campus.platform.module.activity.service.IActivityService;
 import com.campus.platform.module.activity.vo.MemberVO;
 import com.campus.platform.module.ai.service.CampusGuideService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 class ActivityAgentToolsTest {
     @Test
     void signupToolUsesOnlyAuthenticatedIdentityAndRedactsPrivateFields() throws Exception {
-        ActivityService activity = mock(ActivityService.class);
+        IActivityService activity = mock(IActivityService.class);
         ObjectMapper json = new ObjectMapper();
         AgentTool tool = new ActivityAgentTools(activity, json, mock(CampusGuideService.class)).tools().stream()
                 .filter(candidate -> candidate.name().equals("get_my_signups")).findFirst().orElseThrow();

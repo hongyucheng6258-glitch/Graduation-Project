@@ -1,5 +1,10 @@
-package com.campus.platform.module.activity.service;
+package com.campus.platform.module.activity.service.impl;
 
+import com.campus.platform.module.activity.service.IActivityService;
+import com.campus.platform.module.activity.service.IActivitySigninService;
+import com.campus.platform.module.activity.service.ActivityWaitlist;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import com.campus.platform.common.mapper.MapperQueries;
 import com.campus.platform.module.activity.mapper.ActivityMemberMapper;
 import com.campus.platform.module.activity.mapper.ActivitySigninMapper;
@@ -50,23 +55,33 @@ import java.util.stream.Collectors;
  * 活动组队服务（C2/C3）：发布→报名审批→扫码签到。
  */
 @Service
-@RequiredArgsConstructor
-public class ActivityService {
+public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> implements IActivityService {
 
-    private final ActivityMapper activityMapper;
-    private final ActivityMemberMapper memberMapper;
-    private final ActivitySigninMapper signinMapper;
-    private final UserMapper userMapper;
-    private final IMessageService messageService;
-    private final ActivitySigninService signinService;
-    private final SensitiveWordService sensitiveWordService;
-    private final ContentAiAuditService contentAiAuditService;
-    private final SystemConfigHolder systemConfigHolder;
-    private final ActivityWaitlist waitlist;
+    @Resource
+    private ActivityMapper activityMapper;
+    @Resource
+    private ActivityMemberMapper memberMapper;
+    @Resource
+    private ActivitySigninMapper signinMapper;
+    @Resource
+    private UserMapper userMapper;
+    @Resource
+    private IMessageService messageService;
+    @Resource
+    private IActivitySigninService signinService;
+    @Resource
+    private SensitiveWordService sensitiveWordService;
+    @Resource
+    private ContentAiAuditService contentAiAuditService;
+    @Resource
+    private SystemConfigHolder systemConfigHolder;
+    @Resource
+    private ActivityWaitlist waitlist;
 
     @Value("${CAMPUS_ADMIN_ASSISTANT_ENABLED:false}")
     private boolean versionedAudit;
 
+    @Override
     public void ensurePublishingEnabled() {
         if (!systemConfigHolder.isActivityPublishEnabled()) {
             throw new BizException(ResultCode.FORBIDDEN, "当前已关闭活动发布，请联系管理员");
@@ -75,6 +90,7 @@ public class ActivityService {
 
     /** 发布活动（待审核） */
     @Transactional
+    @Override
     public Activity publish(Long userId, ActivityPublishDTO dto) {
         ensurePublishingEnabled();
         if (sensitiveWordService.contains(dto.getTitle()) || sensitiveWordService.contains(dto.getDescription())) {
@@ -105,6 +121,7 @@ public class ActivityService {
 
     /** 编辑活动（仅发布者本人；已结束不可编辑；编辑后重新进入 AI 审核） */
     @Transactional
+    @Override
     public Activity update(Long userId, Long id, ActivityPublishDTO dto) {
         Activity activity = activityMapper.selectForUpdate(id);
         if (activity == null) {
@@ -157,10 +174,12 @@ public class ActivityService {
     }
 
     /** 列表检索（公开，仅审核通过；已结束的活动不展示） */
+    @Override
     public PageResult<ActivityVO> list(String keyword, String category, int pageNum, int pageSize) {
         return list(keyword, category, pageNum, pageSize, null, null);
     }
 
+    @Override
     public PageResult<ActivityVO> list(String keyword, String category, int pageNum, int pageSize,
                                       LocalDateTime startInclusive, LocalDateTime endExclusive) {
         LocalDateTime now = LocalDateTime.now();
@@ -183,6 +202,7 @@ public class ActivityService {
     }
 
     /** 详情（含报名数、我的报名状态） */
+    @Override
     public ActivityDetailVO detail(Long id, Long currentUid) {
         Activity activity = activityMapper.selectById(id);
         if (activity == null) {
@@ -195,7 +215,7 @@ public class ActivityService {
         ActivityDetailVO vo = new ActivityDetailVO();
         BeanUtil.copyProperties(toVO(activity), vo);
         vo.setIsOwner(isOwner);
-        vo.setSigninOpen(ActivitySigninService.signinOpen(activity, LocalDateTime.now()));
+        vo.setSigninOpen(signinService.signinOpen(activity, LocalDateTime.now()));
         if (currentUid != null && !isOwner) {
             ActivityMember my = memberMapper.selectOne(MapperQueries.limit(new LambdaQueryWrapper<ActivityMember>()
                     .eq(ActivityMember::getActivityId, id)
@@ -216,6 +236,7 @@ public class ActivityService {
      * 时间/人数/下架等校验统一走 checkSignupAllowed（最终安全边界）。
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Override
     public void signup(Long userId, Long activityId, SignupDTO dto) {
         Activity activity = activityMapper.selectForUpdate(activityId);
         checkSignupAllowed(activityId, activity);
@@ -227,6 +248,7 @@ public class ActivityService {
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Override
     public void acceptWaitlist(Long userId, Long activityId, Long entryId, SignupDTO dto) {
         Activity activity = activityMapper.selectForUpdate(activityId);
         if (waitlist.claim(activity, userId, entryId)) {
@@ -276,6 +298,7 @@ public class ActivityService {
 
     /** 取消报名（仅待审批/已通过可取消；已结束/已签到不可取消） */
     @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Override
     public void cancelSignup(Long userId, Long activityId) {
         Activity activity = activityMapper.selectForUpdate(activityId);
         if (activity == null) {
@@ -307,6 +330,7 @@ public class ActivityService {
                 Constants.BIZ_ACTIVITY, activityId);
     }
     /** 报名名单（仅发布者可见，含签到状态；第8项修复：分页返回） */
+    @Override
     public PageResult<MemberVO> members(Long userId, Long activityId, int pageNum, int pageSize) {
         checkPublisher(userId, activityId);
         Page<ActivityMember> page = memberMapper.selectPage(new Page<>(pageNum, pageSize),
@@ -341,6 +365,7 @@ public class ActivityService {
      * 审批报名（通过/拒绝）→ 消息通知；满员自动更新活动状态。
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Override
     public void handleMember(Long userId, Long memberId, boolean approve) {
         ActivityMember member = memberMapper.selectById(memberId);
         if (member == null) {
@@ -413,15 +438,18 @@ public class ActivityService {
                 .eq(ActivityMember::getStatus, Constants.MEMBER_APPROVED));
     }
 
+    @Override
     public String signinQrCode(Long userId, Long activityId) {
         return signinService.signinQrCode(userId, activityId);
     }
 
+    @Override
     public void signin(Long userId, SigninDTO dto) {
         signinService.signin(userId, dto);
     }
 
     /** 我的发布 */
+    @Override
     public PageResult<ActivityVO> myPublished(Long userId, int pageNum, int pageSize) {
         Page<Activity> page = activityMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<Activity>()
@@ -431,6 +459,7 @@ public class ActivityService {
     }
 
     /** 我的报名 */
+    @Override
     public PageResult<MemberVO> mySignups(Long userId, int pageNum, int pageSize) {
         Page<ActivityMember> page = memberMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<ActivityMember>()

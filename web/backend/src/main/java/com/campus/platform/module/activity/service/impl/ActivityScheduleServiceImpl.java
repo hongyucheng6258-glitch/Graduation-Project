@@ -1,5 +1,7 @@
-package com.campus.platform.module.activity.service;
+package com.campus.platform.module.activity.service.impl;
 
+import com.campus.platform.module.activity.service.IActivityScheduleService;
+import jakarta.annotation.Resource;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
@@ -17,13 +19,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
-public class ActivityScheduleService {
-    static final ZoneId CAMPUS_ZONE = ZoneId.of("Asia/Shanghai");
+public class ActivityScheduleServiceImpl implements IActivityScheduleService {
 
-    private final ActivityScheduleMapper schedules;
-    private final ActivityMapper activities;
+    @Resource
+    private ActivityScheduleMapper schedules;
+    @Resource
+    private ActivityMapper activities;
 
+    @Override
     public Schedule schedule(Long userId) {
         LocalDateTime now = LocalDateTime.now(CAMPUS_ZONE);
         LocalDate today = now.toLocalDate();
@@ -34,6 +37,7 @@ public class ActivityScheduleService {
         return new Schedule(today, through, entries);
     }
 
+    @Override
     public ConflictCheck conflicts(Long userId, Long activityId) {
         Activity target = activities.selectById(activityId);
         if (target == null || !Integer.valueOf(Constants.AUDIT_PASS).equals(target.getAuditStatus())
@@ -58,10 +62,4 @@ public class ActivityScheduleService {
         return new ConflictCheck(true, conflicts);
     }
 
-    public record Schedule(LocalDate from, LocalDate through, List<Entry> entries) {}
-    public record Entry(long activityId, String title, String location, LocalDateTime startTime,
-                        LocalDateTime endTime, int signupStatus) {}
-    public record ConflictCheck(boolean timeKnown, List<Conflict> conflicts) {}
-    public record Conflict(long activityId, String title, LocalDateTime startTime,
-                           LocalDateTime endTime, long overlapSeconds) {}
 }

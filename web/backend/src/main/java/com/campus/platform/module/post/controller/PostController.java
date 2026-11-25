@@ -2,7 +2,7 @@ package com.campus.platform.module.post.controller;
 
 import com.campus.platform.module.post.dto.PostPublishDTO;
 import com.campus.platform.module.post.entity.PostComment;
-import com.campus.platform.module.post.service.PostService;
+import com.campus.platform.module.post.service.IPostService;
 import com.campus.platform.module.post.dto.CommentDTO;
 import com.campus.platform.module.post.vo.CommentVO;
 import com.campus.platform.module.post.vo.PostVO;
@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/post")
 @RequiredArgsConstructor
 public class PostController {
-    private final PostService postService;
+    private final IPostService postService;
     private final SystemConfigHolder systemConfigHolder;
 
     @PostMapping

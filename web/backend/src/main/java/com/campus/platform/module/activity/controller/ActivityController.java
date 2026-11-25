@@ -2,10 +2,10 @@ package com.campus.platform.module.activity.controller;
 
 import com.campus.platform.module.activity.dto.ActivityPublishDTO;
 import com.campus.platform.module.activity.vo.ActivityDetailVO;
-import com.campus.platform.module.activity.service.ActivityService;
-import com.campus.platform.module.activity.service.ActivityScheduleService;
+import com.campus.platform.module.activity.service.IActivityService;
+import com.campus.platform.module.activity.service.IActivityScheduleService;
 import com.campus.platform.module.activity.service.ActivityWaitlist;
-import com.campus.platform.module.activity.service.ActivityRecommendService;
+import com.campus.platform.module.activity.service.IActivityRecommendService;
 import com.campus.platform.module.activity.vo.ActivityRecommendVO;
 import com.campus.platform.module.activity.dto.MemberHandleDTO;
 import com.campus.platform.module.activity.vo.ActivityVO;
@@ -27,9 +27,9 @@ import java.util.List;
 @RequestMapping("/api/activity")
 @RequiredArgsConstructor
 public class ActivityController {
-    private final ActivityService activityService;
-    private final ActivityRecommendService activityRecommendService;
-    private final ActivityScheduleService activityScheduleService;
+    private final IActivityService activityService;
+    private final IActivityRecommendService activityRecommendService;
+    private final IActivityScheduleService activityScheduleService;
     private final ActivityWaitlist waitlist;
 
     /** 活动 AI 智能推荐 */
@@ -74,12 +74,12 @@ public class ActivityController {
     }
 
     @GetMapping("/my/schedule")
-    public Result<ActivityScheduleService.Schedule> mySchedule() {
+    public Result<IActivityScheduleService.Schedule> mySchedule() {
         return Result.ok(activityScheduleService.schedule(UserContext.getUid()));
     }
 
     @GetMapping("/{id}/signup-conflicts")
-    public Result<ActivityScheduleService.ConflictCheck> signupConflicts(@PathVariable Long id) {
+    public Result<IActivityScheduleService.ConflictCheck> signupConflicts(@PathVariable Long id) {
         return Result.ok(activityScheduleService.conflicts(UserContext.getUid(), id));
     }
 

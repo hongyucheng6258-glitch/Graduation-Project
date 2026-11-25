@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 
 /**
  * 活动状态定时清理（兜底，非实时保障）：
- * 实时展示状态由 {@code ActivityService.resolveDisplayStatus} 动态计算；
+ * 实时展示状态由 {@code IActivityService.resolveDisplayStatus} 动态计算；
  * 本任务每分钟把数据库中已过结束时间的活动落库为「已结束」，避免脏数据长期滞留。
  */
 @Slf4j

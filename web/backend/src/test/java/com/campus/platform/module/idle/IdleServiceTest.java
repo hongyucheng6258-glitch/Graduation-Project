@@ -5,7 +5,7 @@ import com.campus.platform.module.idle.mapper.IdleReviewMapper;
 import com.campus.platform.module.idle.entity.IdleAppointment;
 import com.campus.platform.module.idle.mapper.IdleItemMapper;
 import com.campus.platform.module.idle.vo.IdleDetailVO;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.impl.IdleServiceImpl;
 import com.campus.platform.module.idle.dto.AppointDTO;
 import com.campus.platform.module.idle.entity.IdleReview;
 import com.campus.platform.module.idle.entity.IdleItem;
@@ -76,10 +76,10 @@ class IdleServiceTest {
     private IMessageService messageService;
 
     @Mock
-    private com.campus.platform.module.idle.service.IdleHandoffService handoffs;
+    private com.campus.platform.module.idle.service.IIdleHandoffService handoffs;
 
     @InjectMocks
-    private IdleService idleService;
+    private IdleServiceImpl idleService;
 
     @org.junit.jupiter.api.BeforeEach
     void setUpHandoffs() {

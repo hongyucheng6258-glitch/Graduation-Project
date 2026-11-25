@@ -1,6 +1,6 @@
 package com.campus.platform.module.idle;
 
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.IIdleService;
 
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +19,7 @@ class IdleNotificationBizIdTest {
 
     private String idleServiceSource() throws Exception {
         return Files.readString(
-                Path.of("src/main/java/com/campus/platform/module/idle/service/IdleService.java")
+                Path.of("src/main/java/com/campus/platform/module/idle/service/impl/IdleServiceImpl.java")
         );
     }
 

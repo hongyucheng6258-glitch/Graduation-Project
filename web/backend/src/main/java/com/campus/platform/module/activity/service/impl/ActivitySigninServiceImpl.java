@@ -1,5 +1,7 @@
-package com.campus.platform.module.activity.service;
+package com.campus.platform.module.activity.service.impl;
 
+import com.campus.platform.module.activity.service.IActivitySigninService;
+import jakarta.annotation.Resource;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
@@ -23,16 +25,21 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 @Service
-@RequiredArgsConstructor
-public class ActivitySigninService {
-    private final ActivityMapper activityMapper;
-    private final ActivityMemberMapper memberMapper;
-    private final ActivitySigninMapper signinMapper;
-    private final UserMapper userMapper;
-    private final IMessageService messageService;
-    private final SignTokenUtils signTokenUtils;
+public class ActivitySigninServiceImpl implements IActivitySigninService {
+    @Resource
+    private ActivityMapper activityMapper;
+    @Resource
+    private ActivityMemberMapper memberMapper;
+    @Resource
+    private ActivitySigninMapper signinMapper;
+    @Resource
+    private UserMapper userMapper;
+    @Resource
+    private IMessageService messageService;
+    @Resource
+    private SignTokenUtils signTokenUtils;
 
-    static boolean signinOpen(Activity activity, LocalDateTime now) {
+    public boolean signinOpen(Activity activity, LocalDateTime now) {
         return activity.getAuditStatus() == Constants.AUDIT_PASS
                 && activity.getStatus() != Constants.ACTIVITY_OFF
                 && activity.getStatus() != Constants.ACTIVITY_ENDED
@@ -42,6 +49,7 @@ public class ActivitySigninService {
     }
 
     /** 发布者获取签到二维码内容（campus://signin/{id}/{token}） */
+    @Override
     public String signinQrCode(Long userId, Long activityId) {
         requirePublisher(userId, activityId);
         return signTokenUtils.generateQrContent(activityId);
@@ -51,6 +59,7 @@ public class ActivitySigninService {
      * 扫码签到：token 校验 + 必须为已通过报名的成员 + 防重复签到。
      */
     @Transactional
+    @Override
     public void signin(Long userId, SigninDTO dto) {
         Long activityId = dto.getActivityId();
         if (!signTokenUtils.verify(activityId, dto.getToken())) {

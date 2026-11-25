@@ -4,7 +4,7 @@ import com.campus.platform.module.ai.mapper.AgentMessageAttachmentMapper;
 import com.campus.platform.common.BizException;
 import com.campus.platform.module.ai.entity.AiMessage;
 import com.campus.platform.module.ai.rag.KnowledgeService;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.IIdleService;
 import com.campus.platform.module.idle.vo.IdleGuideCard;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,7 +24,7 @@ public class AgentMessageAttachments {
     private final ObjectMapper json;
     private final ObjectProvider<KnowledgeService> knowledge;
     private final ActivitySignupActions actions;
-    private final IdleService idle;
+    private final IIdleService idle;
     private final IdlePublishDrafts idleDrafts;
     private final IdleAppointmentActions idleAppointments;
     private final CampusResourceTools resources;

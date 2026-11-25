@@ -1,5 +1,7 @@
-package com.campus.platform.module.idle.service;
+package com.campus.platform.module.idle.service.impl;
 
+import com.campus.platform.module.idle.service.IIdleHandoffService;
+import jakarta.annotation.Resource;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
@@ -21,27 +23,34 @@ import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
-public class IdleHandoffService {
+public class IdleHandoffServiceImpl implements IIdleHandoffService {
     private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter.ofPattern("M月d日 HH:mm");
 
-    private final IdleHandoffMapper handoffs;
-    private final IdleAppointmentMapper appointments;
-    private final IdleItemMapper idleItems;
-    private final IMessageService messages;
-    private final TransactionTemplate transactions;
+    @Resource
+    private IdleHandoffMapper handoffs;
+    @Resource
+    private IdleAppointmentMapper appointments;
+    @Resource
+    private IdleItemMapper idleItems;
+    @Resource
+    private IMessageService messages;
+    @Resource
+    private TransactionTemplate transactions;
 
-    void register(long appointmentId) {
+    @Override
+    public void register(long appointmentId) {
         handoffs.insertPlan(appointmentId);
     }
 
+    @Override
     public Plan view(long userId, long appointmentId) {
         requireParticipant(appointments.selectById(appointmentId), userId);
         return findPlan(appointmentId);
     }
 
     @Transactional
+    @Override
     public Plan propose(long userId, long appointmentId, int version, LocalDateTime meetingAt, String location) {
         IdleAppointment appointment = lockAcceptedAppointment(appointmentId, userId);
         Plan plan = findPlan(appointmentId);
@@ -65,6 +74,7 @@ public class IdleHandoffService {
     }
 
     @Transactional
+    @Override
     public Plan confirm(long userId, long appointmentId, int version) {
         IdleAppointment appointment = lockAcceptedAppointment(appointmentId, userId);
         Plan plan = findPlan(appointmentId);
@@ -81,12 +91,14 @@ public class IdleHandoffService {
         return findPlan(appointmentId);
     }
 
-    boolean hasCompletionConfirmation(long appointmentId) {
+    @Override
+    public boolean hasCompletionConfirmation(long appointmentId) {
         Plan current = findPlan(appointmentId);
         return current != null && (current.buyerDone() || current.sellerDone());
     }
 
     /** 调用方已锁定预约。没有交接安排的旧预约可直接完成。 */
+    @Override
     public boolean markDone(IdleAppointment appointment, long userId) {
         Plan plan = findPlan(appointment.getId());
         if (plan == null) return true;
@@ -109,6 +121,7 @@ public class IdleHandoffService {
     }
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 60_000)
+    @Override
     public void remind() {
         LocalDateTime now = handoffNow();
         for (long id : handoffs.findUpcoming(now, now.plusHours(1))) {
@@ -121,6 +134,7 @@ public class IdleHandoffService {
     }
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 60_000)
+    @Override
     public void expireMissedHandoffs() {
         LocalDateTime cutoff = handoffNow().minusHours(24);
         for (long id : handoffs.findExpired(cutoff)) {
@@ -196,6 +210,4 @@ public class IdleHandoffService {
         return new BizException(ResultCode.BAD_REQUEST, reason);
     }
 
-    public record Plan(int version, Long proposedBy, LocalDateTime meetingAt, String location,
-                       boolean confirmed, boolean buyerDone, boolean sellerDone) {}
 }

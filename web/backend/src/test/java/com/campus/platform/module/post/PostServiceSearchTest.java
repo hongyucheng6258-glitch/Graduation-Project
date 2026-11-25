@@ -2,7 +2,7 @@ package com.campus.platform.module.post;
 
 import com.campus.platform.module.post.mapper.PostCommentMapper;
 import com.campus.platform.module.post.mapper.PostLikeMapper;
-import com.campus.platform.module.post.service.PostService;
+import com.campus.platform.module.post.service.impl.PostServiceImpl;
 import com.campus.platform.module.post.mapper.PostMapper;
 import com.campus.platform.module.post.entity.Post;
 
@@ -37,7 +37,7 @@ class PostServiceSearchTest {
     @Mock private SensitiveWordService sensitiveWordService;
     @Mock private IMessageService messageService;
     @Mock private ContentAiAuditService contentAiAuditService;
-    @InjectMocks private PostService postService;
+    @InjectMocks private PostServiceImpl postService;
 
     @Test
     void listFiltersApprovedPostsByKeyword() {

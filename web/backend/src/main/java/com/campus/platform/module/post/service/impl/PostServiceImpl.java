@@ -1,5 +1,8 @@
-package com.campus.platform.module.post.service;
+package com.campus.platform.module.post.service.impl;
 
+import com.campus.platform.module.post.service.IPostService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import com.campus.platform.module.post.mapper.PostCommentMapper;
 import com.campus.platform.module.post.mapper.PostLikeMapper;
 import com.campus.platform.module.post.dto.PostPublishDTO;
@@ -45,20 +48,28 @@ import java.util.stream.IntStream;
  * 动态广场服务（C6）：发布（待审）→ 点赞（防重）→ 评论（DFA机审）。
  */
 @Service
-@RequiredArgsConstructor
-public class PostService {
+public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IPostService {
     private static final Pattern INLINE_IMAGE = Pattern.compile("^data:(image/(?:jpeg|jpg|png|gif|webp));base64,", Pattern.CASE_INSENSITIVE);
 
-    private final PostMapper postMapper;
-    private final PostCommentMapper commentMapper;
-    private final PostLikeMapper likeMapper;
-    private final UserMapper userMapper;
-    private final SensitiveWordService sensitiveWordService;
-    private final IMessageService messageService;
-    private final FavoriteMapper favoriteMapper;
-    private final ContentAiAuditService contentAiAuditService;
+    @Resource
+    private PostMapper postMapper;
+    @Resource
+    private PostCommentMapper commentMapper;
+    @Resource
+    private PostLikeMapper likeMapper;
+    @Resource
+    private UserMapper userMapper;
+    @Resource
+    private SensitiveWordService sensitiveWordService;
+    @Resource
+    private IMessageService messageService;
+    @Resource
+    private FavoriteMapper favoriteMapper;
+    @Resource
+    private ContentAiAuditService contentAiAuditService;
 
     /** 发动态（先审后发） */
+    @Override
     public Post publish(Long userId, PostPublishDTO dto) {
         if (sensitiveWordService.contains(dto.getContent())) {
             throw new BizException(ResultCode.SENSITIVE_WORD);
@@ -76,10 +87,12 @@ public class PostService {
     }
 
     /** 动态广场（公开，仅审核通过） */
+    @Override
     public PageResult<PostVO> list(Long currentUid, String keyword, int pageNum, int pageSize) {
         return list(currentUid, keyword, pageNum, pageSize, false);
     }
 
+    @Override
     public PageResult<PostVO> list(Long currentUid, String keyword, int pageNum, int pageSize, boolean compactImages) {
         String normalizedKeyword = keyword == null ? null : keyword.trim();
         Page<Post> page = postMapper.selectPage(new Page<>(pageNum, pageSize),
@@ -150,6 +163,7 @@ public class PostService {
         }).toList();
     }
 
+    @Override
     public InlineImage image(Long postId, int index) {
         List<String> images = ImageListJson.parseJson(checkVisible(postId).getImages());
         if (index < 0 || index >= images.size() || images.get(index) == null) {
@@ -166,9 +180,8 @@ public class PostService {
         }
     }
 
-    public record InlineImage(byte[] bytes, String contentType) {}
-
     /** 动态详情（仅审核通过、可见的动态；第10项修复：供分享直达 ?post=id 使用，找不到/删除/未过审统一 NOT_FOUND） */
+    @Override
     public PostVO detail(Long currentUid, Long postId) {
         Post post = checkVisible(postId);
         PostVO vo = new PostVO();
@@ -191,6 +204,7 @@ public class PostService {
 
     /** 点赞（联合唯一索引防重复；计数用原子自增，防并发丢失更新） */
     @Transactional
+    @Override
     public void like(Long userId, Long postId) {
         Post post = checkVisible(postId);
         PostLike like = new PostLike();
@@ -215,6 +229,7 @@ public class PostService {
 
     /** 取消点赞（删除成功才减计数，原子自减且不为负） */
     @Transactional
+    @Override
     public void unlike(Long userId, Long postId) {
         checkVisible(postId);
         long deleted = likeMapper.delete(new LambdaQueryWrapper<PostLike>()
@@ -228,6 +243,7 @@ public class PostService {
      * 评论（DFA 机审：命中敏感词直接落库为隐藏状态并提示）。
      */
     @Transactional
+    @Override
     public PostComment comment(Long userId, Long postId, CommentDTO dto) {
         Post post = checkVisible(postId);
         PostComment comment = new PostComment();
@@ -258,6 +274,7 @@ public class PostService {
     }
 
     /** 评论列表（公开，仅正常状态） */
+    @Override
     public PageResult<CommentVO> comments(Long postId, int pageNum, int pageSize) {
         Page<PostComment> page = commentMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<PostComment>()

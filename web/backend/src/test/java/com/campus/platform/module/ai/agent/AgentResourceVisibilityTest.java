@@ -3,7 +3,7 @@ package com.campus.platform.module.ai.agent;
 import com.campus.platform.common.BizException;
 import com.campus.platform.module.ai.gateway.AiConfigHolder;
 import com.campus.platform.module.ai.rag.KnowledgeService;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.IIdleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
@@ -45,7 +45,7 @@ class AgentResourceVisibilityTest {
         ObjectProvider<KnowledgeService> knowledge = mock();
         var service = new AgentService(model, json, mock(AgentQuota.class), conversation, prompts,
                 mock(AiConfigHolder.class), mock(AgentRunMapper.class), List.of(() -> List.of(tool)),
-                knowledge, mock(IdleService.class), resources);
+                knowledge, mock(IIdleService.class), resources);
 
         var reply = service.ask(1L, "查校园互助问答里的选课问题", null);
         assertEquals(List.of(CampusResourceTools.SEARCH), reply.toolsUsed());
@@ -73,7 +73,7 @@ class AgentResourceVisibilityTest {
         ObjectProvider<KnowledgeService> knowledge = mock();
         var service = new AgentService(model, json, mock(AgentQuota.class), conversation, prompts,
                 mock(AiConfigHolder.class), mock(AgentRunMapper.class), List.of(() -> List.of(tool)),
-                knowledge, mock(IdleService.class), resources);
+                knowledge, mock(IIdleService.class), resources);
 
         var failure = assertThrows(BizException.class, () -> service.ask(1L, "查询失物", null));
         assertEquals("查询期间校园内容有更新，请重新查询", failure.getMessage());

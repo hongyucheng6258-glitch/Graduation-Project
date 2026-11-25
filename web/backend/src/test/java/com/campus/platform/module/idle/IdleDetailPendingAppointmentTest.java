@@ -2,7 +2,7 @@ package com.campus.platform.module.idle;
 
 import com.campus.platform.module.idle.vo.PendingAppointmentVO;
 import com.campus.platform.module.idle.vo.IdleDetailVO;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.IIdleService;
 
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +32,7 @@ class IdleDetailPendingAppointmentTest {
 
     @Test
     void detailServiceFillsPendingAppointmentWhenOwner() throws Exception {
-        String svc = read("src/main/java/com/campus/platform/module/idle/service/IdleService.java");
+        String svc = read("src/main/java/com/campus/platform/module/idle/service/impl/IdleServiceImpl.java");
         assertTrue(svc.contains("isOwner"), "详情查询需判断是否本人（卖家）");
         assertTrue(svc.contains("setPendingAppointment"), "详情查询应填充待处理预约（setPendingAppointment）");
         assertTrue(svc.contains("APPOINT_PENDING, Constants.APPOINT_ACCEPTED"),

@@ -5,7 +5,7 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.ai.gateway.AiConfigHolder;
 import com.campus.platform.module.ai.rag.KnowledgeService;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.IIdleService;
 import com.campus.platform.module.idle.vo.IdleGuideCard;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -88,13 +88,13 @@ public class AgentService {
     private final AiConfigHolder config;
     private final AgentRunMapper runs;
     private final ObjectProvider<KnowledgeService> knowledge;
-    private final IdleService idle;
+    private final IIdleService idle;
     private final CampusResourceTools resources;
     private final Map<String, AgentTool> tools;
 
     public AgentService(AgentModelClient model, ObjectMapper json, AgentQuota quota, AgentConversation conversation,
                         AgentPromptService prompts, AiConfigHolder config, AgentRunMapper runs, List<AgentToolSource> sources,
-                        ObjectProvider<KnowledgeService> knowledge, IdleService idle, CampusResourceTools resources) {
+                        ObjectProvider<KnowledgeService> knowledge, IIdleService idle, CampusResourceTools resources) {
         this.model = model;
         this.json = json;
         this.quota = quota;

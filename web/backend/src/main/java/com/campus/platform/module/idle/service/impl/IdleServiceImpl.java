@@ -1,5 +1,9 @@
-package com.campus.platform.module.idle.service;
+package com.campus.platform.module.idle.service.impl;
 
+import com.campus.platform.module.idle.service.IIdleService;
+import com.campus.platform.module.idle.service.IIdleHandoffService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import com.campus.platform.common.mapper.MapperQueries;
 import com.campus.platform.module.idle.mapper.IdleAppointmentMapper;
 import com.campus.platform.module.idle.vo.PendingAppointmentVO;
@@ -49,22 +53,30 @@ import java.util.stream.Collectors;
  * 闲置互换服务（C1）：发布→审核→预约→确认→互评 闭环。
  */
 @Service
-@RequiredArgsConstructor
-public class IdleService {
+public class IdleServiceImpl extends ServiceImpl<IdleItemMapper, IdleItem> implements IIdleService {
 
-    private final IdleItemMapper idleItemMapper;
-    private final IdleAppointmentMapper appointmentMapper;
-    private final IdleReviewMapper reviewMapper;
-    private final UserMapper userMapper;
-    private final IMessageService messageService;
-    private final SensitiveWordService sensitiveWordService;
-    private final ContentAiAuditService contentAiAuditService;
-    private final IdleHandoffService handoffs;
+    @Resource
+    private IdleItemMapper idleItemMapper;
+    @Resource
+    private IdleAppointmentMapper appointmentMapper;
+    @Resource
+    private IdleReviewMapper reviewMapper;
+    @Resource
+    private UserMapper userMapper;
+    @Resource
+    private IMessageService messageService;
+    @Resource
+    private SensitiveWordService sensitiveWordService;
+    @Resource
+    private ContentAiAuditService contentAiAuditService;
+    @Resource
+    private IIdleHandoffService handoffs;
 
     @Value("${CAMPUS_ADMIN_ASSISTANT_ENABLED:false}")
     private boolean versionedAudit;
 
     /** 发布闲置（进入待审核） */
+    @Override
     public IdleItem publish(Long userId, IdlePublishDTO dto) {
         if (sensitiveWordService.contains(dto.getTitle()) || sensitiveWordService.contains(dto.getDescription())) {
             throw new BizException(ResultCode.SENSITIVE_WORD);
@@ -93,6 +105,7 @@ public class IdleService {
     }
 
     /** 列表检索（公开，仅审核通过 + 在架） */
+    @Override
     public PageResult<IdleItemVO> list(String keyword, String category, int pageNum, int pageSize) {
         Page<IdleItem> page = idleItemMapper.selectPage(new Page<>(pageNum, pageSize),
                 onShelf()
@@ -104,6 +117,7 @@ public class IdleService {
         return toPage(page, true);
     }
 
+    @Override
     public List<IdleGuideCard> guideSearch(Long uid, String keyword, String category, String exchange, int limit) {
         var query = onShelf().select(IdleItem::getId, IdleItem::getUserId, IdleItem::getTitle, IdleItem::getDescription,
                         IdleItem::getExpectItem, IdleItem::getCategory, IdleItem::getStatus)
@@ -116,6 +130,7 @@ public class IdleService {
                 .getRecords().stream().map(item -> guideCard(uid, item)).toList();
     }
 
+    @Override
     public IdleGuideCard guideDetail(Long uid, long itemId) {
         var card = guideCards(uid, List.of(itemId)).get(0);
         if (!card.isVisible()) {
@@ -124,6 +139,7 @@ public class IdleService {
         return card;
     }
 
+    @Override
     public List<IdleGuideCard> guideCards(Long uid, List<Long> itemIds) {
         if (itemIds.isEmpty()) {
             return List.of();
@@ -158,6 +174,7 @@ public class IdleService {
     }
 
     /** 详情（浏览数+1；待审内容仅本人/管理员可见） */
+    @Override
     public IdleDetailVO detail(Long id, Long currentUid) {
         IdleItem item = idleItemMapper.selectById(id);
         if (item == null) {
@@ -226,6 +243,7 @@ public class IdleService {
     }
 
     /** 编辑（仅本人，编辑后重新待审） */
+    @Override
     public IdleItem update(Long userId, Long id, IdlePublishDTO dto) {
         IdleItem item = checkOwner(userId, id);
         item.setTitle(dto.getTitle());
@@ -259,6 +277,7 @@ public class IdleService {
     }
 
     /** 下架（仅本人） */
+    @Override
     public void offline(Long userId, Long id) {
         checkOwner(userId, id);
         if (idleItemMapper.changeListing(id, Constants.IDLE_ON_SHELF, Constants.IDLE_OFF_SHELF, false) != 1) {
@@ -267,6 +286,7 @@ public class IdleService {
     }
 
     /** 重新上架（仅本人；需审核通过且非已成交） */
+    @Override
     public void relist(Long userId, Long id) {
         IdleItem item = checkOwner(userId, id);
         if (item.getAuditStatus() != Constants.AUDIT_PASS) {
@@ -284,6 +304,7 @@ public class IdleService {
     }
 
     /** 我的发布 */
+    @Override
     public PageResult<IdleItemVO> myList(Long userId, int pageNum, int pageSize) {
         Page<IdleItem> page = idleItemMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<IdleItem>()
@@ -296,6 +317,7 @@ public class IdleService {
      * 发起预约：物品需在架且审核通过，不能预约自己的物品；预约成功后物品标记"已预约"并通知卖家。
      */
     @Transactional
+    @Override
     public IdleAppointment appoint(Long userId, Long itemId, AppointDTO dto) {
         // 先锁定物品，同一物品的预约请求按顺序检查状态。
         IdleItem item = idleItemMapper.lockForAppointment(itemId);
@@ -337,6 +359,7 @@ public class IdleService {
 
     /** 卖家接受/拒绝预约 */
     @Transactional
+    @Override
     public void handleAppoint(Long userId, Long appointId, boolean accept) {
         IdleAppointment appointment = lockAppointment(appointId);
         if (!appointment.getSellerId().equals(userId)) {
@@ -360,6 +383,7 @@ public class IdleService {
     }
 
     @Transactional
+    @Override
     public void cancelAppoint(Long userId, Long appointId) {
         IdleAppointment appointment = lockAppointment(appointId);
         boolean buyer = appointment.getBuyerId().equals(userId);
@@ -386,6 +410,7 @@ public class IdleService {
 
     /** 完成交接。新增预约在双方确认后才完成，旧预约保持原流程。 */
     @Transactional
+    @Override
     public void finishAppoint(Long userId, Long appointId) {
         IdleAppointment appointment = lockAppointment(appointId);
         if (!appointment.getBuyerId().equals(userId) && !appointment.getSellerId().equals(userId)) {
@@ -407,6 +432,7 @@ public class IdleService {
     }
 
     /** 互评（1-5分+评语，联合唯一索引防重复） */
+    @Override
     public void review(Long userId, Long appointId, ReviewDTO dto) {
         IdleAppointment appointment = getAppointment(appointId);
         if (appointment.getStatus() != Constants.APPOINT_FINISHED) {
@@ -439,10 +465,12 @@ public class IdleService {
     }
 
     /** 我的预约（买/卖双向） */
+    @Override
     public PageResult<AppointmentVO> myAppointments(Long userId, String role, int pageNum, int pageSize) {
         return myAppointments(userId, role, pageNum, pageSize, null);
     }
 
+    @Override
     public PageResult<AppointmentVO> myAppointments(Long userId, String role, int pageNum, int pageSize, Long appointmentId) {
         Page<IdleAppointment> page = appointmentMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<IdleAppointment>()

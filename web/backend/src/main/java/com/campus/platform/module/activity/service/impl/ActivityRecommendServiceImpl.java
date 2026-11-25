@@ -1,5 +1,7 @@
-package com.campus.platform.module.activity.service;
+package com.campus.platform.module.activity.service.impl;
 
+import com.campus.platform.module.activity.service.IActivityRecommendService;
+import jakarta.annotation.Resource;
 import com.campus.platform.common.mapper.MapperQueries;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -26,16 +28,19 @@ import java.util.*;
  * 由 AI 挑选最合适的活动并给出推荐理由。
  */
 @Service
-@RequiredArgsConstructor
-public class ActivityRecommendService {
+public class ActivityRecommendServiceImpl implements IActivityRecommendService {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("M月d日 HH:mm");
 
-    private final ActivityMapper activityMapper;
-    private final ActivityMemberMapper memberMapper;
-    private final AiGatewayService aiGatewayService;
+    @Resource
+    private ActivityMapper activityMapper;
+    @Resource
+    private ActivityMemberMapper memberMapper;
+    @Resource
+    private AiGatewayService aiGatewayService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Override
     public List<ActivityRecommendVO> recommend(Long userId) {
         if (!aiGatewayService.isAiConfigured()) {
             throw new BizException(ResultCode.AI_NOT_CONFIGURED,

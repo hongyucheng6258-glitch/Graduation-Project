@@ -1,5 +1,7 @@
-package com.campus.platform.module.idle.service;
+package com.campus.platform.module.idle.service.impl;
 
+import com.campus.platform.module.idle.service.IIdleEstimateService;
+import jakarta.annotation.Resource;
 import cn.hutool.core.util.StrUtil;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
@@ -23,14 +25,15 @@ import java.util.Map;
  * 校园二手参考价区间、定价建议与发布卖点文案。
  */
 @Service
-@RequiredArgsConstructor
-public class IdleEstimateService {
+public class IdleEstimateServiceImpl implements IIdleEstimateService {
 
-    private static final Logger log = LoggerFactory.getLogger(IdleEstimateService.class);
+    private static final Logger log = LoggerFactory.getLogger(IdleEstimateServiceImpl.class);
 
-    private final AiGatewayService aiGatewayService;
+    @Resource
+    private AiGatewayService aiGatewayService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Override
     public IdleEstimateVO estimate(Long userId, String title, String description, String category, String expectItem) {
         if (!aiGatewayService.isAiConfigured()) {
             throw new BizException(ResultCode.AI_NOT_CONFIGURED,

@@ -28,7 +28,7 @@ public class ActivityReminderTask {
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 60_000)
     public void sendUpcomingReminders() {
-        LocalDateTime now = LocalDateTime.now(ActivityScheduleService.CAMPUS_ZONE);
+        LocalDateTime now = LocalDateTime.now(IActivityScheduleService.CAMPUS_ZONE);
         var candidates = reminders.findCandidates(Constants.AUDIT_PASS, Constants.ACTIVITY_SIGNING,
                 Constants.ACTIVITY_FULL, Constants.MEMBER_APPROVED, now, now.plusHours(1));
         for (Candidate candidate : candidates) {
@@ -43,7 +43,7 @@ public class ActivityReminderTask {
     }
 
     private void sendIfEligible(Candidate candidate) {
-        LocalDateTime now = LocalDateTime.now(ActivityScheduleService.CAMPUS_ZONE);
+        LocalDateTime now = LocalDateTime.now(IActivityScheduleService.CAMPUS_ZONE);
         Reminder reminder = reminders.lockEligible(Constants.AUDIT_PASS, Constants.ACTIVITY_SIGNING,
                 Constants.ACTIVITY_FULL, Constants.MEMBER_APPROVED, now, now.plusHours(1),
                 candidate.memberId(), candidate.startTime());

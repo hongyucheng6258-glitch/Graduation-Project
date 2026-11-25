@@ -1,6 +1,6 @@
 package com.campus.platform.module.idle.mapper;
 
-import com.campus.platform.module.idle.service.IdleHandoffService.Plan;
+import com.campus.platform.module.idle.service.IIdleHandoffService.Plan;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

@@ -3,13 +3,13 @@ package com.campus.platform.module.idle.controller;
 import com.campus.platform.module.idle.dto.AppointHandleDTO;
 import com.campus.platform.module.idle.dto.IdleEstimateDTO;
 import com.campus.platform.module.idle.dto.IdleHandoffDTO;
-import com.campus.platform.module.idle.service.IdleHandoffService;
+import com.campus.platform.module.idle.service.IIdleHandoffService;
 import com.campus.platform.module.idle.entity.IdleAppointment;
 import com.campus.platform.module.idle.dto.IdlePublishDTO;
 import com.campus.platform.module.idle.vo.AppointmentVO;
 import com.campus.platform.module.idle.vo.IdleDetailVO;
-import com.campus.platform.module.idle.service.IdleService;
-import com.campus.platform.module.idle.service.IdleEstimateService;
+import com.campus.platform.module.idle.service.IIdleService;
+import com.campus.platform.module.idle.service.IIdleEstimateService;
 import com.campus.platform.module.idle.vo.IdleEstimateVO;
 import com.campus.platform.module.idle.dto.AppointDTO;
 import com.campus.platform.module.idle.vo.IdleItemVO;
@@ -30,10 +30,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/idle")
 @RequiredArgsConstructor
 public class IdleController {
-    private final IdleService idleService;
-    private final IdleEstimateService idleEstimateService;
+    private final IIdleService idleService;
+    private final IIdleEstimateService idleEstimateService;
     private final SystemConfigHolder systemConfigHolder;
-    private final IdleHandoffService handoffs;
+    private final IIdleHandoffService handoffs;
 
     /** 闲置 AI 智能估价 */
     @PostMapping("/estimate")
@@ -110,17 +110,17 @@ public class IdleController {
     }
 
     @GetMapping("/appoint/{id}/handoff")
-    public Result<IdleHandoffService.Plan> handoff(@PathVariable Long id) {
+    public Result<IIdleHandoffService.Plan> handoff(@PathVariable Long id) {
         return Result.ok(handoffs.view(UserContext.getUid(), id));
     }
 
     @PutMapping("/appoint/{id}/handoff")
-    public Result<IdleHandoffService.Plan> proposeHandoff(@PathVariable Long id, @Valid @RequestBody IdleHandoffDTO dto) {
+    public Result<IIdleHandoffService.Plan> proposeHandoff(@PathVariable Long id, @Valid @RequestBody IdleHandoffDTO dto) {
         return Result.ok(handoffs.propose(UserContext.getUid(), id, dto.version(), dto.meetingAt(), dto.location()));
     }
 
     @PutMapping("/appoint/{id}/handoff/confirm")
-    public Result<IdleHandoffService.Plan> confirmHandoff(@PathVariable Long id, @Valid @RequestBody IdleHandoffDTO.Confirmation dto) {
+    public Result<IIdleHandoffService.Plan> confirmHandoff(@PathVariable Long id, @Valid @RequestBody IdleHandoffDTO.Confirmation dto) {
         return Result.ok(handoffs.confirm(UserContext.getUid(), id, dto.version()));
     }
 

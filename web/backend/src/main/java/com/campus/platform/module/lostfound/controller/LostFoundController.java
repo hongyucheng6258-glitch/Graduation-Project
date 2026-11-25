@@ -4,8 +4,8 @@ import com.campus.platform.module.lostfound.dto.ClaimDTO;
 import com.campus.platform.module.lostfound.dto.ClaimHandleDTO;
 import com.campus.platform.module.lostfound.dto.LostFoundPublishDTO;
 import com.campus.platform.module.lostfound.dto.LostMatchDTO;
-import com.campus.platform.module.lostfound.service.LostFoundService;
-import com.campus.platform.module.lostfound.service.LostMatchService;
+import com.campus.platform.module.lostfound.service.ILostFoundService;
+import com.campus.platform.module.lostfound.service.ILostMatchService;
 import com.campus.platform.module.lostfound.vo.ClaimVO;
 import com.campus.platform.module.lostfound.vo.LostFoundVO;
 import com.campus.platform.module.lostfound.vo.LostMatchVO;
@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/lostfound")
 @RequiredArgsConstructor
 public class LostFoundController {
-    private final LostFoundService lostFoundService;
-    private final LostMatchService lostMatchService;
+    private final ILostFoundService lostFoundService;
+    private final ILostMatchService lostMatchService;
 
     /** 失物 AI 智能匹配：根据丢失物品信息匹配库中拾到记录 */
     @PostMapping("/match")

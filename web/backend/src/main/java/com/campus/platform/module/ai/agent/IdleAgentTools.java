@@ -2,7 +2,7 @@ package com.campus.platform.module.ai.agent;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.IIdleService;
 import com.campus.platform.module.idle.vo.IdleGuideCard;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,7 +19,7 @@ class IdleAgentTools implements AgentToolSource {
     static final String SEARCH = "search_idle_items";
     static final String DETAIL = "get_idle_detail";
 
-    private final IdleService idle;
+    private final IIdleService idle;
     private final ObjectMapper json;
 
     @Override

@@ -3,7 +3,7 @@ package com.campus.platform.module.ai.agent;
 import com.campus.platform.module.ai.entity.AiMessage;
 import com.campus.platform.module.ai.gateway.AiConfigHolder;
 import com.campus.platform.module.ai.rag.KnowledgeService;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.IIdleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -76,6 +76,6 @@ class AgentActivityPublishRoutingTest {
                         .put("title", args.path("title").asText()));
         ObjectProvider<KnowledgeService> knowledge = mock();
         return new AgentService(model, json, mock(AgentQuota.class), conversation, prompts, mock(AiConfigHolder.class),
-                mock(AgentRunMapper.class), List.of(() -> List.of(tool)), knowledge, mock(IdleService.class), mock(CampusResourceTools.class));
+                mock(AgentRunMapper.class), List.of(() -> List.of(tool)), knowledge, mock(IIdleService.class), mock(CampusResourceTools.class));
     }
 }

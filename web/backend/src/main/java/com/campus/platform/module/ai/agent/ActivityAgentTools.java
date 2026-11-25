@@ -3,7 +3,7 @@ package com.campus.platform.module.ai.agent;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
-import com.campus.platform.module.activity.service.ActivityService;
+import com.campus.platform.module.activity.service.IActivityService;
 import com.campus.platform.module.activity.vo.ActivityVO;
 import com.campus.platform.module.ai.service.CampusGuideService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -23,7 +23,7 @@ import java.util.Objects;
 public class ActivityAgentTools implements AgentToolSource {
     private static final int LIMIT = 8;
 
-    private final ActivityService activities;
+    private final IActivityService activities;
     private final ObjectMapper json;
     private final CampusGuideService legacyGuide;
 

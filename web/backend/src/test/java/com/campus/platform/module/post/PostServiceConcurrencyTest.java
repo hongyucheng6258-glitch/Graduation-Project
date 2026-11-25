@@ -6,7 +6,7 @@ import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
 import com.campus.platform.module.ai.service.ContentAiAuditService;
 import com.campus.platform.module.favorite.mapper.FavoriteMapper;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.IIdleService;
 import com.campus.platform.module.message.service.IMessageService;
 import com.campus.platform.module.post.dto.CommentDTO;
 import com.campus.platform.module.post.entity.Post;
@@ -15,7 +15,7 @@ import com.campus.platform.module.post.entity.PostLike;
 import com.campus.platform.module.post.mapper.PostCommentMapper;
 import com.campus.platform.module.post.mapper.PostLikeMapper;
 import com.campus.platform.module.post.mapper.PostMapper;
-import com.campus.platform.module.post.service.PostService;
+import com.campus.platform.module.post.service.impl.PostServiceImpl;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -44,7 +44,7 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("P1 PostService 点赞/评论计数并发")
+@DisplayName("P1 IPostService 点赞/评论计数并发")
 class PostServiceConcurrencyTest {
 
     @Mock private PostMapper postMapper;
@@ -57,7 +57,7 @@ class PostServiceConcurrencyTest {
     @Mock private ContentAiAuditService contentAiAuditService;
 
     @InjectMocks
-    private PostService postService;
+    private PostServiceImpl postService;
 
     private Post passedPost(Long id) {
         Post p = new Post();

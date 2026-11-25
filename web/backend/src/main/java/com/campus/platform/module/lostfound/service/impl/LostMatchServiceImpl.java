@@ -1,5 +1,7 @@
-package com.campus.platform.module.lostfound.service;
+package com.campus.platform.module.lostfound.service.impl;
 
+import com.campus.platform.module.lostfound.service.ILostMatchService;
+import jakarta.annotation.Resource;
 import com.campus.platform.common.mapper.MapperQueries;
 import cn.hutool.core.util.StrUtil;
 import com.campus.platform.common.BizException;
@@ -27,19 +29,22 @@ import java.util.*;
  * 综合物品名称/特征/关键词/地点/时间判断相似度，命中即提示"可能找到了！"。
  */
 @Service
-@RequiredArgsConstructor
-public class LostMatchService {
+public class LostMatchServiceImpl implements ILostMatchService {
 
-    private static final Logger log = LoggerFactory.getLogger(LostMatchService.class);
+    private static final Logger log = LoggerFactory.getLogger(LostMatchServiceImpl.class);
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("M月d日 HH:mm");
     private static final int MAX_CANDIDATES = 20;
 
-    private final LostFoundMapper lostFoundMapper;
-    private final UserMapper userMapper;
-    private final AiGatewayService aiGatewayService;
+    @Resource
+    private LostFoundMapper lostFoundMapper;
+    @Resource
+    private UserMapper userMapper;
+    @Resource
+    private AiGatewayService aiGatewayService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** 智能匹配：返回可能的拾到记录（最多 3 条，AI 排序） */
+    @Override
     public List<LostMatchVO> match(Long userId, String title, String description) {
         if (!aiGatewayService.isAiConfigured()) {
             throw new BizException(ResultCode.AI_NOT_CONFIGURED,
