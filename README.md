@@ -105,7 +105,7 @@ notepad .env
 | 配置项 | 填写内容 |
 | --- | --- |
 | `MYSQL_ROOT_PASSWORD`、`REDIS_PASSWORD` | 各自的本机密码，均为必填项 |
-| `JWT_SECRET`、`SIGNIN_SECRET` | 分别填写至少 32、16 字符的随机值 |
+| `SIGNIN_SECRET` | 至少 16 字符的随机值；Sa-Token 会话不需要 JWT 签名密钥 |
 | `AI_API_KEY` | 体验模型问答和生成时填写有效密钥，也可在管理端配置 |
 | `AI_BASE_URL`、`AI_MODEL` | 模板使用 DeepSeek 和 `deepseek-chat`，可按服务配置调整 |
 | `STUDENT_PORT`、`ADMIN_PORT`、`BACKEND_PORT` | 建议设置为 `15173`、`15174`、`18080`。模板的后端端口是 `8080`，如沿用模板则使用 `8080` 检查后端 |

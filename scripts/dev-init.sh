@@ -40,7 +40,6 @@ if [[ ! -f "$dev_env" ]]; then
             printf 'MYSQL_ROOT_PASSWORD=%s\n' "$(quote_env "$mysql_password")"
             printf 'MYSQL_DB=%s\n' "$(quote_env "$database")"
             printf 'REDIS_PASSWORD=%s\n' "$(quote_env "$redis_password")"
-            printf 'JWT_SECRET=%s\n' "$(openssl rand -hex 32)"
             printf 'SIGNIN_SECRET=%s\n' "$(openssl rand -hex 24)"
         } > "$dev_env"
     )
@@ -48,7 +47,7 @@ fi
 
 # A developer's shell can contain credentials for another Compose project.
 compose() {
-    env -u MYSQL_ROOT_PASSWORD -u MYSQL_DB -u REDIS_PASSWORD -u JWT_SECRET -u SIGNIN_SECRET \
+    env -u MYSQL_ROOT_PASSWORD -u MYSQL_DB -u REDIS_PASSWORD -u SIGNIN_SECRET \
         docker compose --env-file "$dev_env" -p campus-idea "$@"
 }
 
@@ -65,7 +64,6 @@ if [[ ! -f "$idea_env" ]]; then
             property MYSQL_PASSWORD "$(container_value mysql MYSQL_ROOT_PASSWORD)"
             property MYSQL_DB "$(container_value mysql MYSQL_DATABASE)"
             property REDIS_PASSWORD "$(container_value redis REDIS_PASSWORD)"
-            property JWT_SECRET "$(openssl rand -hex 32)"
             property SIGNIN_SECRET "$(openssl rand -hex 24)"
         } > "$idea_env"
     )
