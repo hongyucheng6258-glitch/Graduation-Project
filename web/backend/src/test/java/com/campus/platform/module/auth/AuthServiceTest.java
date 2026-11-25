@@ -15,7 +15,7 @@ import com.campus.platform.module.admin.entity.Admin;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.admin.mapper.AdminMapper;
 import com.campus.platform.module.user.mapper.UserMapper;
-import com.campus.platform.utils.JwtUtils;
+import com.campus.platform.module.auth.service.TokenService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -53,7 +53,7 @@ class AuthServiceTest {
 
     @Mock private UserMapper userMapper;
     @Mock private AdminMapper adminMapper;
-    @Mock private JwtUtils jwtUtils;
+    @Mock private TokenService tokenService;
     @Mock private SystemConfigHolder systemConfigHolder;
 
     @InjectMocks
@@ -78,7 +78,7 @@ class AuthServiceTest {
         @DisplayName("注册成功应 BCrypt 加密密码、状态正常，并签发 student JWT")
         void register_shouldEncryptPasswordAndIssueStudentToken() {
             when(userMapper.selectCount(any())).thenReturn(0L);
-            when(jwtUtils.generate(any(), eq(Constants.ROLE_STUDENT))).thenReturn("TOKEN_STUDENT");
+            when(tokenService.studentLogin(any(), any())).thenReturn("TOKEN_STUDENT");
 
             RegisterDTO dto = new RegisterDTO();
             dto.setStudentNo("2021001");
@@ -129,7 +129,7 @@ class AuthServiceTest {
             assertThatThrownBy(() -> authService.register(dto))
                     .isInstanceOf(BizException.class)
                     .hasMessage("该学号已注册");
-            verify(jwtUtils, never()).generate(any(), eq(Constants.ROLE_STUDENT));
+            verify(tokenService, never()).studentLogin(any(), any());
         }
 
         @Test
@@ -138,7 +138,7 @@ class AuthServiceTest {
             when(userMapper.recordLogin(eq(1L), anyString(), any())).thenReturn(1);
             User user = buildUser(1L, "2021001", encoder.encode("123456"), Constants.USER_STATUS_NORMAL);
             when(userMapper.selectOne(any())).thenReturn(user);
-            when(jwtUtils.generate(eq(1L), eq(Constants.ROLE_STUDENT))).thenReturn("TOKEN_STUDENT");
+            when(tokenService.studentLogin(eq(1L), any())).thenReturn("TOKEN_STUDENT");
 
             LoginDTO dto = new LoginDTO();
             dto.setStudentNo("2021001");
@@ -149,8 +149,8 @@ class AuthServiceTest {
             assertThat(vo.getToken()).isEqualTo("TOKEN_STUDENT");
             assertThat(user.getLastLoginTime()).isNotNull();
             verify(userMapper).recordLogin(eq(1L), eq(user.getPassword()), any());
-            // 口径校验：JWT 角色必须是 student，不能是 admin
-            verify(jwtUtils, never()).generate(anyLong(), eq(Constants.ROLE_ADMIN));
+            // 口径校验：学生登录不得签发管理员会话
+            verify(tokenService, never()).adminLogin(anyLong());
         }
 
         @Test
@@ -229,7 +229,7 @@ class AuthServiceTest {
             admin.setPassword(encoder.encode("admin123"));
             admin.setStatus(0);
             when(adminMapper.selectOne(any())).thenReturn(admin);
-            when(jwtUtils.generate(1L, Constants.ROLE_ADMIN)).thenReturn("TOKEN_ADMIN");
+            when(tokenService.adminLogin(1L)).thenReturn("TOKEN_ADMIN");
 
             AdminLoginDTO dto = new AdminLoginDTO();
             dto.setUsername("admin");
@@ -238,9 +238,9 @@ class AuthServiceTest {
             AdminLoginVO vo = authService.adminLogin(dto);
 
             assertThat(vo.getToken()).isEqualTo("TOKEN_ADMIN");
-            verify(jwtUtils).generate(1L, Constants.ROLE_ADMIN);
-            // 绝不能给管理员发 student 角色
-            verify(jwtUtils, never()).generate(anyLong(), eq(Constants.ROLE_STUDENT));
+            verify(tokenService).adminLogin(1L);
+            // 绝不能给管理员发学生会话
+            verify(tokenService, never()).studentLogin(anyLong(), any());
         }
 
         /**

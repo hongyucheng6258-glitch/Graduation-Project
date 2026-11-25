@@ -4,7 +4,7 @@ import com.campus.platform.module.idle.controller.IdleController;
 import com.campus.platform.module.post.controller.PostController;
 
 import com.campus.platform.interceptor.AdminInterceptor;
-import com.campus.platform.interceptor.JwtInterceptor;
+import com.campus.platform.interceptor.LoginInterceptor;
 import com.campus.platform.interceptor.MaintenanceInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,7 +27,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @RequiredArgsConstructor
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    private final JwtInterceptor jwtInterceptor;
+    private final LoginInterceptor loginInterceptor;
     private final AdminInterceptor adminInterceptor;
     private final MaintenanceInterceptor maintenanceInterceptor;
 
@@ -41,16 +41,15 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns("/api/admin/**", "/error", "/favicon.ico");
 
-        // 管理端拦截器：仅校验 /api/admin/** 且 role=admin
+        // 管理端拦截器：仅校验 /api/admin/** 的管理员会话
         registry.addInterceptor(adminInterceptor)
                 .addPathPatterns("/api/admin/**")
                 .excludePathPatterns("/api/admin/auth/login");
 
         // 学生端拦截器：拦截所有 /api/**，排除管理端（由 AdminInterceptor 负责）和纯鉴权/静态资源入口。
-        // 公开读取（匿名 GET 列表/详情）不再通过宽泛路径排除放行，改由 JwtInterceptor 内部按
-        // 「HTTP 方法 + 明确端点」白名单处理（见 JwtInterceptor.PUBLIC_READ_PATTERNS），
-        // 避免排除项把同路径的 PUT/DELETE 写操作也匿名放行，同时保证匿名读取时携带有效令牌仍能解析个性化上下文。
-        registry.addInterceptor(jwtInterceptor)
+        // 公开读取（匿名 GET 列表/详情）由 LoginInterceptor 内部按「HTTP 方法 + 明确端点」白名单处理，
+        // 避免排除项把同路径的 PUT/DELETE 写操作也匿名放行。
+        registry.addInterceptor(loginInterceptor)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
                         "/api/admin/**",

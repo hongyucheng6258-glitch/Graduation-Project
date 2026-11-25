@@ -5,6 +5,7 @@ import com.campus.platform.module.admin.mapper.AdminMapper;
 import com.campus.platform.module.admin.entity.Admin;
 
 import com.campus.platform.module.auth.service.AuthService;
+import com.campus.platform.module.auth.service.TokenService;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -15,7 +16,6 @@ import com.campus.platform.common.PageResult;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
-import com.campus.platform.utils.RedisUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -29,8 +29,7 @@ public class AdminUserService {
     private final UserMapper userMapper;
     private final AdminMapper adminMapper;
     private final AuthService authService;
-    private final RedisUtils redisUtils;
-    private final AdminPermissionService adminPermissionService;
+    private final TokenService tokenService;
     private final com.campus.platform.module.chat.websocket.ChatSessionRegistry chatSessions;
     private final com.campus.platform.module.drawgame.websocket.DrawGuessSessionRegistry drawSessions;
 
@@ -57,21 +56,14 @@ public class AdminUserService {
         statusUpdate.setId(id);
         statusUpdate.setStatus(status);
         userMapper.updateById(statusUpdate);
-        // 状态机联动黑名单（key 与 JwtInterceptor 保持一致，按角色区分避免与管理员 id 冲突）：
-        // 禁用 -> 写入黑名单；解封 -> 移除黑名单。
-        // 角色段统一用 Constants.ROLE_STUDENT，避免将来该常量被改而写入端不同步导致黑名单静默失效
-        String blackKey = "auth:blacklist:" + Constants.ROLE_STUDENT + ":" + id;
+        // 禁用时清掉该学生的全部登录态与实时连接；解封后重新登录即可
         if (status != null && status == 1) {
-            redisUtils.set(blackKey, "1");
             revokeStudentSessions(id);
-        } else {
-            redisUtils.delete(blackKey);
         }
     }
 
     private void revokeStudentSessions(Long id) {
-        redisUtils.set("auth:revoked-at:" + Constants.ROLE_STUDENT + ":" + id,
-                String.valueOf(System.currentTimeMillis()));
+        tokenService.kickoutStudent(id);
         chatSessions.closeUserSessions(id);
         drawSessions.closeUserSessions(id);
     }
@@ -141,9 +133,9 @@ public class AdminUserService {
             admin.setPassword(authService.encode(dto.getPassword()));
         }
         adminMapper.updateById(admin);
-        // 降权/改角色后旧令牌必须失效，防止按旧角色继续操作
+        // 降权/改角色后清掉管理员的全部登录态，防止按旧角色继续操作
         if (roleChanged) {
-            adminPermissionService.revokeToken(id);
+            tokenService.kickoutAdmin(id);
         }
         return admin;
     }
@@ -164,7 +156,7 @@ public class AdminUserService {
             }
         }
         adminMapper.deleteById(id);
-        // 删除后旧令牌立即失效
-        adminPermissionService.revokeToken(id);
+        // 删除后清掉该管理员的全部登录态
+        tokenService.kickoutAdmin(id);
     }
 }

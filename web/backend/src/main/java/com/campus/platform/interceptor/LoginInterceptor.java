@@ -1,10 +1,11 @@
 package com.campus.platform.interceptor;
 
 import com.campus.platform.common.Constants;
+import com.campus.platform.common.R;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.common.UserContext;
-import com.campus.platform.utils.JwtUtils;
-import com.campus.platform.utils.RedisUtils;
+import com.campus.platform.module.auth.service.TokenService;
+import com.campus.platform.module.user.mapper.UserMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,28 +14,23 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.servlet.HandlerInterceptor;
-import com.campus.platform.common.R;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * 学生端 JWT 拦截器（共享约定 #3）。
- * 从 Header Authorization: Bearer <token> 解析 {uid, role} 写入 UserContext。
+ * 学生端登录拦截器。
  *
- * <p>P1/P2 鉴权统一修复（第2项）：
- * 公开读取采用「HTTP 方法 + 明确端点」规则——匿名 GET 列表/详情允许进入且不设用户上下文；
- * 携带有效学生令牌时仍解析上下文，使点赞/收藏等个性化状态正常返回；
- * 无效/过期令牌在公开读取端点上按匿名继续（保证公开页可访问），在受保护端点返回 401 引导登录。
- * 写操作（POST/PUT/DELETE）一律不在公开白名单内，匿名提交被拒绝。
+ * <p>从 {@code Authorization: Bearer <token>} 或 {@code ?token=} 取出 Sa-Token 会话，
+ * 解析出学生 id 写入 {@link UserContext}。公开读取接口允许匿名访问；
+ * 其余接口未登录返回 401，临时密码未修改时只放行改密接口。
  */
 @Component
 @RequiredArgsConstructor
-public class JwtInterceptor implements HandlerInterceptor {
+public class LoginInterceptor implements HandlerInterceptor {
 
-    /** 公开读取白名单（仅 GET；含 {id} 的详情路径用数字约束，避免误放开写接口或“my”等个人端点） */
+    /** 公开读取白名单（仅 GET；含 {id} 的详情路径用数字约束，避免误放开写接口或个人端点） */
     private static final List<String> PUBLIC_READ_PATTERNS = List.of(
-            // 公开列表
             "/api/idle/list",
             "/api/media/{resource}/{id:[0-9]+}/{index:[0-9]+}",
             "/api/activity/list",
@@ -45,7 +41,6 @@ public class JwtInterceptor implements HandlerInterceptor {
             "/api/partner/list",
             "/api/home/aggregate",
             "/api/site/config",
-            // 公开详情（数字 id；带路径参数的写操作不在白名单内）
             "/api/idle/{id:[0-9]+}",
             "/api/activity/{id:[0-9]+}",
             "/api/lostfound/{id:[0-9]+}",
@@ -57,61 +52,32 @@ public class JwtInterceptor implements HandlerInterceptor {
             "/api/post/{id:[0-9]+}/images/{index:[0-9]+}"
     );
 
-    private final JwtUtils jwtUtils;
-    private final RedisUtils redisUtils;
-    private final com.campus.platform.module.user.mapper.UserMapper userMapper;
+    private final TokenService tokenService;
+    private final UserMapper userMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        String token = resolveToken(request);
-        if (token == null) {
-            if (isPublicRead(request)) {
-                // 匿名公开读取：放行，不设用户上下文（个性化状态由业务层按空上下文处理）
-                return true;
-            }
-            writeUnauthorized(response, ResultCode.UNAUTHORIZED);
-            return false;
-        }
         try {
-            Long uid = jwtUtils.getUid(token);
-            String role = jwtUtils.getRole(token);
-            // BUG-06 修复：管理员 Token 不能当学生 Token 用
-            if (Constants.ROLE_ADMIN.equals(role)) {
-                writeUnauthorized(response, ResultCode.FORBIDDEN);
-                return false;
-            }
-            // 禁用用户黑名单校验：管理员禁用学生后，其存量 token 在下一次请求即失效
-            if (redisUtils.hasKey("auth:blacklist:" + role + ":" + uid)) {
-                writeUnauthorized(response, ResultCode.UNAUTHORIZED);
-                return false;
-            }
-            Object revoked = redisUtils.get("auth:revoked-at:" + Constants.ROLE_STUDENT + ":" + uid);
-            if (revoked != null) {
-                Long issuedAt = jwtUtils.getIssuedAtMillis(token);
-                if (issuedAt == null || issuedAt <= Long.parseLong(revoked.toString())) {
-                    writeUnauthorized(response, ResultCode.UNAUTHORIZED);
-                    return false;
+            Long uid = tokenService.studentId(resolveToken(request));
+            if (uid == null) {
+                if (isPublicRead(request)) {
+                    return true;
                 }
-            }
-            boolean passwordChangeOnly = jwtUtils.isPasswordChangeOnly(token);
-            boolean pendingChange = userMapper.requiresPasswordChange(uid);
-            if (passwordChangeOnly && !pendingChange) {
                 writeUnauthorized(response, ResultCode.UNAUTHORIZED);
                 return false;
             }
-            if ((passwordChangeOnly || pendingChange)
-                    && !("PUT".equals(request.getMethod())
-                    && "/api/user/password".equals(request.getServletPath().isEmpty()
-                            ? request.getRequestURI() : request.getServletPath()))) {
+            // 临时密码登录后必须先改密，改密接口之外一律拒绝
+            boolean pendingChange = userMapper.requiresPasswordChange(uid);
+            if (pendingChange && !isPasswordUpdate(request)) {
                 writeUnauthorized(response, ResultCode.FORBIDDEN);
                 return false;
             }
-            UserContext.set(uid, role);
+            UserContext.set(uid, Constants.ROLE_STUDENT);
             return true;
         } catch (Exception e) {
-            // 无效/过期令牌：公开读取端点按匿名继续；受保护端点返回 401 引导登录
+            // 无效/过期会话：公开读取按匿名继续，受保护接口返回 401
             if (isPublicRead(request)) {
                 return true;
             }
@@ -137,6 +103,15 @@ public class JwtInterceptor implements HandlerInterceptor {
             }
         }
         return false;
+    }
+
+    private boolean isPasswordUpdate(HttpServletRequest request) {
+        return "PUT".equals(request.getMethod()) && "/api/user/password".equals(requestPath(request));
+    }
+
+    private String requestPath(HttpServletRequest request) {
+        String servletPath = request.getServletPath();
+        return servletPath == null || servletPath.isEmpty() ? request.getRequestURI() : servletPath;
     }
 
     protected String resolveToken(HttpServletRequest request) {

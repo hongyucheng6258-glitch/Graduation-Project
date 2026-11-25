@@ -17,7 +17,6 @@ import com.campus.platform.module.admin.entity.Admin;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.admin.mapper.AdminMapper;
 import com.campus.platform.module.user.mapper.UserMapper;
-import com.campus.platform.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -38,7 +37,7 @@ public class AuthService {
 
     private final UserMapper userMapper;
     private final AdminMapper adminMapper;
-    private final JwtUtils jwtUtils;
+    private final TokenService tokenService;
     private final SystemConfigHolder systemConfigHolder;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -108,7 +107,7 @@ public class AuthService {
         if (admin.getStatus() != null && admin.getStatus() == 1) {
             throw new BizException(ResultCode.FORBIDDEN, "管理员账号已被禁用");
         }
-        String token = jwtUtils.generate(admin.getId(), Constants.ROLE_ADMIN);
+        String token = tokenService.adminLogin(admin.getId());
         return new AdminLoginVO(token, admin);
     }
 
@@ -136,8 +135,8 @@ public class AuthService {
 
     private LoginVO buildLoginVO(User user) {
         LocalDateTime expiresAt = user.getTemporaryPasswordExpiresAt();
-        String token = expiresAt == null ? jwtUtils.generate(user.getId(), Constants.ROLE_STUDENT)
-                : jwtUtils.generate(user.getId(), Constants.ROLE_STUDENT, expiresAt.toInstant(ZoneOffset.UTC));
+        String token = tokenService.studentLogin(user.getId(),
+                expiresAt == null ? null : expiresAt.toInstant(ZoneOffset.UTC));
         return new LoginVO(token, user, expiresAt != null);
     }
 }

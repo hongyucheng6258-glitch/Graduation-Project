@@ -6,6 +6,7 @@ import com.campus.platform.module.user.mapper.UserMapper;
 import com.campus.platform.module.user.entity.User;
 
 import com.campus.platform.module.auth.service.AuthService;
+import com.campus.platform.module.auth.service.TokenService;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
@@ -21,6 +22,7 @@ public class UserService {
 
     private final UserMapper userMapper;
     private final AuthService authService;
+    private final TokenService tokenService;
 
     public User getById(Long uid) {
         User user = userMapper.selectById(uid);
@@ -83,5 +85,7 @@ public class UserService {
         if (userMapper.replacePassword(uid, user.getPassword(), authService.encode(dto.getNewPassword()), null) != 1) {
             throw new BizException(ResultCode.BAD_REQUEST, "密码已变化，请重新登录");
         }
+        // 改密成功后清掉旧登录态，统一要求重新登录
+        tokenService.kickoutStudent(uid);
     }
 }
