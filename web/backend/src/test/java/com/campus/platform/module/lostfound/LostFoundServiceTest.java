@@ -12,7 +12,7 @@ import com.campus.platform.module.lostfound.entity.LostFoundClaim;
 import com.campus.platform.module.lostfound.mapper.LostFoundClaimMapper;
 import com.campus.platform.module.lostfound.mapper.LostFoundMapper;
 import com.campus.platform.module.lostfound.service.LostFoundService;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -46,7 +46,7 @@ class LostFoundServiceTest {
     @Mock private UserMapper userMapper;
     @Mock private SensitiveWordService sensitiveWordService;
     @Mock private ContentAiAuditService contentAiAuditService;
-    @Mock private MessageService messageService;
+    @Mock private IMessageService messageService;
 
     @InjectMocks
     private LostFoundService lostFoundService;

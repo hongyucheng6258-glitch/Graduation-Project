@@ -7,7 +7,7 @@ import com.campus.platform.module.post.mapper.PostMapper;
 import com.campus.platform.module.post.entity.Post;
 
 import com.campus.platform.module.ai.service.ContentAiAuditService;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
@@ -35,7 +35,7 @@ class PostServiceSearchTest {
     @Mock private PostLikeMapper likeMapper;
     @Mock private UserMapper userMapper;
     @Mock private SensitiveWordService sensitiveWordService;
-    @Mock private MessageService messageService;
+    @Mock private IMessageService messageService;
     @Mock private ContentAiAuditService contentAiAuditService;
     @InjectMocks private PostService postService;
 

@@ -1,6 +1,6 @@
 package com.campus.platform.module.report.controller;
 
-import com.campus.platform.module.report.service.ReportService;
+import com.campus.platform.module.report.service.IReportService;
 import com.campus.platform.module.report.dto.ReportDTO;
 import com.campus.platform.module.report.entity.Report;
 import com.campus.platform.common.PageResult;
@@ -8,14 +8,14 @@ import com.campus.platform.common.PageResult;
 import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/report")
-@RequiredArgsConstructor
 public class ReportController {
-    private final ReportService reportService;
+    @Resource
+    private IReportService reportService;
 
     @PostMapping
     public Result<Report> submit(@Valid @RequestBody ReportDTO dto) {

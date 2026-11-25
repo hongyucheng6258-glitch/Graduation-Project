@@ -1,6 +1,7 @@
-package com.campus.platform.module.report.service;
+package com.campus.platform.module.report.service.impl;
 
 import com.campus.platform.module.report.mapper.ReportMapper;
+import com.campus.platform.module.report.service.IReportService;
 import com.campus.platform.module.report.dto.ReportDTO;
 import com.campus.platform.module.report.entity.Report;
 
@@ -19,8 +20,9 @@ import com.campus.platform.module.lostfound.mapper.LostFoundMapper;
 import com.campus.platform.module.post.mapper.PostCommentMapper;
 import com.campus.platform.module.post.mapper.PostMapper;
 import com.campus.platform.module.user.mapper.UserMapper;
-import com.campus.platform.module.message.service.MessageService;
-import lombok.RequiredArgsConstructor;
+import com.campus.platform.module.message.service.IMessageService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -29,19 +31,31 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
  * 举报服务（D3 学生发起侧）：校验举报目标存在后落库，等待管理端处置。
  */
 @Service
-@RequiredArgsConstructor
-public class ReportService {
+public class ReportServiceImpl extends ServiceImpl<ReportMapper, Report> implements IReportService {
 
-    private final ReportMapper reportMapper;
-    private final IdleItemMapper idleItemMapper;
-    private final ActivityMapper activityMapper;
-    private final LostFoundMapper lostFoundMapper;
-    private final PostMapper postMapper;
-    private final PostCommentMapper postCommentMapper;
-    private final UserMapper userMapper;
-    private final MessageService messageService;
+    @Resource
+    private IdleItemMapper idleItemMapper;
+
+    @Resource
+    private ActivityMapper activityMapper;
+
+    @Resource
+    private LostFoundMapper lostFoundMapper;
+
+    @Resource
+    private PostMapper postMapper;
+
+    @Resource
+    private PostCommentMapper postCommentMapper;
+
+    @Resource
+    private UserMapper userMapper;
+
+    @Resource
+    private IMessageService messageService;
 
     /** 发起举报 */
+    @Override
     public Report submit(Long userId, ReportDTO dto) {
         checkTargetExists(dto.getTargetType(), dto.getTargetId());
         Report report = new Report();
@@ -51,7 +65,7 @@ public class ReportService {
         report.setReasonType(dto.getReasonType());
         report.setReason(dto.getReason());
         report.setStatus(Constants.REPORT_PENDING);
-        reportMapper.insert(report);
+        baseMapper.insert(report);
         // 确认举报已提交
         messageService.send(userId, Constants.MSG_SYSTEM,
                 "举报已提交",
@@ -61,8 +75,9 @@ public class ReportService {
     }
 
     /** 当前学生提交的举报记录 */
+    @Override
     public PageResult<Report> myList(Long userId, int pageNum, int pageSize) {
-        Page<Report> page = reportMapper.selectPage(new Page<>(pageNum, pageSize),
+        Page<Report> page = baseMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<Report>()
                         .eq(Report::getReporterId, userId)
                         .orderByDesc(Report::getId));

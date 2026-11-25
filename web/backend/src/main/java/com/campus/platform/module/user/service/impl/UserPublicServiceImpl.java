@@ -1,4 +1,4 @@
-package com.campus.platform.module.user.service;
+package com.campus.platform.module.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.platform.common.BizException;
@@ -19,10 +19,12 @@ import com.campus.platform.module.post.entity.Post;
 import com.campus.platform.module.post.mapper.PostMapper;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
+import com.campus.platform.module.user.service.IUserPublicService;
 import com.campus.platform.module.user.vo.UserContentVO;
 import com.campus.platform.module.user.vo.UserProfileVO;
 import com.campus.platform.module.user.vo.UserReviewVO;
-import lombok.RequiredArgsConstructor;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
@@ -37,22 +39,32 @@ import java.util.stream.Collectors;
  * 脱敏：不返回手机号/完整学号，仅返回年级粒度；只展示已审核通过的内容。
  */
 @Service
-@RequiredArgsConstructor
-public class UserPublicService {
+public class UserPublicServiceImpl extends ServiceImpl<UserMapper, User> implements IUserPublicService {
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("MM-dd HH:mm");
 
-    private final UserMapper userMapper;
-    private final IdleItemMapper idleItemMapper;
-    private final PostMapper postMapper;
-    private final ActivityMapper activityMapper;
-    private final LostFoundMapper lostFoundMapper;
-    private final IdleReviewMapper reviewMapper;
-    private final IdleAppointmentMapper appointmentMapper;
+    @Resource
+    private IdleItemMapper idleItemMapper;
+
+    @Resource
+    private PostMapper postMapper;
+
+    @Resource
+    private ActivityMapper activityMapper;
+
+    @Resource
+    private LostFoundMapper lostFoundMapper;
+
+    @Resource
+    private IdleReviewMapper reviewMapper;
+
+    @Resource
+    private IdleAppointmentMapper appointmentMapper;
 
     /** 公开信息卡 + 统计 */
+    @Override
     public UserProfileVO profile(Long uid) {
-        User u = userMapper.selectById(uid);
+        User u = baseMapper.selectById(uid);
         if (u == null) {
             throw new BizException(ResultCode.NOT_FOUND, "用户不存在");
         }
@@ -81,6 +93,7 @@ public class UserPublicService {
     }
 
     /** TA 的闲置（已审核，含在架/预约/已完成/下架状态展示） */
+    @Override
     public List<UserContentVO> idles(Long uid) {
         return idleItemMapper.selectList(new LambdaQueryWrapper<IdleItem>()
                         .eq(IdleItem::getUserId, uid)
@@ -101,6 +114,7 @@ public class UserPublicService {
     }
 
     /** TA 的动态（已审核） */
+    @Override
     public List<UserContentVO> posts(Long uid) {
         return postMapper.selectList(new LambdaQueryWrapper<Post>()
                         .eq(Post::getUserId, uid)
@@ -121,6 +135,7 @@ public class UserPublicService {
     }
 
     /** TA 发布的活动（已审核） */
+    @Override
     public List<UserContentVO> activities(Long uid) {
         return activityMapper.selectList(new LambdaQueryWrapper<Activity>()
                         .eq(Activity::getUserId, uid)
@@ -141,6 +156,7 @@ public class UserPublicService {
     }
 
     /** TA 的失物招领（已审核） */
+    @Override
     public List<UserContentVO> lostfounds(Long uid) {
         return lostFoundMapper.selectList(new LambdaQueryWrapper<LostFound>()
                         .eq(LostFound::getUserId, uid)
@@ -161,6 +177,7 @@ public class UserPublicService {
     }
 
     /** TA 收到的评价 */
+    @Override
     public List<UserReviewVO> reviews(Long uid) {
         List<IdleReview> reviews = reviewMapper.selectList(new LambdaQueryWrapper<IdleReview>()
                 .eq(IdleReview::getToUserId, uid)
@@ -168,7 +185,7 @@ public class UserPublicService {
         if (reviews.isEmpty()) {
             return List.of();
         }
-        Map<Long, User> userMap = userMapper.selectBatchIds(reviews.stream().map(IdleReview::getFromUserId).distinct().toList())
+        Map<Long, User> userMap = baseMapper.selectBatchIds(reviews.stream().map(IdleReview::getFromUserId).distinct().toList())
                 .stream().collect(Collectors.toMap(User::getId, Function.identity()));
         List<Long> appointIds = reviews.stream().map(IdleReview::getAppointmentId).distinct().toList();
         Map<Long, IdleAppointment> appointMap = appointIds.isEmpty() ? Map.of() :

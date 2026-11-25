@@ -7,7 +7,7 @@ import com.campus.platform.module.idle.entity.IdleAppointment;
 import com.campus.platform.module.idle.mapper.IdleAppointmentMapper;
 import com.campus.platform.module.idle.mapper.IdleHandoffMapper;
 import com.campus.platform.module.idle.mapper.IdleItemMapper;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,7 +29,7 @@ public class IdleHandoffService {
     private final IdleHandoffMapper handoffs;
     private final IdleAppointmentMapper appointments;
     private final IdleItemMapper idleItems;
-    private final MessageService messages;
+    private final IMessageService messages;
     private final TransactionTemplate transactions;
 
     void register(long appointmentId) {

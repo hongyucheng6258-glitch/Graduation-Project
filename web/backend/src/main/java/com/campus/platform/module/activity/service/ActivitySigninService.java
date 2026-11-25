@@ -12,7 +12,7 @@ import com.campus.platform.module.activity.entity.ActivitySignin;
 import com.campus.platform.module.activity.mapper.ActivityMapper;
 import com.campus.platform.module.activity.mapper.ActivityMemberMapper;
 import com.campus.platform.module.activity.mapper.ActivitySigninMapper;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
 import com.campus.platform.utils.SignTokenUtils;
@@ -29,7 +29,7 @@ public class ActivitySigninService {
     private final ActivityMemberMapper memberMapper;
     private final ActivitySigninMapper signinMapper;
     private final UserMapper userMapper;
-    private final MessageService messageService;
+    private final IMessageService messageService;
     private final SignTokenUtils signTokenUtils;
 
     static boolean signinOpen(Activity activity, LocalDateTime now) {

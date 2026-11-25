@@ -1,6 +1,6 @@
 package com.campus.platform.module.admin.service;
 
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -43,7 +43,7 @@ public class AuditService {
     private final PostMapper postMapper;
     private final StudyPartnerMapper studyPartnerMapper;
     private final CampusQuestionMapper questionMapper;
-    private final MessageService messageService;
+    private final IMessageService messageService;
 
     /** 待审列表 */
     public PageResult<?> pendingList(String type, int pageNum, int pageSize) {

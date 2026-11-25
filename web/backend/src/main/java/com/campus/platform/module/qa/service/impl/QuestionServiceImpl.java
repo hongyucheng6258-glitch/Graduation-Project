@@ -1,4 +1,4 @@
-package com.campus.platform.module.qa.service;
+package com.campus.platform.module.qa.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -8,18 +8,20 @@ import com.campus.platform.common.Constants;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.ai.gateway.AiGatewayService;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 import com.campus.platform.module.qa.dto.AnswerDTO;
 import com.campus.platform.module.qa.dto.QuestionDTO;
 import com.campus.platform.module.qa.entity.CampusAnswer;
 import com.campus.platform.module.qa.entity.CampusQuestion;
 import com.campus.platform.module.qa.mapper.CampusAnswerMapper;
+import com.campus.platform.module.qa.service.IQuestionService;
 import com.campus.platform.module.qa.mapper.CampusQuestionMapper;
 import com.campus.platform.module.qa.vo.AnswerVO;
 import com.campus.platform.module.qa.vo.QuestionVO;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
-import lombok.RequiredArgsConstructor;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
@@ -29,18 +31,25 @@ import java.util.*;
 
 /** 校园互助问答服务：提问→回答→采纳最佳回答 */
 @Service
-@RequiredArgsConstructor
-public class QuestionService {
+public class QuestionServiceImpl extends ServiceImpl<CampusQuestionMapper, CampusQuestion>
+        implements IQuestionService {
 
-    private final CampusQuestionMapper questionMapper;
-    private final CampusAnswerMapper answerMapper;
-    private final UserMapper userMapper;
-    private final MessageService messageService;
-    private final AiGatewayService aiGatewayService;
+    @Resource
+    private CampusAnswerMapper answerMapper;
+
+    @Resource
+    private UserMapper userMapper;
+
+    @Resource
+    private IMessageService messageService;
+
+    @Resource
+    private AiGatewayService aiGatewayService;
 
     private static final List<String> CATEGORIES = List.of("课程", "考试", "技术", "生活", "其他");
 
     /** 提问 */
+    @Override
     public CampusQuestion publish(Long userId, QuestionDTO dto) {
         CampusQuestion q = new CampusQuestion();
         q.setUserId(userId);
@@ -50,13 +59,14 @@ public class QuestionService {
         q.setCategory(CATEGORIES.contains(cat) ? cat : "其他");
         q.setStatus(0);
         q.setViewCount(0);
-        questionMapper.insert(q);
+        baseMapper.insert(q);
         return q;
     }
 
     /** 问题列表（公开，不含已下架） */
+    @Override
     public PageResult<QuestionVO> list(String category, String keyword, Integer status, int pageNum, int pageSize) {
-        Page<CampusQuestion> page = questionMapper.selectPage(new Page<>(pageNum, pageSize),
+        Page<CampusQuestion> page = baseMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<CampusQuestion>()
                         .eq(StrUtil.isNotBlank(category), CampusQuestion::getCategory, category)
                         .eq(status != null, CampusQuestion::getStatus, status)
@@ -69,8 +79,9 @@ public class QuestionService {
     }
 
     /** 详情 + 回答列表（公开，浏览计数；已下架不可见；第8项修复：回答分页返回） */
+    @Override
     public Map<String, Object> detail(Long id, Long currentUid, int pageNum, int pageSize) {
-        CampusQuestion q = questionMapper.selectById(id);
+        CampusQuestion q = baseMapper.selectById(id);
         if (q == null) {
             throw new BizException(ResultCode.NOT_FOUND, "问题不存在");
         }
@@ -79,7 +90,7 @@ public class QuestionService {
         }
         // 浏览计数
         q.setViewCount(q.getViewCount() == null ? 1 : q.getViewCount() + 1);
-        questionMapper.incrementViewCount(id);
+        baseMapper.incrementViewCount(id);
         QuestionVO qvo = toVO(q, currentUid, userMapper.selectById(q.getUserId()));
         qvo.setViewCount(q.getViewCount());
 
@@ -101,8 +112,9 @@ public class QuestionService {
     }
 
     /** 我的提问 */
+    @Override
     public PageResult<QuestionVO> myList(Long userId, int pageNum, int pageSize) {
-        Page<CampusQuestion> page = questionMapper.selectPage(new Page<>(pageNum, pageSize),
+        Page<CampusQuestion> page = baseMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<CampusQuestion>()
                         .eq(CampusQuestion::getUserId, userId)
                         .orderByDesc(CampusQuestion::getId));
@@ -110,8 +122,9 @@ public class QuestionService {
     }
 
     /** 回答 */
+    @Override
     public CampusAnswer answer(Long userId, Long questionId, AnswerDTO dto) {
-        CampusQuestion q = questionMapper.selectById(questionId);
+        CampusQuestion q = baseMapper.selectById(questionId);
         if (q == null || q.getStatus() == Constants.QA_OFF) {
             throw new BizException(ResultCode.NOT_FOUND, "问题不存在或已下架");
         }
@@ -132,12 +145,13 @@ public class QuestionService {
 
     /** 采纳最佳回答（仅提问者；采纳后问题标记已解决） */
     @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Override
     public void accept(Long userId, Long answerId) {
         CampusAnswer a = answerMapper.selectById(answerId);
         if (a == null) {
             throw new BizException(ResultCode.NOT_FOUND, "回答不存在");
         }
-        CampusQuestion q = questionMapper.lockById(a.getQuestionId());
+        CampusQuestion q = baseMapper.lockById(a.getQuestionId());
         if (q == null || !q.getUserId().equals(userId)) {
             throw new BizException(ResultCode.FORBIDDEN, "只有提问者可以采纳回答");
         }
@@ -155,15 +169,16 @@ public class QuestionService {
         answerMapper.updateById(a);
         q.setAcceptedAnswerId(answerId);
         q.setStatus(1);
-        questionMapper.updateById(q);
+        baseMapper.updateById(q);
         messageService.send(a.getUserId(), Constants.MSG_INTERACT, "你的回答被采纳了",
                 String.format("你在「%s」下的回答被提问者采纳为最佳回答，感谢你的帮助！", q.getTitle()),
                 "qa", q.getId());
     }
 
     /** AI 参考回答（使用学生额度） */
+    @Override
     public String aiAnswer(Long userId, Long questionId) {
-        CampusQuestion q = questionMapper.selectById(questionId);
+        CampusQuestion q = baseMapper.selectById(questionId);
         if (q == null) {
             throw new BizException(ResultCode.NOT_FOUND, "问题不存在");
         }

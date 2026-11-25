@@ -3,7 +3,7 @@ package com.campus.platform.module.idle;
 import com.campus.platform.module.idle.service.IdleService;
 
 import com.campus.platform.module.ai.service.ContentAiAuditService;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
 import com.campus.platform.common.Constants;
@@ -45,7 +45,7 @@ class IdleDetailReviewEntryTest {
     @Mock
     private UserMapper userMapper;
     @Mock
-    private MessageService messageService;
+    private IMessageService messageService;
     @Mock
     private SensitiveWordService sensitiveWordService;
     @Mock

@@ -16,7 +16,7 @@ import com.campus.platform.module.idle.entity.IdleReview;
 import com.campus.platform.module.idle.entity.IdleItem;
 
 import com.campus.platform.module.ai.service.ContentAiAuditService;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
@@ -56,7 +56,7 @@ public class IdleService {
     private final IdleAppointmentMapper appointmentMapper;
     private final IdleReviewMapper reviewMapper;
     private final UserMapper userMapper;
-    private final MessageService messageService;
+    private final IMessageService messageService;
     private final SensitiveWordService sensitiveWordService;
     private final ContentAiAuditService contentAiAuditService;
     private final IdleHandoffService handoffs;

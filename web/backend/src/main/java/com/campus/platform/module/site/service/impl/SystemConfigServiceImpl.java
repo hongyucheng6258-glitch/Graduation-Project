@@ -1,6 +1,7 @@
-package com.campus.platform.module.site.service;
+package com.campus.platform.module.site.service.impl;
 
 import com.campus.platform.module.site.mapper.SystemConfigMapper;
+import com.campus.platform.module.site.service.ISystemConfigService;
 import com.campus.platform.module.site.entity.SystemConfig;
 
 import cn.hutool.core.util.StrUtil;
@@ -9,7 +10,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.config.SystemConfigHolder;
-import lombok.RequiredArgsConstructor;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -32,8 +34,8 @@ import java.util.regex.Pattern;
  * </ul>
  */
 @Service
-@RequiredArgsConstructor
-public class SystemConfigService {
+public class SystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper, SystemConfig>
+        implements ISystemConfigService {
 
     private static final Set<String> ALLOWED_VALUE_TYPES = Set.of("string", "int", "bool", "json", "list");
     private static final Pattern KEY_PATTERN = Pattern.compile("^[A-Za-z0-9_.-]{1,64}$");
@@ -49,19 +51,21 @@ public class SystemConfigService {
             Map.entry("login_fail_lock_threshold", "int")
     );
 
-    private final SystemConfigMapper systemConfigMapper;
-    private final SystemConfigHolder systemConfigHolder;
+    @Resource
+    private SystemConfigHolder systemConfigHolder;
 
     /** 读取全部配置（按 category + sort 排序） */
+    @Override
     public List<SystemConfig> listAll() {
-        return systemConfigMapper.selectList(new LambdaQueryWrapper<SystemConfig>()
+        return baseMapper.selectList(new LambdaQueryWrapper<SystemConfig>()
                 .orderByAsc(SystemConfig::getCategory)
                 .orderByAsc(SystemConfig::getSort));
     }
 
     /** 按分组读取配置 */
+    @Override
     public List<SystemConfig> listByCategory(String category) {
-        return systemConfigMapper.selectList(new LambdaQueryWrapper<SystemConfig>()
+        return baseMapper.selectList(new LambdaQueryWrapper<SystemConfig>()
                 .eq(StrUtil.isNotBlank(category), SystemConfig::getCategory, category)
                 .orderByAsc(SystemConfig::getSort));
     }
@@ -71,6 +75,7 @@ public class SystemConfigService {
      * 只更新 DB 中已存在的键；未知键直接报错（不再静默 insert，避免垃圾配置）。
      */
     @Transactional
+    @Override
     public void updateConfigs(Map<String, String> configs) {
         if (configs == null || configs.isEmpty()) {
             throw new BizException(ResultCode.BAD_REQUEST, "配置不能为空");
@@ -81,7 +86,7 @@ public class SystemConfigService {
                 throw new BizException(ResultCode.BAD_REQUEST, "非法配置键：" + key);
             }
             String value = e.getValue() == null ? "" : e.getValue().trim();
-            SystemConfig existing = systemConfigMapper.selectOne(new LambdaQueryWrapper<SystemConfig>()
+            SystemConfig existing = baseMapper.selectOne(new LambdaQueryWrapper<SystemConfig>()
                     .eq(SystemConfig::getConfigKey, key));
             if (existing == null) {
                 throw new BizException(ResultCode.BAD_REQUEST, "未知配置键：" + key + "（请先新增配置项）");
@@ -91,7 +96,7 @@ public class SystemConfigService {
                 throw new BizException(ResultCode.BAD_REQUEST, "内置配置项类型已损坏：" + key);
             }
             validateValue(key, existing.getValueType(), value);
-            systemConfigMapper.update(null, new LambdaUpdateWrapper<SystemConfig>()
+            baseMapper.update(null, new LambdaUpdateWrapper<SystemConfig>()
                     .eq(SystemConfig::getConfigKey, key)
                     .set(SystemConfig::getConfigValue, value));
         }
@@ -100,12 +105,13 @@ public class SystemConfigService {
 
     /** 新增配置项 */
     @Transactional
+    @Override
     public SystemConfig create(SystemConfig config) {
         if (StrUtil.isBlank(config.getConfigKey()) || !KEY_PATTERN.matcher(config.getConfigKey().trim()).matches()) {
             throw new BizException(ResultCode.BAD_REQUEST, "配置键非法（仅允许字母/数字/_.-，≤64 字符）");
         }
         config.setConfigKey(config.getConfigKey().trim());
-        Long exists = systemConfigMapper.selectCount(new LambdaQueryWrapper<SystemConfig>()
+        Long exists = baseMapper.selectCount(new LambdaQueryWrapper<SystemConfig>()
                 .eq(SystemConfig::getConfigKey, config.getConfigKey()));
         if (exists != null && exists > 0) {
             throw new BizException(ResultCode.BAD_REQUEST, "配置键已存在");
@@ -117,15 +123,16 @@ public class SystemConfigService {
         validateValue(config.getConfigKey(), config.getValueType(), config.getConfigValue());
         if (StrUtil.isBlank(config.getCategory())) config.setCategory("basic");
         if (config.getSort() == null) config.setSort(999);
-        systemConfigMapper.insert(config);
+        baseMapper.insert(config);
         refreshAfterCommit();
         return config;
     }
 
     /** 更新配置项（含元信息：类型/分组/说明/排序） */
     @Transactional
+    @Override
     public SystemConfig update(Long id, SystemConfig config) {
-        SystemConfig existing = systemConfigMapper.selectById(id);
+        SystemConfig existing = baseMapper.selectById(id);
         if (existing == null) {
             throw new BizException(ResultCode.NOT_FOUND, "配置项不存在");
         }
@@ -144,26 +151,28 @@ public class SystemConfigService {
         if (StrUtil.isNotBlank(config.getCategory())) existing.setCategory(config.getCategory());
         if (StrUtil.isNotBlank(config.getDescription())) existing.setDescription(config.getDescription());
         if (config.getSort() != null) existing.setSort(config.getSort());
-        systemConfigMapper.updateById(existing);
+        baseMapper.updateById(existing);
         refreshAfterCommit();
         return existing;
     }
 
     /** 删除配置项（内置关键键不可删除） */
     @Transactional
+    @Override
     public void delete(Long id) {
-        SystemConfig existing = systemConfigMapper.selectById(id);
+        SystemConfig existing = baseMapper.selectById(id);
         if (existing == null) {
             throw new BizException(ResultCode.NOT_FOUND, "配置项不存在");
         }
         if (systemConfigHolder.isBuiltinKey(existing.getConfigKey())) {
             throw new BizException(ResultCode.BAD_REQUEST, "内置关键配置项不可删除（只能改值）：" + existing.getConfigKey());
         }
-        systemConfigMapper.deleteById(id);
+        baseMapper.deleteById(id);
         refreshAfterCommit();
     }
 
     /** 手动刷新缓存（无事务时直接刷；有事务时注册 afterCommit） */
+    @Override
     public void refresh() {
         refreshAfterCommit();
     }

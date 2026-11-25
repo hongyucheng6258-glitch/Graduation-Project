@@ -15,7 +15,7 @@ import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.activity.vo.MemberVO;
 
 import com.campus.platform.module.ai.service.ContentAiAuditService;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 import com.campus.platform.utils.ImageListJson;
 
 import cn.hutool.core.bean.BeanUtil;
@@ -57,7 +57,7 @@ public class ActivityService {
     private final ActivityMemberMapper memberMapper;
     private final ActivitySigninMapper signinMapper;
     private final UserMapper userMapper;
-    private final MessageService messageService;
+    private final IMessageService messageService;
     private final ActivitySigninService signinService;
     private final SensitiveWordService sensitiveWordService;
     private final ContentAiAuditService contentAiAuditService;

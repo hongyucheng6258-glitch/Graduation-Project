@@ -2,7 +2,7 @@ package com.campus.platform.module.admin;
 
 import com.campus.platform.module.admin.service.AuditService;
 
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
@@ -54,7 +54,7 @@ class AuditServiceTest {
     @Mock private LostFoundMapper lostFoundMapper;
     @Mock private PostMapper postMapper;
     @Mock private StudyPartnerMapper studyPartnerMapper;
-    @Mock private MessageService messageService;
+    @Mock private IMessageService messageService;
 
     @InjectMocks
     private AuditService auditService;

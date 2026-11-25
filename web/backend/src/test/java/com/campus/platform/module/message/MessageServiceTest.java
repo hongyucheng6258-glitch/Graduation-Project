@@ -1,9 +1,10 @@
 package com.campus.platform.module.message;
 
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.impl.MessageServiceImpl;
 import com.campus.platform.module.message.mapper.MessageMapper;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,7 +18,8 @@ class MessageServiceTest {
         MessageMapper mapper = mock(MessageMapper.class);
         when(mapper.selectCount(any(Wrapper.class))).thenReturn(4L);
 
-        MessageService service = new MessageService(mapper);
+        MessageServiceImpl service = new MessageServiceImpl();
+        ReflectionTestUtils.setField(service, "baseMapper", mapper);
 
         assertEquals(4L, service.unreadCount(7L).getCount());
     }

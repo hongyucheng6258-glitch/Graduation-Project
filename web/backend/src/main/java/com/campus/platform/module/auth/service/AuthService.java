@@ -6,7 +6,7 @@ import com.campus.platform.module.auth.dto.RegisterDTO;
 import com.campus.platform.module.auth.dto.LoginDTO;
 import com.campus.platform.module.auth.vo.LoginVO;
 
-import com.campus.platform.module.user.service.UserService;
+import com.campus.platform.module.user.service.IUserService;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.platform.common.BizException;

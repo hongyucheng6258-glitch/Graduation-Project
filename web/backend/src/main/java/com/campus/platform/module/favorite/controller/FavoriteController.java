@@ -3,9 +3,9 @@ package com.campus.platform.module.favorite.controller;
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
-import com.campus.platform.module.favorite.service.FavoriteService;
+import com.campus.platform.module.favorite.service.IFavoriteService;
 import com.campus.platform.module.favorite.vo.FavoriteVO;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/favorite")
-@RequiredArgsConstructor
 public class FavoriteController {
 
-    private final FavoriteService favoriteService;
+    @Resource
+    private IFavoriteService favoriteService;
 
     @PostMapping("/{type}/{id}")
     public Result<Void> favorite(@PathVariable String type, @PathVariable Long id) {

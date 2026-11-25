@@ -1,4 +1,4 @@
-package com.campus.platform.module.favorite.service;
+package com.campus.platform.module.favorite.service.impl;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
@@ -8,6 +8,7 @@ import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.activity.mapper.ActivityMapper;
 import com.campus.platform.module.favorite.entity.Favorite;
 import com.campus.platform.module.favorite.mapper.FavoriteMapper;
+import com.campus.platform.module.favorite.service.IFavoriteService;
 import com.campus.platform.module.favorite.vo.FavoriteVO;
 import com.campus.platform.module.idle.entity.IdleItem;
 import com.campus.platform.module.idle.mapper.IdleItemMapper;
@@ -18,9 +19,10 @@ import com.campus.platform.module.post.mapper.PostMapper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,21 +36,29 @@ import java.util.stream.Collectors;
  * 统一收藏：活动/闲置/失物/动态 收藏与聚合列表。
  */
 @Service
-@RequiredArgsConstructor
-public class FavoriteService {
+public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite> implements IFavoriteService {
 
-    private final FavoriteMapper favoriteMapper;
-    private final ActivityMapper activityMapper;
-    private final IdleItemMapper idleItemMapper;
-    private final LostFoundMapper lostFoundMapper;
-    private final PostMapper postMapper;
-    private final ObjectMapper objectMapper;
+    @Resource
+    private ActivityMapper activityMapper;
+
+    @Resource
+    private IdleItemMapper idleItemMapper;
+
+    @Resource
+    private LostFoundMapper lostFoundMapper;
+
+    @Resource
+    private PostMapper postMapper;
+
+    @Resource
+    private ObjectMapper objectMapper;
 
     /** 收藏（幂等：重复收藏直接返回） */
+    @Override
     @Transactional
     public void favorite(Long userId, String type, Long targetId) {
         checkTarget(type, targetId);
-        Long existingCount = favoriteMapper.selectCount(favoriteQuery(userId, type, targetId));
+        Long existingCount = baseMapper.selectCount(favoriteQuery(userId, type, targetId));
         if (existingCount != null && existingCount > 0) {
             return;
         }
@@ -57,17 +67,19 @@ public class FavoriteService {
         favorite.setTargetType(type);
         favorite.setTargetId(targetId);
         favorite.setCreateTime(LocalDateTime.now());
-        favoriteMapper.insert(favorite);
+        baseMapper.insert(favorite);
     }
 
     /** 取消收藏 */
+    @Override
     public void unfavorite(Long userId, String type, Long targetId) {
-        favoriteMapper.delete(favoriteQuery(userId, type, targetId));
+        baseMapper.delete(favoriteQuery(userId, type, targetId));
     }
 
     /** 是否已收藏 */
+    @Override
     public boolean isFavorited(Long userId, String type, Long targetId) {
-        Long count = favoriteMapper.selectCount(favoriteQuery(userId, type, targetId));
+        Long count = baseMapper.selectCount(favoriteQuery(userId, type, targetId));
         return count != null && count > 0;
     }
 
@@ -79,8 +91,9 @@ public class FavoriteService {
     }
 
     /** 我的收藏（聚合标题与封面） */
+    @Override
     public PageResult<FavoriteVO> myFavorites(Long userId, int pageNum, int pageSize) {
-        Page<Favorite> page = favoriteMapper.selectPage(new Page<>(pageNum, pageSize),
+        Page<Favorite> page = baseMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<Favorite>()
                         .eq(Favorite::getUserId, userId)
                         .orderByDesc(Favorite::getCreateTime));

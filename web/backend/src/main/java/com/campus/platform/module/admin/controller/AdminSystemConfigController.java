@@ -6,8 +6,8 @@ import com.campus.platform.module.admin.audit.AdminPermission;
 import com.campus.platform.common.Result;
 import com.campus.platform.module.admin.service.AdminPermissionService;
 import com.campus.platform.module.site.entity.SystemConfig;
-import com.campus.platform.module.site.service.SystemConfigService;
-import lombok.RequiredArgsConstructor;
+import com.campus.platform.module.site.service.ISystemConfigService;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,11 +22,13 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/admin/system/config")
-@RequiredArgsConstructor
 public class AdminSystemConfigController {
 
-    private final SystemConfigService systemConfigService;
-    private final AdminPermissionService adminPermissionService;
+    @Resource
+    private ISystemConfigService systemConfigService;
+
+    @Resource
+    private AdminPermissionService adminPermissionService;
 
     /** 获取全部系统配置（按分组排序） */
     @GetMapping

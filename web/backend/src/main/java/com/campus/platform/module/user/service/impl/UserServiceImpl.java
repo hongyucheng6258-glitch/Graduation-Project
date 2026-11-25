@@ -1,8 +1,9 @@
-package com.campus.platform.module.user.service;
+package com.campus.platform.module.user.service.impl;
 
 import com.campus.platform.module.user.dto.PasswordUpdateDTO;
 import com.campus.platform.module.user.dto.ProfileUpdateDTO;
 import com.campus.platform.module.user.mapper.UserMapper;
+import com.campus.platform.module.user.service.IUserService;
 import com.campus.platform.module.user.entity.User;
 
 import com.campus.platform.module.auth.service.AuthService;
@@ -10,22 +11,25 @@ import com.campus.platform.module.auth.service.TokenService;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
-import lombok.RequiredArgsConstructor;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 /**
  * 用户服务：资料查询/编辑、修改密码。
  */
 @Service
-@RequiredArgsConstructor
-public class UserService {
+public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
 
-    private final UserMapper userMapper;
-    private final AuthService authService;
-    private final TokenService tokenService;
+    @Resource
+    private AuthService authService;
 
+    @Resource
+    private TokenService tokenService;
+
+    @Override
     public User getById(Long uid) {
-        User user = userMapper.selectById(uid);
+        User user = baseMapper.selectById(uid);
         if (user == null) {
             throw new BizException(ResultCode.NOT_FOUND, "用户不存在");
         }
@@ -33,6 +37,7 @@ public class UserService {
     }
 
     /** 资料编辑（昵称/头像/性别/简介/手机号） */
+    @Override
     public User updateProfile(Long uid, ProfileUpdateDTO dto) {
         User user = getById(uid);
         if (dto.getNickname() != null) {
@@ -63,10 +68,11 @@ public class UserService {
         profile.setBio(user.getBio());
         profile.setGender(user.getGender());
         profile.setPhone(user.getPhone());
-        userMapper.updateById(profile);
+        baseMapper.updateById(profile);
     }
 
     /** 修改密码：校验原密码 */
+    @Override
     public void updatePassword(Long uid, PasswordUpdateDTO dto) {
         User user = getById(uid);
         if (user.getPassword() == null) {
@@ -82,7 +88,7 @@ public class UserService {
         if (user.getTemporaryPasswordExpiresAt() != null && dto.getOldPassword().equals(dto.getNewPassword())) {
             throw new BizException(ResultCode.BAD_REQUEST, "新密码不能与临时密码相同");
         }
-        if (userMapper.replacePassword(uid, user.getPassword(), authService.encode(dto.getNewPassword()), null) != 1) {
+        if (baseMapper.replacePassword(uid, user.getPassword(), authService.encode(dto.getNewPassword()), null) != 1) {
             throw new BizException(ResultCode.BAD_REQUEST, "密码已变化，请重新登录");
         }
         // 改密成功后清掉旧登录态，统一要求重新登录

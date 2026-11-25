@@ -12,7 +12,7 @@ import com.campus.platform.module.lostfound.entity.LostFound;
 
 import com.campus.platform.module.ai.service.ContentAiAuditService;
 import com.campus.platform.utils.ImageListJson;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
@@ -44,7 +44,7 @@ public class LostFoundService {
     private final SensitiveWordService sensitiveWordService;
     private final ContentAiAuditService contentAiAuditService;
     private final LostFoundClaimMapper claimMapper;
-    private final MessageService messageService;
+    private final IMessageService messageService;
 
     /** 发布（待审核） */
     public LostFound publish(Long userId, LostFoundPublishDTO dto) {

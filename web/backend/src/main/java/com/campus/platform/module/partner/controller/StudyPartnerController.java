@@ -5,10 +5,10 @@ import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import com.campus.platform.module.partner.dto.StudyPartnerDTO;
 import com.campus.platform.module.partner.entity.StudyPartner;
-import com.campus.platform.module.partner.service.StudyPartnerService;
+import com.campus.platform.module.partner.service.IStudyPartnerService;
 import com.campus.platform.module.partner.vo.StudyPartnerVO;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,10 +16,10 @@ import java.util.List;
 /** 学习搭子 */
 @RestController
 @RequestMapping("/api/partner")
-@RequiredArgsConstructor
 public class StudyPartnerController {
 
-    private final StudyPartnerService partnerService;
+    @Resource
+    private IStudyPartnerService partnerService;
 
     /** 发布搭子信息 */
     @PostMapping

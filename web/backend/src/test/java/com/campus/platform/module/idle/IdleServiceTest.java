@@ -10,7 +10,7 @@ import com.campus.platform.module.idle.dto.AppointDTO;
 import com.campus.platform.module.idle.entity.IdleReview;
 import com.campus.platform.module.idle.entity.IdleItem;
 
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.platform.common.BizException;
@@ -73,7 +73,7 @@ class IdleServiceTest {
     @Mock
     private UserMapper userMapper;
     @Mock
-    private MessageService messageService;
+    private IMessageService messageService;
 
     @Mock
     private com.campus.platform.module.idle.service.IdleHandoffService handoffs;

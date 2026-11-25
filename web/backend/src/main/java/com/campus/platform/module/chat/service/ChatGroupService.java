@@ -14,7 +14,7 @@ import com.campus.platform.module.chat.mapper.ChatConversationMemberMapper;
 import com.campus.platform.module.chat.mapper.ChatGroupInviteMapper;
 import com.campus.platform.module.chat.mapper.UserBlockMapper;
 import com.campus.platform.module.chat.websocket.ChatRealtimePublisher;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +34,7 @@ public class ChatGroupService {
     private final UserMapper users;
     private final UserBlockMapper blocks;
     private final SensitiveWordService sensitiveWords;
-    private final MessageService messages;
+    private final IMessageService messages;
     private final ChatNotificationService notifications;
     private final ChatRealtimePublisher realtime;
 

@@ -1,10 +1,11 @@
-package com.campus.platform.module.report.service;
+package com.campus.platform.module.report.service.impl;
 
 import com.campus.platform.module.report.dto.ReportHandleDTO;
 import com.campus.platform.module.report.mapper.ReportMapper;
+import com.campus.platform.module.report.service.IReportAdminService;
 import com.campus.platform.module.report.entity.Report;
 
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -27,7 +28,8 @@ import com.campus.platform.module.lostfound.mapper.LostFoundMapper;
 import com.campus.platform.module.post.mapper.PostCommentMapper;
 import com.campus.platform.module.post.mapper.PostMapper;
 import com.campus.platform.module.user.mapper.UserMapper;
-import lombok.RequiredArgsConstructor;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,24 +39,43 @@ import java.time.LocalDateTime;
  * 管理端-举报处置闭环（D3）：处置（下架/警告/封禁）→ 通知举报人。
  */
 @Service
-@RequiredArgsConstructor
-public class ReportAdminService {
+public class ReportAdminServiceImpl extends ServiceImpl<ReportMapper, Report>
+        implements IReportAdminService {
 
-    private final ReportMapper reportMapper;
-    private final IdleItemMapper idleItemMapper;
-    private final ActivityMapper activityMapper;
-    private final LostFoundMapper lostFoundMapper;
-    private final PostMapper postMapper;
-    private final PostCommentMapper postCommentMapper;
-    private final UserMapper userMapper;
-    private final ChatMessageMapper chatMessageMapper;
-    private final AdminUserService adminUserService;
-    private final AdminContentService adminContentService;
-    private final MessageService messageService;
+    @Resource
+    private IdleItemMapper idleItemMapper;
+
+    @Resource
+    private ActivityMapper activityMapper;
+
+    @Resource
+    private LostFoundMapper lostFoundMapper;
+
+    @Resource
+    private PostMapper postMapper;
+
+    @Resource
+    private PostCommentMapper postCommentMapper;
+
+    @Resource
+    private UserMapper userMapper;
+
+    @Resource
+    private ChatMessageMapper chatMessageMapper;
+
+    @Resource
+    private AdminUserService adminUserService;
+
+    @Resource
+    private AdminContentService adminContentService;
+
+    @Resource
+    private IMessageService messageService;
 
     /** 举报列表（状态筛选） */
+    @Override
     public PageResult<Report> list(Integer status, Long record, int pageNum, int pageSize) {
-        Page<Report> page = reportMapper.selectPage(new Page<>(pageNum, pageSize),
+        Page<Report> page = baseMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<Report>()
                         .eq(status != null, Report::getStatus, status)
                         .eq(record != null, Report::getId, record)
@@ -62,14 +83,14 @@ public class ReportAdminService {
         return PageResult.of(page);
     }
 
+    @Override
     public Report detail(Long id) {
-        Report report = reportMapper.selectById(id);
+        Report report = baseMapper.selectById(id);
         if (report == null) throw new BizException(ResultCode.NOT_FOUND, "举报不存在");
         return report;
     }
 
-    public record ChatEvidence(Long senderId, String messageType, String text) {}
-
+    @Override
     public ChatEvidence chatEvidence(Long id) {
         Report report = detail(id);
         if (!"chat_message".equals(report.getTargetType())) {
@@ -85,8 +106,9 @@ public class ReportAdminService {
      * action: offline=下架内容 / warn=警告发布者 / ban=封禁发布者 / ignore=举报不成立
      */
     @Transactional
+    @Override
     public void handle(Long adminId, Long reportId, ReportHandleDTO dto) {
-        Report report = reportMapper.lockById(reportId);
+        Report report = baseMapper.lockById(reportId);
         if (report == null) throw new BizException(ResultCode.NOT_FOUND, "举报不存在");
         if (report.getStatus() == Constants.REPORT_HANDLED) {
             throw new BizException(ResultCode.DUPLICATE_OPERATION, "该举报已处理");
@@ -108,7 +130,7 @@ public class ReportAdminService {
         report.setHandleResult(dto.getHandleResult());
         report.setHandlerId(adminId);
         report.setHandleTime(LocalDateTime.now());
-        reportMapper.updateById(report);
+        baseMapper.updateById(report);
         notifyReporter(report, reportId, isUserReport, dto.getHandleResult());
     }
 

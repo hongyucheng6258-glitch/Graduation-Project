@@ -5,12 +5,14 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.config.SystemConfigHolder;
 import com.campus.platform.module.site.entity.SystemConfig;
 import com.campus.platform.module.site.mapper.SystemConfigMapper;
-import com.campus.platform.module.site.service.SystemConfigService;
+import com.campus.platform.module.site.service.impl.SystemConfigServiceImpl;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Map;
 
@@ -23,7 +25,12 @@ import static org.mockito.Mockito.when;
 class SystemConfigServiceTest {
     @Mock private SystemConfigMapper mapper;
     @Mock private SystemConfigHolder holder;
-    @InjectMocks private SystemConfigService service;
+    @InjectMocks private SystemConfigServiceImpl service;
+
+    @BeforeEach
+    void injectBaseMapper() {
+        ReflectionTestUtils.setField(service, "baseMapper", mapper);
+    }
 
     private SystemConfig config(String key, String type, String value) {
         SystemConfig config = new SystemConfig();

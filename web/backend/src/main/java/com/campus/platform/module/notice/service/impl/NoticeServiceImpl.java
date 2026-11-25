@@ -1,7 +1,8 @@
-package com.campus.platform.module.notice.service;
+package com.campus.platform.module.notice.service.impl;
 
 import com.campus.platform.common.mapper.MapperQueries;
 import com.campus.platform.module.notice.mapper.NoticeMapper;
+import com.campus.platform.module.notice.service.INoticeService;
 import com.campus.platform.module.notice.entity.Notice;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -19,31 +20,37 @@ import com.campus.platform.module.activity.mapper.ActivityMapper;
 import com.campus.platform.module.idle.mapper.IdleItemMapper;
 import com.campus.platform.module.lostfound.mapper.LostFoundMapper;
 import com.campus.platform.module.site.vo.HomeAggregateVO;
-import lombok.RequiredArgsConstructor;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 /**
  * 公告与首页聚合服务（C5）。
  */
 @Service
-@RequiredArgsConstructor
-public class NoticeService {
+public class NoticeServiceImpl extends ServiceImpl<NoticeMapper, Notice> implements INoticeService {
 
-    private final NoticeMapper noticeMapper;
-    private final IdleItemMapper idleItemMapper;
-    private final ActivityMapper activityMapper;
-    private final LostFoundMapper lostFoundMapper;
+    @Resource
+    private IdleItemMapper idleItemMapper;
+
+    @Resource
+    private ActivityMapper activityMapper;
+
+    @Resource
+    private LostFoundMapper lostFoundMapper;
 
     /** 公告列表（公开，仅已发布） */
+    @Override
     public PageResult<Notice> list(int pageNum, int pageSize) {
-        Page<Notice> page = noticeMapper.selectPage(new Page<>(pageNum, pageSize),
+        Page<Notice> page = baseMapper.selectPage(new Page<>(pageNum, pageSize),
                 publishedNotices());
         return PageResult.of(page);
     }
 
     /** 公告详情（公开，仅已发布） */
+    @Override
     public Notice detail(Long id) {
-        Notice notice = noticeMapper.selectById(id);
+        Notice notice = baseMapper.selectById(id);
         if (notice == null || notice.getStatus() != Constants.NOTICE_PUBLISHED) {
             throw new BizException(ResultCode.NOT_FOUND, "公告不存在或未发布");
         }
@@ -51,9 +58,10 @@ public class NoticeService {
     }
 
     /** 首页聚合（公告轮播 + 各模块最新3条） */
+    @Override
     public HomeAggregateVO homeAggregate() {
         HomeAggregateVO home = new HomeAggregateVO();
-        home.setNotices(noticeMapper.selectList(MapperQueries.limit(publishedNotices(), 5)));
+        home.setNotices(baseMapper.selectList(MapperQueries.limit(publishedNotices(), 5)));
         home.setIdleItems(idleItemMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<IdleItem>()
                 .eq(IdleItem::getAuditStatus, Constants.AUDIT_PASS)
                 .eq(IdleItem::getStatus, Constants.IDLE_ON_SHELF)

@@ -5,10 +5,10 @@ import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.lostfound.dto.LostFoundPublishDTO;
 import com.campus.platform.module.lostfound.service.LostFoundService;
 import com.campus.platform.module.partner.dto.StudyPartnerDTO;
-import com.campus.platform.module.partner.service.StudyPartnerService;
+import com.campus.platform.module.partner.service.IStudyPartnerService;
 import com.campus.platform.module.qa.dto.AnswerDTO;
 import com.campus.platform.module.qa.dto.QuestionDTO;
-import com.campus.platform.module.qa.service.QuestionService;
+import com.campus.platform.module.qa.service.IQuestionService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,8 +42,8 @@ public class CampusPublishDrafts implements AgentToolSource {
     private final AgentCampusDraftMapper drafts;
     private final ObjectMapper json;
     private final LostFoundService lostFound;
-    private final StudyPartnerService partners;
-    private final QuestionService questions;
+    private final IStudyPartnerService partners;
+    private final IQuestionService questions;
     private final CampusResourceTools resources;
     private final IdlePublishDrafts idleDrafts;
 

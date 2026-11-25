@@ -9,7 +9,7 @@ import com.campus.platform.module.activity.dto.SignupDTO;
 import com.campus.platform.module.activity.entity.Activity;
 
 import com.campus.platform.module.ai.service.ContentAiAuditService;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
@@ -68,7 +68,7 @@ class ActivityServiceTest {
     @Mock
     private UserMapper userMapper;
     @Mock
-    private MessageService messageService;
+    private IMessageService messageService;
     @Mock
     private ActivitySigninService signinService;
     @Mock

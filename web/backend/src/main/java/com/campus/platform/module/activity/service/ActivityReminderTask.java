@@ -4,7 +4,7 @@ import com.campus.platform.common.Constants;
 import com.campus.platform.module.activity.mapper.ActivityReminderMapper;
 import com.campus.platform.module.activity.mapper.ActivityReminderMapper.Candidate;
 import com.campus.platform.module.activity.mapper.ActivityReminderMapper.Reminder;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
@@ -24,7 +24,7 @@ public class ActivityReminderTask {
 
     private final ActivityReminderMapper reminders;
     private final TransactionTemplate transactions;
-    private final MessageService messages;
+    private final IMessageService messages;
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 60_000)
     public void sendUpcomingReminders() {

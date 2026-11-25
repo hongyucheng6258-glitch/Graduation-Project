@@ -1,4 +1,4 @@
-package com.campus.platform.module.partner.service;
+package com.campus.platform.module.partner.service.impl;
 
 import com.campus.platform.common.mapper.MapperQueries;
 import cn.hutool.core.util.StrUtil;
@@ -13,28 +13,36 @@ import com.campus.platform.module.ai.service.ContentAiAuditService;
 import com.campus.platform.module.partner.dto.StudyPartnerDTO;
 import com.campus.platform.module.partner.entity.StudyPartner;
 import com.campus.platform.module.partner.mapper.StudyPartnerMapper;
+import com.campus.platform.module.partner.service.IStudyPartnerService;
 import com.campus.platform.module.partner.vo.StudyPartnerVO;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 
 /** 学习搭子服务：发布→审核→浏览→AI匹配撮合 */
 @Service
-@RequiredArgsConstructor
-public class StudyPartnerService {
+public class StudyPartnerServiceImpl extends ServiceImpl<StudyPartnerMapper, StudyPartner>
+        implements IStudyPartnerService {
 
-    private final StudyPartnerMapper partnerMapper;
-    private final UserMapper userMapper;
-    private final AiGatewayService aiGatewayService;
-    private final ContentAiAuditService contentAiAuditService;
+    @Resource
+    private UserMapper userMapper;
+
+    @Resource
+    private AiGatewayService aiGatewayService;
+
+    @Resource
+    private ContentAiAuditService contentAiAuditService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** 发布（待审核） */
+    @Override
     public StudyPartner publish(Long userId, StudyPartnerDTO dto) {
         StudyPartner p = new StudyPartner();
         p.setUserId(userId);
@@ -45,16 +53,17 @@ public class StudyPartnerService {
         p.setContact(StrUtil.trimToEmpty(dto.getContact()));
         p.setStatus(Constants.LF_DOING); // 0 匹配中
         p.setAuditStatus(Constants.AUDIT_PENDING);
-        partnerMapper.insert(p);
+        baseMapper.insert(p);
         // AI 分级审核：低风险自动通过，中高风险转人工审核（与其他 UGC 一致）
         contentAiAuditService.audit(Constants.BIZ_PARTNER, p, userId,
                 dto.getSubject(), StrUtil.nullToEmpty(dto.getIntro()));
-        return partnerMapper.selectById(p.getId());
+        return baseMapper.selectById(p.getId());
     }
 
     /** 列表（公开，仅审核通过） */
+    @Override
     public PageResult<StudyPartnerVO> list(String subject, String keyword, int pageNum, int pageSize) {
-        Page<StudyPartner> page = partnerMapper.selectPage(new Page<>(pageNum, pageSize),
+        Page<StudyPartner> page = baseMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<StudyPartner>()
                         .eq(StudyPartner::getAuditStatus, Constants.AUDIT_PASS)
                         .eq(StudyPartner::getStatus, Constants.LF_DOING)
@@ -68,8 +77,9 @@ public class StudyPartnerService {
     }
 
     /** 我的发布 */
+    @Override
     public PageResult<StudyPartnerVO> myList(Long userId, int pageNum, int pageSize) {
-        Page<StudyPartner> page = partnerMapper.selectPage(new Page<>(pageNum, pageSize),
+        Page<StudyPartner> page = baseMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<StudyPartner>()
                         .eq(StudyPartner::getUserId, userId)
                         .orderByDesc(StudyPartner::getId));
@@ -77,8 +87,9 @@ public class StudyPartnerService {
     }
 
     /** 标记已找到（仅本人） */
+    @Override
     public void finish(Long userId, Long id) {
-        StudyPartner p = partnerMapper.selectById(id);
+        StudyPartner p = baseMapper.selectById(id);
         if (p == null) {
             throw new BizException(ResultCode.NOT_FOUND, "搭子信息不存在");
         }
@@ -86,17 +97,18 @@ public class StudyPartnerService {
             throw new BizException(ResultCode.FORBIDDEN, "只能操作自己发布的信息");
         }
         p.setStatus(Constants.LF_DONE);
-        partnerMapper.updateById(p);
+        baseMapper.updateById(p);
     }
 
     /** AI 智能匹配：基于我的需求从进行中的搭子中挑选最合适的 */
+    @Override
     public List<StudyPartnerVO> match(Long userId, StudyPartnerDTO dto) {
         if (!aiGatewayService.isAiConfigured()) {
             throw new BizException(ResultCode.AI_NOT_CONFIGURED,
                     "AI 服务暂不可用（未配置 API Key），可稍后重试");
         }
         String subject = dto.getSubject().trim();
-        List<StudyPartner> candidates = partnerMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<StudyPartner>()
+        List<StudyPartner> candidates = baseMapper.selectList(MapperQueries.limit(new LambdaQueryWrapper<StudyPartner>()
                 .eq(StudyPartner::getAuditStatus, Constants.AUDIT_PASS)
                 .eq(StudyPartner::getStatus, Constants.LF_DOING)
                 .ne(StudyPartner::getUserId, userId)

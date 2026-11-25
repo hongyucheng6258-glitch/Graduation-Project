@@ -7,7 +7,7 @@ import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.activity.mapper.ActivityMapper;
 import com.campus.platform.module.activity.mapper.ActivityWaitlistMapper;
 import com.campus.platform.module.activity.mapper.ActivityWaitlistMapper.Candidate;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,7 +26,7 @@ import java.util.Objects;
 public class ActivityWaitlist {
     private final ActivityWaitlistMapper waitlist;
     private final ActivityMapper activities;
-    private final MessageService messages;
+    private final IMessageService messages;
     private final TransactionTemplate transactions;
 
     public List<Entry> mine(long userId) {

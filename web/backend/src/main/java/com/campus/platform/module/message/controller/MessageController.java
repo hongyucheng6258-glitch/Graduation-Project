@@ -1,20 +1,20 @@
 package com.campus.platform.module.message.controller;
 
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 import com.campus.platform.module.message.vo.UnreadCountVO;
 import com.campus.platform.module.message.entity.Message;
 
 import com.campus.platform.common.PageResult;
 import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/message")
-@RequiredArgsConstructor
 public class MessageController {
-    private final MessageService messageService;
+    @Resource
+    private IMessageService messageService;
 
     @GetMapping("/list")
     public Result<PageResult<Message>> list(

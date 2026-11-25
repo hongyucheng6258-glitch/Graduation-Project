@@ -1,11 +1,12 @@
-package com.campus.platform.module.friend;
+package com.campus.platform.module.friend.controller;
 
 import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
+import com.campus.platform.module.friend.service.IFriendService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,15 +14,15 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/friends")
-@RequiredArgsConstructor
 public class FriendController {
-    private final FriendService friends;
+    @Resource
+    private IFriendService friends;
 
     public record Request(@Size(max = 80) String greeting) {}
     public record Response(@NotNull Boolean accept) {}
 
     @GetMapping
-    public Result<List<FriendService.Contact>> list() {
+    public Result<List<IFriendService.Contact>> list() {
         return Result.ok(friends.list(UserContext.getUid()));
     }
 

@@ -2,8 +2,8 @@ package com.campus.platform.module.user.controller;
 
 import com.campus.platform.module.user.dto.PasswordUpdateDTO;
 import com.campus.platform.module.user.dto.ProfileUpdateDTO;
-import com.campus.platform.module.user.service.UserPublicService;
-import com.campus.platform.module.user.service.UserService;
+import com.campus.platform.module.user.service.IUserPublicService;
+import com.campus.platform.module.user.service.IUserService;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.vo.UserContentVO;
 import com.campus.platform.module.user.vo.UserProfileVO;
@@ -12,17 +12,19 @@ import com.campus.platform.module.user.vo.UserReviewVO;
 import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/user")
-@RequiredArgsConstructor
 public class UserController {
-    private final UserService userService;
-    private final UserPublicService userPublicService;
+    @Resource
+    private IUserService userService;
+
+    @Resource
+    private IUserPublicService userPublicService;
 
     @GetMapping("/info")
     public Result<User> info() {

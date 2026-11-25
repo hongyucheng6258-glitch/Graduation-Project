@@ -7,10 +7,10 @@ import com.campus.platform.module.qa.dto.AnswerDTO;
 import com.campus.platform.module.qa.dto.QuestionDTO;
 import com.campus.platform.module.qa.entity.CampusAnswer;
 import com.campus.platform.module.qa.entity.CampusQuestion;
-import com.campus.platform.module.qa.service.QuestionService;
+import com.campus.platform.module.qa.service.IQuestionService;
 import com.campus.platform.module.qa.vo.QuestionVO;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -18,10 +18,10 @@ import java.util.Map;
 /** 校园互助问答 */
 @RestController
 @RequestMapping("/api/qa")
-@RequiredArgsConstructor
 public class QuestionController {
 
-    private final QuestionService questionService;
+    @Resource
+    private IQuestionService questionService;
 
     /** 提问 */
     @PostMapping

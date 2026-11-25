@@ -9,7 +9,7 @@ import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import com.campus.platform.module.report.dto.ReportHandleDTO;
 import com.campus.platform.module.report.entity.Report;
-import com.campus.platform.module.report.service.ReportAdminService;
+import com.campus.platform.module.report.service.IReportAdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/report")
 @RequiredArgsConstructor
 public class AdminReportController {
-    private final ReportAdminService reportAdminService;
+    private final IReportAdminService reportAdminService;
     private final AdminPermissionService adminPermissions;
 
     @GetMapping("/list")
@@ -36,7 +36,7 @@ public class AdminReportController {
     }
 
     @GetMapping("/{id}/chat-evidence")
-    public Result<ReportAdminService.ChatEvidence> chatEvidence(@PathVariable Long id) {
+    public Result<IReportAdminService.ChatEvidence> chatEvidence(@PathVariable Long id) {
         adminPermissions.require(AdminPermission.REPORT_HANDLE);
         return Result.ok(reportAdminService.chatEvidence(id));
     }
