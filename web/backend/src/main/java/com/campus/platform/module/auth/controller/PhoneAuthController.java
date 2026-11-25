@@ -4,17 +4,17 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.Result;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.common.UserContext;
-import com.campus.platform.module.auth.service.PhoneAuthService;
+import com.campus.platform.module.auth.service.IPhoneAuthService;
 import com.campus.platform.module.auth.vo.LoginVO;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
 @RestController
-@RequiredArgsConstructor
 public class PhoneAuthController {
-    private final PhoneAuthService phones;
+    @Resource
+    private IPhoneAuthService phones;
 
     public record Input(String phone, String purpose, String code, String password) {}
 
@@ -24,7 +24,7 @@ public class PhoneAuthController {
     }
 
     @PostMapping("/api/auth/phone/send")
-    public Result<PhoneAuthService.Delivery> send(@RequestBody Input input) {
+    public Result<IPhoneAuthService.Delivery> send(@RequestBody Input input) {
         if (!"login".equals(input.purpose()) && !"reset".equals(input.purpose())) {
             throw new BizException(ResultCode.BAD_REQUEST, "验证码用途无效");
         }
@@ -43,17 +43,17 @@ public class PhoneAuthController {
     }
 
     @GetMapping("/api/user/verified-phone")
-    public Result<PhoneAuthService.Binding> binding() {
+    public Result<IPhoneAuthService.Binding> binding() {
         return Result.ok(phones.binding(UserContext.getUid()));
     }
 
     @PostMapping("/api/user/verified-phone/send")
-    public Result<PhoneAuthService.Delivery> sendBinding(@RequestBody Input input) {
+    public Result<IPhoneAuthService.Delivery> sendBinding(@RequestBody Input input) {
         return Result.ok(phones.send("bind", input.phone(), UserContext.getUid()));
     }
 
     @PutMapping("/api/user/verified-phone")
-    public Result<PhoneAuthService.Binding> bind(@RequestBody Input input) {
+    public Result<IPhoneAuthService.Binding> bind(@RequestBody Input input) {
         return Result.ok(phones.bind(UserContext.getUid(), input.phone(), input.code()));
     }
 }

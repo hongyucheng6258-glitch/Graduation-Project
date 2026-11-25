@@ -4,7 +4,7 @@ import com.campus.platform.module.admin.dto.AdminSaveDTO;
 import com.campus.platform.module.admin.mapper.AdminMapper;
 import com.campus.platform.module.admin.entity.Admin;
 
-import com.campus.platform.module.auth.service.AuthService;
+import com.campus.platform.module.auth.service.IAuthService;
 import com.campus.platform.module.auth.service.TokenService;
 
 import cn.hutool.core.util.StrUtil;
@@ -28,7 +28,7 @@ public class AdminUserService {
 
     private final UserMapper userMapper;
     private final AdminMapper adminMapper;
-    private final AuthService authService;
+    private final IAuthService authService;
     private final TokenService tokenService;
     private final com.campus.platform.module.chat.websocket.ChatSessionRegistry chatSessions;
     private final com.campus.platform.module.drawgame.websocket.DrawGuessSessionRegistry drawSessions;

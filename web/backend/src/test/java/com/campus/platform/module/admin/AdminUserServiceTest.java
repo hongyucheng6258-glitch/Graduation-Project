@@ -5,7 +5,7 @@ import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.admin.mapper.AdminMapper;
 import com.campus.platform.module.admin.service.AdminUserService;
-import com.campus.platform.module.auth.service.AuthService;
+import com.campus.platform.module.auth.service.IAuthService;
 import com.campus.platform.module.auth.service.TokenService;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
@@ -42,7 +42,7 @@ class AdminUserServiceTest {
     @Mock
     private AdminMapper adminMapper;
     @Mock
-    private AuthService authService;
+    private IAuthService authService;
     @Mock
     private TokenService tokenService;
 
@@ -74,7 +74,7 @@ class AdminUserServiceTest {
             ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
             verify(userMapper).updateById(saved.capture());
             assertThat(saved.getValue().getStatus())
-                    .as("禁用语义由 Constants.USER_STATUS_BANNED 定义，须与 AuthService.login 的判断一致")
+                    .as("禁用语义由 Constants.USER_STATUS_BANNED 定义，须与 IAuthService.login 的判断一致")
                     .isEqualTo(Constants.USER_STATUS_BANNED);
 
             verify(tokenService).kickoutStudent(42L);

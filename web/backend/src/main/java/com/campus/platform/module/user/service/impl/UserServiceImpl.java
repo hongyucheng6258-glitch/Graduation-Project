@@ -6,7 +6,7 @@ import com.campus.platform.module.user.mapper.UserMapper;
 import com.campus.platform.module.user.service.IUserService;
 import com.campus.platform.module.user.entity.User;
 
-import com.campus.platform.module.auth.service.AuthService;
+import com.campus.platform.module.auth.service.IAuthService;
 import com.campus.platform.module.auth.service.TokenService;
 
 import com.campus.platform.common.BizException;
@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
 
     @Resource
-    private AuthService authService;
+    private IAuthService authService;
 
     @Resource
     private TokenService tokenService;

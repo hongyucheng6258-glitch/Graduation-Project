@@ -1,4 +1,4 @@
-package com.campus.platform.module.auth.service;
+package com.campus.platform.module.auth.service.impl;
 
 import cn.hutool.captcha.CaptchaUtil;
 import cn.hutool.captcha.LineCaptcha;
@@ -6,11 +6,12 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
+import com.campus.platform.module.auth.service.ICaptchaService;
 import com.campus.platform.module.auth.vo.CaptchaVO;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -23,8 +24,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
-public class CaptchaService {
+public class CaptchaServiceImpl implements ICaptchaService {
 
     private static final String KEY_PREFIX = "captcha:";
     private static final String MODE_IMAGE = "image";
@@ -33,7 +33,8 @@ public class CaptchaService {
     private static final String CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
     private static final int CODE_LENGTH = 4;
 
-    private final StringRedisTemplate redisTemplate;
+    @Resource(name = "stringRedisTemplate")
+    private StringRedisTemplate redisTemplate;
 
     @Value("${platform.captcha.expire-seconds:300}")
     private long expireSeconds;
@@ -49,6 +50,7 @@ public class CaptchaService {
     /**
      * 生成验证码：随机选择图形或运算模式，答案写入 Redis（TTL 过期）。
      */
+    @Override
     public CaptchaVO generate() {
         if (ThreadLocalRandom.current().nextDouble() < mathRatio) {
             return generateMath();
@@ -101,6 +103,7 @@ public class CaptchaService {
      * 校验并消费验证码：无论成败立即删除（一次性，防重放）。
      * 校验失败抛出 BizException(400, "验证码错误或已过期")。
      */
+    @Override
     public void validateAndConsume(String captchaId, String code) {
         if (!enabled) {
             return;

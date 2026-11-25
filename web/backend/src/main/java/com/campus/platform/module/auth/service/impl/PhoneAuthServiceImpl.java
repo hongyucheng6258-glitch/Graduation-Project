@@ -1,16 +1,18 @@
-package com.campus.platform.module.auth.service;
+package com.campus.platform.module.auth.service.impl;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.module.auth.mapper.VerifiedPhoneMapper;
+import com.campus.platform.module.auth.service.IAuthService;
+import com.campus.platform.module.auth.service.IPhoneAuthService;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,30 +22,38 @@ import java.util.List;
 import java.util.Locale;
 
 @Service
-@RequiredArgsConstructor
-public class PhoneAuthService {
+public class PhoneAuthServiceImpl implements IPhoneAuthService {
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final RedisScript<Long> VERIFY = RedisScript.of(
             new ClassPathResource("scripts/redis/auth/verify-phone-code.lua"), Long.class);
 
-    private final StringRedisTemplate redis;
-    private final VerifiedPhoneMapper phones;
-    private final UserMapper users;
-    private final AuthService auth;
-    private final com.campus.platform.module.admin.service.AdminUserService accountAdministration;
+    @Resource(name = "stringRedisTemplate")
+    private StringRedisTemplate redis;
+
+    @Resource
+    private VerifiedPhoneMapper phones;
+
+    @Resource
+    private UserMapper users;
+
+    @Resource
+    private IAuthService auth;
+
+    @Resource
+    private com.campus.platform.module.admin.service.AdminUserService accountAdministration;
 
     @Value("${platform.sms.console-enabled:false}")
     private boolean consoleEnabled;
 
+    @Override
     public boolean available() { return consoleEnabled; }
 
-    public record Binding(String phone) {}
-    public record Delivery(String consoleCode, int expiresInSeconds) {}
-
+    @Override
     public Binding binding(long uid) {
         return new Binding(phones.findPhone(uid));
     }
 
+    @Override
     public Delivery send(String purpose, String phone, Long uid) {
         requireConsole();
         validatePhone(phone);
@@ -56,6 +66,7 @@ public class PhoneAuthService {
     }
 
     @Transactional
+    @Override
     public Binding bind(long uid, String phone, String code) {
         verify("bind", phone, uid, code);
         try {
@@ -69,11 +80,13 @@ public class PhoneAuthService {
         return new Binding(phone);
     }
 
+    @Override
     public com.campus.platform.module.auth.vo.LoginVO login(String phone, String code) {
         verify("login", phone, null, code);
         return auth.loginVerifiedPhone(requireAccount(phone));
     }
 
+    @Override
     public void reset(String phone, String code, String password) {
         if (password == null || password.length() < 6 || password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
             throw new BizException(ResultCode.BAD_REQUEST, "新密码至少 6 位且不能超过 72 字节");

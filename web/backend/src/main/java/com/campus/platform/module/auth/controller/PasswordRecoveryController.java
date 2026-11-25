@@ -4,20 +4,22 @@ import com.campus.platform.common.Result;
 import com.campus.platform.module.admin.audit.AdminOperation;
 import com.campus.platform.module.admin.audit.AdminPermission;
 import com.campus.platform.module.admin.service.AdminPermissionService;
-import com.campus.platform.module.auth.service.CaptchaService;
-import com.campus.platform.module.auth.service.PasswordRecoveryService;
-import lombok.RequiredArgsConstructor;
+import com.campus.platform.module.auth.service.ICaptchaService;
+import com.campus.platform.module.auth.service.IPasswordRecoveryService;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequiredArgsConstructor
 public class PasswordRecoveryController {
-    private final PasswordRecoveryService recovery;
-    private final AdminPermissionService permissions;
-    private final CaptchaService captcha;
+    @Resource
+    private IPasswordRecoveryService recovery;
+    @Resource
+    private AdminPermissionService permissions;
+    @Resource
+    private ICaptchaService captcha;
 
     public record Request(String studentNo, String name, String contact, String explanation, String captchaId, String captchaCode) {}
     public record Receipt(String receipt) {}
@@ -26,12 +28,12 @@ public class PasswordRecoveryController {
     @PostMapping("/api/auth/recovery/apply")
     public Result<Receipt> apply(@RequestBody Request request) {
         captcha.validateAndConsume(request.captchaId(), request.captchaCode());
-        return Result.ok(new Receipt(recovery.submit(new PasswordRecoveryService.Application(
+        return Result.ok(new Receipt(recovery.submit(new IPasswordRecoveryService.Application(
                 request.studentNo(), request.name(), request.contact(), request.explanation()))));
     }
 
     @PostMapping("/api/auth/recovery/status")
-    public Result<PasswordRecoveryService.Status> status(@RequestBody Receipt receipt) {
+    public Result<IPasswordRecoveryService.Status> status(@RequestBody Receipt receipt) {
         return Result.ok(recovery.status(receipt.receipt()));
     }
 

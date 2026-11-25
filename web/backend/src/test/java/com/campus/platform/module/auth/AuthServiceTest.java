@@ -2,7 +2,7 @@ package com.campus.platform.module.auth;
 
 import com.campus.platform.module.auth.dto.AdminLoginDTO;
 import com.campus.platform.module.auth.vo.AdminLoginVO;
-import com.campus.platform.module.auth.service.AuthService;
+import com.campus.platform.module.auth.service.impl.AuthServiceImpl;
 import com.campus.platform.module.auth.dto.RegisterDTO;
 import com.campus.platform.module.auth.dto.LoginDTO;
 import com.campus.platform.module.auth.vo.LoginVO;
@@ -40,6 +40,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * 认证服务测试（对应 PRD A1/A5）。
@@ -57,10 +58,11 @@ class AuthServiceTest {
     @Mock private SystemConfigHolder systemConfigHolder;
 
     @InjectMocks
-    private AuthService authService;
+    private AuthServiceImpl authService;
 
     @BeforeEach
     void setUpSystemConfigDefaults() {
+        ReflectionTestUtils.setField(authService, "baseMapper", userMapper);
         when(systemConfigHolder.isRegisterEnabled()).thenReturn(true);
         when(systemConfigHolder.getInt("user_default_status", Constants.USER_STATUS_NORMAL))
                 .thenReturn(Constants.USER_STATUS_NORMAL);

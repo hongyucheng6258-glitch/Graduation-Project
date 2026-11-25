@@ -1,4 +1,4 @@
-package com.campus.platform.module.auth.service;
+package com.campus.platform.module.auth.service.impl;
 
 import com.campus.platform.module.auth.dto.AdminLoginDTO;
 import com.campus.platform.module.auth.vo.AdminLoginVO;
@@ -6,6 +6,8 @@ import com.campus.platform.module.auth.dto.RegisterDTO;
 import com.campus.platform.module.auth.dto.LoginDTO;
 import com.campus.platform.module.auth.vo.LoginVO;
 
+import com.campus.platform.module.auth.service.IAuthService;
+import com.campus.platform.module.auth.service.TokenService;
 import com.campus.platform.module.user.service.IUserService;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -17,10 +19,11 @@ import com.campus.platform.module.admin.entity.Admin;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.admin.mapper.AdminMapper;
 import com.campus.platform.module.user.mapper.UserMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -32,24 +35,28 @@ import java.time.ZoneOffset;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
-public class AuthService {
+public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IAuthService {
 
-    private final UserMapper userMapper;
-    private final AdminMapper adminMapper;
-    private final TokenService tokenService;
-    private final SystemConfigHolder systemConfigHolder;
+    @Resource
+    private AdminMapper adminMapper;
+
+    @Resource
+    private TokenService tokenService;
+
+    @Resource
+    private SystemConfigHolder systemConfigHolder;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     /**
      * Web 注册（学号+密码+昵称）。
      */
+    @Override
     public LoginVO register(RegisterDTO dto) {
         if (!systemConfigHolder.isRegisterEnabled()) {
             throw new BizException(ResultCode.FORBIDDEN, "当前已关闭注册，请联系管理员");
         }
-        Long count = userMapper.selectCount(new LambdaQueryWrapper<User>()
+        Long count = baseMapper.selectCount(new LambdaQueryWrapper<User>()
                 .eq(User::getStudentNo, dto.getStudentNo()));
         if (count > 0) {
             throw new BizException(ResultCode.BAD_REQUEST, "该学号已注册");
@@ -62,7 +69,7 @@ public class AuthService {
         user.setStatus(systemConfigHolder.getInt("user_default_status", Constants.USER_STATUS_NORMAL));
         user.setLastLoginTime(LocalDateTime.now());
         try {
-            userMapper.insert(user);
+            baseMapper.insert(user);
         } catch (DuplicateKeyException e) {
             // Two requests can both pass the precheck. The unique index decides which insert wins.
             throw new BizException(ResultCode.BAD_REQUEST, "该学号已注册");
@@ -73,8 +80,9 @@ public class AuthService {
     /**
      * Web 账号密码登录。
      */
+    @Override
     public LoginVO login(LoginDTO dto) {
-        User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
+        User user = baseMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getStudentNo, dto.getStudentNo()));
         if (user == null || user.getPassword() == null
                 || !passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
@@ -88,7 +96,7 @@ public class AuthService {
             throw new BizException(ResultCode.BAD_REQUEST, "临时密码已过期，请联系管理员重新重置");
         }
         var loginTime = LocalDateTime.now();
-        if (userMapper.recordLogin(user.getId(), user.getPassword(), loginTime) != 1) {
+        if (baseMapper.recordLogin(user.getId(), user.getPassword(), loginTime) != 1) {
             throw new BizException(ResultCode.BAD_REQUEST, "账号状态已变化，请重新登录");
         }
         user.setLastLoginTime(loginTime);
@@ -98,6 +106,7 @@ public class AuthService {
     /**
      * 管理员独立登录（role=admin 的 JWT）。
      */
+    @Override
     public AdminLoginVO adminLogin(AdminLoginDTO dto) {
         Admin admin = adminMapper.selectOne(new LambdaQueryWrapper<Admin>()
                 .eq(Admin::getUsername, dto.getUsername()));
@@ -112,21 +121,24 @@ public class AuthService {
     }
 
     /** 密码校验（供 UserService 改密复用） */
+    @Override
     public boolean matches(String raw, String encoded) {
         return passwordEncoder.matches(raw, encoded);
     }
 
     /** BCrypt 加密 */
+    @Override
     public String encode(String raw) {
         return passwordEncoder.encode(raw);
     }
 
+    @Override
     public LoginVO loginVerifiedPhone(User user) {
         if (user.getTemporaryPasswordExpiresAt() != null) {
             throw new BizException(ResultCode.BAD_REQUEST, "请先通过手机号找回密码，再登录");
         }
         LocalDateTime loginTime = LocalDateTime.now();
-        if (userMapper.recordLogin(user.getId(), user.getPassword(), loginTime) != 1) {
+        if (baseMapper.recordLogin(user.getId(), user.getPassword(), loginTime) != 1) {
             throw new BizException(ResultCode.BAD_REQUEST, "账号状态已变化，请重试");
         }
         user.setLastLoginTime(loginTime);

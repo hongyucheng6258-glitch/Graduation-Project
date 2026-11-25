@@ -2,24 +2,26 @@ package com.campus.platform.module.auth.controller;
 
 import com.campus.platform.module.auth.dto.AdminLoginDTO;
 import com.campus.platform.module.auth.vo.AdminLoginVO;
-import com.campus.platform.module.auth.service.AuthService;
-import com.campus.platform.module.auth.service.CaptchaService;
+import com.campus.platform.module.auth.service.IAuthService;
+import com.campus.platform.module.auth.service.ICaptchaService;
 
 import com.campus.platform.common.Result;
 import com.campus.platform.module.admin.service.AdminPermissionService;
 
 import java.util.List;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/admin/auth")
-@RequiredArgsConstructor
 public class AdminAuthController {
-    private final AuthService authService;
-    private final CaptchaService captchaService;
-    private final AdminPermissionService permissions;
+    @Resource
+    private IAuthService authService;
+    @Resource
+    private ICaptchaService captchaService;
+    @Resource
+    private AdminPermissionService permissions;
 
     @PostMapping("/login")
     public Result<AdminLoginVO> login(@Valid @RequestBody AdminLoginDTO dto) {

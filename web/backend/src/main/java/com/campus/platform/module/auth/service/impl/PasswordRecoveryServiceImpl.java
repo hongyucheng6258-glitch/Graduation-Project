@@ -1,11 +1,12 @@
-package com.campus.platform.module.auth.service;
+package com.campus.platform.module.auth.service.impl;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.admin.service.AdminUserService;
 import com.campus.platform.module.auth.mapper.PasswordRecoveryMapper;
-import lombok.RequiredArgsConstructor;
+import com.campus.platform.module.auth.service.IPasswordRecoveryService;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,15 +17,18 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
-public class PasswordRecoveryService {
-    private final PasswordRecoveryMapper recoveries;
-    private final StringRedisTemplate redis;
-    private final AdminUserService accounts;
+public class PasswordRecoveryServiceImpl implements IPasswordRecoveryService {
 
-    public record Application(String studentNo, String name, String contact, String explanation) {}
-    public record Status(String status, String reason) {}
+    @Resource
+    private PasswordRecoveryMapper recoveries;
 
+    @Resource(name = "stringRedisTemplate")
+    private StringRedisTemplate redis;
+
+    @Resource
+    private AdminUserService accounts;
+
+    @Override
     public String submit(Application application) {
         String studentNo = required(application.studentNo(), 32);
         String name = required(application.name(), 64);
@@ -39,12 +43,14 @@ public class PasswordRecoveryService {
         return receipt;
     }
 
+    @Override
     public Status status(String receipt) {
         Status status = recoveries.findStatus(receiptHash(receipt));
         if (status == null) throw missing();
         return status;
     }
 
+    @Override
     public List<Map<String, Object>> list(long before) {
         return recoveries.listBefore(before).stream().map(row -> {
             Map<String, Object> result = new LinkedHashMap<>();
@@ -61,6 +67,7 @@ public class PasswordRecoveryService {
     }
 
     @Transactional
+    @Override
     public void decide(long id, boolean approve, String reason) {
         if (approve) {
             String studentNo = recoveries.findStudentNo(id);
@@ -75,6 +82,7 @@ public class PasswordRecoveryService {
     }
 
     @Transactional
+    @Override
     public String claim(String receipt) {
         var row = recoveries.lockClaimable(receiptHash(receipt));
         if (row == null) throw new BizException(ResultCode.BAD_REQUEST, "申请尚不可领取、已领取或领取期限已过");
