@@ -1,6 +1,6 @@
 package com.campus.platform.interceptor;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.config.SystemConfigHolder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,7 +30,7 @@ public class MaintenanceInterceptor implements HandlerInterceptor {
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.getWriter().write(objectMapper.writeValueAsString(
-                    R.fail(503, "系统维护中，请稍后再试")));
+                    Result.fail(503, "系统维护中，请稍后再试")));
             return false;
         }
         return true;

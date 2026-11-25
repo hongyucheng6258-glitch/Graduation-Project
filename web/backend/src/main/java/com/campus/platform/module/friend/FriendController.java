@@ -1,6 +1,6 @@
 package com.campus.platform.module.friend;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -21,29 +21,29 @@ public class FriendController {
     public record Response(@NotNull Boolean accept) {}
 
     @GetMapping
-    public R<List<FriendService.Contact>> list() {
-        return R.ok(friends.list(UserContext.getUid()));
+    public Result<List<FriendService.Contact>> list() {
+        return Result.ok(friends.list(UserContext.getUid()));
     }
 
     @GetMapping("/{peerId}")
-    public R<Map<String, String>> status(@PathVariable Long peerId) {
-        return R.ok(Map.of("status", friends.status(UserContext.getUid(), peerId)));
+    public Result<Map<String, String>> status(@PathVariable Long peerId) {
+        return Result.ok(Map.of("status", friends.status(UserContext.getUid(), peerId)));
     }
 
     @PostMapping("/{peerId}")
-    public R<Map<String, String>> request(@PathVariable Long peerId, @Valid @RequestBody Request request) {
-        return R.ok(Map.of("status", friends.request(UserContext.getUid(), peerId, request.greeting())));
+    public Result<Map<String, String>> request(@PathVariable Long peerId, @Valid @RequestBody Request request) {
+        return Result.ok(Map.of("status", friends.request(UserContext.getUid(), peerId, request.greeting())));
     }
 
     @PutMapping("/{peerId}")
-    public R<Void> respond(@PathVariable Long peerId, @Valid @RequestBody Response response) {
+    public Result<Void> respond(@PathVariable Long peerId, @Valid @RequestBody Response response) {
         friends.respond(UserContext.getUid(), peerId, response.accept());
-        return R.ok();
+        return Result.ok();
     }
 
     @DeleteMapping("/{peerId}")
-    public R<Void> remove(@PathVariable Long peerId) {
+    public Result<Void> remove(@PathVariable Long peerId) {
         friends.remove(UserContext.getUid(), peerId);
-        return R.ok();
+        return Result.ok();
     }
 }

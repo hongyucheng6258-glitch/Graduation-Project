@@ -1,6 +1,6 @@
 package com.campus.platform.module.ai.rag;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import com.campus.platform.module.ai.mapper.PdfDocumentMapper;
 import com.campus.platform.module.ai.service.PdfService;
@@ -26,8 +26,8 @@ public class AdminKnowledgeController {
     private final PdfDocumentMapper pdfs;
 
     @GetMapping
-    public R<List<KnowledgeService.PublicDocument>> list() {
-        return R.ok(knowledge.publicDocuments());
+    public Result<List<KnowledgeService.PublicDocument>> list() {
+        return Result.ok(knowledge.publicDocuments());
     }
 
     @GetMapping("/{id}/file")
@@ -41,20 +41,20 @@ public class AdminKnowledgeController {
     }
 
     @PostMapping
-    public R<KnowledgeService.Status> publish(@RequestParam MultipartFile file) {
+    public Result<KnowledgeService.Status> publish(@RequestParam MultipartFile file) {
         long owner = -UserContext.getUid();
         var uploaded = pdfService.upload(owner, file);
-        return R.ok(knowledge.enqueuePdf(pdfs.selectById(uploaded.getDocId()), "PUBLIC"));
+        return Result.ok(knowledge.enqueuePdf(pdfs.selectById(uploaded.getDocId()), "PUBLIC"));
     }
 
     @DeleteMapping("/{id}")
-    public R<Void> withdraw(@PathVariable long id) {
+    public Result<Void> withdraw(@PathVariable long id) {
         knowledge.withdraw(id);
-        return R.ok();
+        return Result.ok();
     }
 
     @PostMapping("/{id}/reindex")
-    public R<KnowledgeService.Status> reindex(@PathVariable long id) {
-        return R.ok(knowledge.reindexPublic(id));
+    public Result<KnowledgeService.Status> reindex(@PathVariable long id) {
+        return Result.ok(knowledge.reindexPublic(id));
     }
 }

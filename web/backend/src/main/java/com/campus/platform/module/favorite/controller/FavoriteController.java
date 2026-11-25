@@ -1,7 +1,7 @@
 package com.campus.platform.module.favorite.controller;
 
 import com.campus.platform.common.PageResult;
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import com.campus.platform.module.favorite.service.FavoriteService;
 import com.campus.platform.module.favorite.vo.FavoriteVO;
@@ -19,26 +19,26 @@ public class FavoriteController {
     private final FavoriteService favoriteService;
 
     @PostMapping("/{type}/{id}")
-    public R<Void> favorite(@PathVariable String type, @PathVariable Long id) {
+    public Result<Void> favorite(@PathVariable String type, @PathVariable Long id) {
         favoriteService.favorite(UserContext.getUid(), type, id);
-        return R.ok();
+        return Result.ok();
     }
 
     @DeleteMapping("/{type}/{id}")
-    public R<Void> unfavorite(@PathVariable String type, @PathVariable Long id) {
+    public Result<Void> unfavorite(@PathVariable String type, @PathVariable Long id) {
         favoriteService.unfavorite(UserContext.getUid(), type, id);
-        return R.ok();
+        return Result.ok();
     }
 
     @GetMapping("/{type}/{id}/status")
-    public R<Boolean> status(@PathVariable String type, @PathVariable Long id) {
-        return R.ok(favoriteService.isFavorited(UserContext.getUid(), type, id));
+    public Result<Boolean> status(@PathVariable String type, @PathVariable Long id) {
+        return Result.ok(favoriteService.isFavorited(UserContext.getUid(), type, id));
     }
 
     @GetMapping("/my")
-    public R<PageResult<FavoriteVO>> my(
+    public Result<PageResult<FavoriteVO>> my(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
-        return R.ok(favoriteService.myFavorites(UserContext.getUid(), pageNum, pageSize));
+        return Result.ok(favoriteService.myFavorites(UserContext.getUid(), pageNum, pageSize));
     }
 }

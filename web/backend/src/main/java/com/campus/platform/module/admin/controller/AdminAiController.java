@@ -6,7 +6,7 @@ import com.campus.platform.module.admin.audit.AdminPermission;
 import com.campus.platform.module.admin.service.AiAdminService;
 
 import com.campus.platform.common.PageResult;
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.module.ai.dto.AiConfigUpdateDTO;
 import com.campus.platform.module.ai.dto.PromptTemplateDTO;
 import com.campus.platform.module.ai.entity.AiCallLog;
@@ -31,46 +31,46 @@ public class AdminAiController {
     private boolean ragEnabled;
 
     @GetMapping("/agent/capabilities")
-    public R<Map<String, Boolean>> agentCapabilities() {
-        return R.ok(Map.of("enabled", agentEnabled, "ragEnabled", ragEnabled));
+    public Result<Map<String, Boolean>> agentCapabilities() {
+        return Result.ok(Map.of("enabled", agentEnabled, "ragEnabled", ragEnabled));
     }
 
     @GetMapping("/config")
-    public R<List<AiConfig>> listConfigs() {
-        return R.ok(aiAdminService.listConfigs());
+    public Result<List<AiConfig>> listConfigs() {
+        return Result.ok(aiAdminService.listConfigs());
     }
 
     @PutMapping("/config")
     @AdminOperation(permission = AdminPermission.AI_CONFIG_EDIT, module = "ai", action = "update-config")
-    public R<Void> updateConfigs(@Valid @RequestBody AiConfigUpdateDTO dto) {
+    public Result<Void> updateConfigs(@Valid @RequestBody AiConfigUpdateDTO dto) {
         aiAdminService.updateConfigs(dto.getConfigs());
-        return R.ok();
+        return Result.ok();
     }
 
     @GetMapping("/prompt")
-    public R<List<PromptTemplate>> listPrompts(@RequestParam(required = false) String scene) {
-        return R.ok(aiAdminService.listPrompts(scene));
+    public Result<List<PromptTemplate>> listPrompts(@RequestParam(required = false) String scene) {
+        return Result.ok(aiAdminService.listPrompts(scene));
     }
 
     @PostMapping("/prompt")
     @AdminOperation(permission = AdminPermission.AI_PROMPT_EDIT, module = "ai", action = "create-prompt")
-    public R<PromptTemplate> createPrompt(@Valid @RequestBody PromptTemplateDTO dto) {
-        return R.ok(aiAdminService.createPrompt(dto));
+    public Result<PromptTemplate> createPrompt(@Valid @RequestBody PromptTemplateDTO dto) {
+        return Result.ok(aiAdminService.createPrompt(dto));
     }
 
     @PutMapping("/prompt/{id}")
     @AdminOperation(permission = AdminPermission.AI_PROMPT_EDIT, module = "ai", action = "update-prompt", idArgument = 0)
-    public R<PromptTemplate> updatePrompt(@PathVariable Long id, @Valid @RequestBody PromptTemplateDTO dto) {
-        return R.ok(aiAdminService.updatePrompt(id, dto));
+    public Result<PromptTemplate> updatePrompt(@PathVariable Long id, @Valid @RequestBody PromptTemplateDTO dto) {
+        return Result.ok(aiAdminService.updatePrompt(id, dto));
     }
 
     @GetMapping("/log")
-    public R<PageResult<AiCallLog>> listLogs(
+    public Result<PageResult<AiCallLog>> listLogs(
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String scene,
             @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
-        return R.ok(aiAdminService.listLogs(userId, scene, status, pageNum, pageSize));
+        return Result.ok(aiAdminService.listLogs(userId, scene, status, pageNum, pageSize));
     }
 }

@@ -15,7 +15,7 @@ import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.activity.vo.MemberVO;
 
 import com.campus.platform.common.PageResult;
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,124 +34,124 @@ public class ActivityController {
 
     /** 活动 AI 智能推荐 */
     @PostMapping("/recommend")
-    public R<List<ActivityRecommendVO>> recommend() {
-        return R.ok(activityRecommendService.recommend(UserContext.getUid()));
+    public Result<List<ActivityRecommendVO>> recommend() {
+        return Result.ok(activityRecommendService.recommend(UserContext.getUid()));
     }
 
     @PostMapping
-    public R<Activity> publish(@Valid @RequestBody ActivityPublishDTO dto) {
-        return R.ok(activityService.publish(UserContext.getUid(), dto));
+    public Result<Activity> publish(@Valid @RequestBody ActivityPublishDTO dto) {
+        return Result.ok(activityService.publish(UserContext.getUid(), dto));
     }
 
     @PutMapping("/{id}")
-    public R<Activity> update(@PathVariable Long id, @Valid @RequestBody ActivityPublishDTO dto) {
-        return R.ok(activityService.update(UserContext.getUid(), id, dto));
+    public Result<Activity> update(@PathVariable Long id, @Valid @RequestBody ActivityPublishDTO dto) {
+        return Result.ok(activityService.update(UserContext.getUid(), id, dto));
     }
 
     @GetMapping("/list")
-    public R<PageResult<ActivityVO>> list(
+    public Result<PageResult<ActivityVO>> list(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         // 匿名公开接口：限制分页大小，防止一次性拉全表
         int capped = Math.min(pageSize == null ? 10 : pageSize, 50);
-        return R.ok(activityService.list(keyword, category, pageNum, capped));
+        return Result.ok(activityService.list(keyword, category, pageNum, capped));
     }
 
     @GetMapping("/my")
-    public R<PageResult<ActivityVO>> myPublished(
+    public Result<PageResult<ActivityVO>> myPublished(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
-        return R.ok(activityService.myPublished(UserContext.getUid(), pageNum, pageSize));
+        return Result.ok(activityService.myPublished(UserContext.getUid(), pageNum, pageSize));
     }
 
     @GetMapping("/my/signup")
-    public R<PageResult<MemberVO>> mySignups(
+    public Result<PageResult<MemberVO>> mySignups(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
-        return R.ok(activityService.mySignups(UserContext.getUid(), pageNum, pageSize));
+        return Result.ok(activityService.mySignups(UserContext.getUid(), pageNum, pageSize));
     }
 
     @GetMapping("/my/schedule")
-    public R<ActivityScheduleService.Schedule> mySchedule() {
-        return R.ok(activityScheduleService.schedule(UserContext.getUid()));
+    public Result<ActivityScheduleService.Schedule> mySchedule() {
+        return Result.ok(activityScheduleService.schedule(UserContext.getUid()));
     }
 
     @GetMapping("/{id}/signup-conflicts")
-    public R<ActivityScheduleService.ConflictCheck> signupConflicts(@PathVariable Long id) {
-        return R.ok(activityScheduleService.conflicts(UserContext.getUid(), id));
+    public Result<ActivityScheduleService.ConflictCheck> signupConflicts(@PathVariable Long id) {
+        return Result.ok(activityScheduleService.conflicts(UserContext.getUid(), id));
     }
 
     @GetMapping("/{id}")
-    public R<ActivityDetailVO> detail(@PathVariable Long id) {
+    public Result<ActivityDetailVO> detail(@PathVariable Long id) {
         UserContext.CurrentUser current = UserContext.get();
         Long uid = current == null ? null : current.uid();
-        return R.ok(activityService.detail(id, uid));
+        return Result.ok(activityService.detail(id, uid));
     }
 
     @PostMapping("/{id}/signup")
-    public R<Void> signup(@PathVariable Long id, @Valid @RequestBody SignupDTO dto) {
+    public Result<Void> signup(@PathVariable Long id, @Valid @RequestBody SignupDTO dto) {
         activityService.signup(UserContext.getUid(), id, dto);
-        return R.ok();
+        return Result.ok();
     }
 
     @DeleteMapping("/{id}/signup")
-    public R<Void> cancelSignup(@PathVariable Long id) {
+    public Result<Void> cancelSignup(@PathVariable Long id) {
         activityService.cancelSignup(UserContext.getUid(), id);
-        return R.ok();
+        return Result.ok();
     }
 
     @GetMapping("/my/waitlist")
-    public R<List<ActivityWaitlist.Entry>> myWaitlist() {
-        return R.ok(waitlist.mine(UserContext.getUid()));
+    public Result<List<ActivityWaitlist.Entry>> myWaitlist() {
+        return Result.ok(waitlist.mine(UserContext.getUid()));
     }
 
     @GetMapping("/{id}/waitlist")
-    public R<ActivityWaitlist.View> waitlist(@PathVariable Long id) {
-        return R.ok(waitlist.view(UserContext.getUid(), id));
+    public Result<ActivityWaitlist.View> waitlist(@PathVariable Long id) {
+        return Result.ok(waitlist.view(UserContext.getUid(), id));
     }
 
     @PostMapping("/{id}/waitlist")
-    public R<ActivityWaitlist.Entry> joinWaitlist(@PathVariable Long id) {
-        return R.ok(waitlist.join(UserContext.getUid(), id));
+    public Result<ActivityWaitlist.Entry> joinWaitlist(@PathVariable Long id) {
+        return Result.ok(waitlist.join(UserContext.getUid(), id));
     }
 
     @DeleteMapping("/{id}/waitlist/{entryId}")
-    public R<Void> leaveWaitlist(@PathVariable Long id, @PathVariable Long entryId) {
+    public Result<Void> leaveWaitlist(@PathVariable Long id, @PathVariable Long entryId) {
         waitlist.leave(UserContext.getUid(), id, entryId);
-        return R.ok();
+        return Result.ok();
     }
 
     @PostMapping("/{id}/waitlist/{entryId}/accept")
-    public R<Void> acceptWaitlist(@PathVariable Long id, @PathVariable Long entryId, @Valid @RequestBody SignupDTO dto) {
+    public Result<Void> acceptWaitlist(@PathVariable Long id, @PathVariable Long entryId, @Valid @RequestBody SignupDTO dto) {
         activityService.acceptWaitlist(UserContext.getUid(), id, entryId, dto);
-        return R.ok();
+        return Result.ok();
     }
 
     @GetMapping("/{id}/members")
-    public R<PageResult<MemberVO>> members(
+    public Result<PageResult<MemberVO>> members(
             @PathVariable Long id,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         int capped = Math.min(pageSize == null ? 10 : Math.max(1, pageSize), 100);
-        return R.ok(activityService.members(UserContext.getUid(), id, Math.max(1, pageNum == null ? 1 : pageNum), capped));
+        return Result.ok(activityService.members(UserContext.getUid(), id, Math.max(1, pageNum == null ? 1 : pageNum), capped));
     }
 
     @PutMapping("/member/{memberId}/handle")
-    public R<Void> handleMember(@PathVariable Long memberId, @Valid @RequestBody MemberHandleDTO dto) {
+    public Result<Void> handleMember(@PathVariable Long memberId, @Valid @RequestBody MemberHandleDTO dto) {
         activityService.handleMember(UserContext.getUid(), memberId, dto.getApprove());
-        return R.ok();
+        return Result.ok();
     }
 
     @GetMapping("/{id}/signin-qrcode")
-    public R<String> signinQrCode(@PathVariable Long id) {
-        return R.ok(activityService.signinQrCode(UserContext.getUid(), id));
+    public Result<String> signinQrCode(@PathVariable Long id) {
+        return Result.ok(activityService.signinQrCode(UserContext.getUid(), id));
     }
 
     @PostMapping("/signin")
-    public R<Void> signin(@Valid @RequestBody SigninDTO dto) {
+    public Result<Void> signin(@Valid @RequestBody SigninDTO dto) {
         activityService.signin(UserContext.getUid(), dto);
-        return R.ok();
+        return Result.ok();
     }
 }

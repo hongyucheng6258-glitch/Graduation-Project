@@ -6,7 +6,7 @@ import com.campus.platform.module.admin.dto.AdminSaveDTO;
 import com.campus.platform.module.admin.entity.Admin;
 
 import com.campus.platform.common.PageResult;
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -19,29 +19,29 @@ public class AdminSystemController {
     private final AdminPermissionService adminPermissionService;
 
     @GetMapping
-    public R<PageResult<Admin>> list(
+    public Result<PageResult<Admin>> list(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         adminPermissionService.requireSuper();
-        return R.ok(adminUserService.listAdmins(pageNum, pageSize));
+        return Result.ok(adminUserService.listAdmins(pageNum, pageSize));
     }
 
     @PostMapping
-    public R<Admin> create(@Valid @RequestBody AdminSaveDTO dto) {
+    public Result<Admin> create(@Valid @RequestBody AdminSaveDTO dto) {
         adminPermissionService.requireSuper();
-        return R.ok(adminUserService.createAdmin(dto));
+        return Result.ok(adminUserService.createAdmin(dto));
     }
 
     @PutMapping("/{id}")
-    public R<Admin> update(@PathVariable Long id, @Valid @RequestBody AdminSaveDTO dto) {
+    public Result<Admin> update(@PathVariable Long id, @Valid @RequestBody AdminSaveDTO dto) {
         adminPermissionService.requireSuper();
-        return R.ok(adminUserService.updateAdmin(id, dto));
+        return Result.ok(adminUserService.updateAdmin(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public R<Void> delete(@PathVariable Long id) {
+    public Result<Void> delete(@PathVariable Long id) {
         adminPermissionService.requireSuper();
         adminUserService.deleteAdmin(id, com.campus.platform.common.UserContext.getUid());
-        return R.ok();
+        return Result.ok();
     }
 }

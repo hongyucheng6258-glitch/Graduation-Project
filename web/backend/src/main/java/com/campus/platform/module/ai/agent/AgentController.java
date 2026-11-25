@@ -1,6 +1,6 @@
 package com.campus.platform.module.ai.agent;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.common.UserContext;
@@ -45,59 +45,59 @@ public class AgentController {
     }
 
     @GetMapping("/capabilities")
-    public R<Capabilities> capabilities() {
-        return R.ok(new Capabilities(enabled, ragEnabled));
+    public Result<Capabilities> capabilities() {
+        return Result.ok(new Capabilities(enabled, ragEnabled));
     }
 
     @PostMapping("/ask")
-    public R<AgentService.Reply> ask(@Valid @RequestBody Question request) {
+    public Result<AgentService.Reply> ask(@Valid @RequestBody Question request) {
         checkEnabled();
-        return R.ok(agent.ask(UserContext.getUid(), request.question().strip(), request.sessionId()));
+        return Result.ok(agent.ask(UserContext.getUid(), request.question().strip(), request.sessionId()));
     }
 
     @PostMapping("/actions/{id}/confirm")
-    public R<ActivitySignupActions.Confirmation> confirm(@PathVariable String id, @Valid @RequestBody(required = false) ActionInput input) {
+    public Result<ActivitySignupActions.Confirmation> confirm(@PathVariable String id, @Valid @RequestBody(required = false) ActionInput input) {
         checkEnabled();
-        return R.ok(actions.confirm(UserContext.getUid(), id, input == null ? null : input.remark()));
+        return Result.ok(actions.confirm(UserContext.getUid(), id, input == null ? null : input.remark()));
     }
 
     @GetMapping("/activity-drafts/{id}")
-    public R<ActivityPublishDrafts.Draft> activityDraft(@PathVariable String id) {
+    public Result<ActivityPublishDrafts.Draft> activityDraft(@PathVariable String id) {
         checkEnabled();
-        return R.ok(activityDrafts.get(UserContext.getUid(), id));
+        return Result.ok(activityDrafts.get(UserContext.getUid(), id));
     }
 
     @PostMapping("/activity-drafts/{id}/confirm")
-    public R<ActivityPublishDrafts.Draft> confirmActivityDraft(@PathVariable String id,
+    public Result<ActivityPublishDrafts.Draft> confirmActivityDraft(@PathVariable String id,
                                                              @Valid @RequestBody ActivityPublishDTO request) {
         checkEnabled();
-        return R.ok(activityDrafts.confirm(UserContext.getUid(), id, request));
+        return Result.ok(activityDrafts.confirm(UserContext.getUid(), id, request));
     }
 
     @GetMapping("/idle-drafts/{id}")
-    public R<IdlePublishDrafts.Draft> idleDraft(@PathVariable String id) {
+    public Result<IdlePublishDrafts.Draft> idleDraft(@PathVariable String id) {
         checkEnabled();
-        return R.ok(idleDrafts.get(UserContext.getUid(), id));
+        return Result.ok(idleDrafts.get(UserContext.getUid(), id));
     }
 
     @PostMapping("/idle-drafts/{id}/confirm")
-    public R<IdlePublishDrafts.Draft> confirmIdleDraft(@PathVariable String id,
+    public Result<IdlePublishDrafts.Draft> confirmIdleDraft(@PathVariable String id,
                                                      @Valid @RequestBody IdlePublishDrafts.Submission request) {
         checkEnabled();
-        return R.ok(idleDrafts.confirm(UserContext.getUid(), id, request));
+        return Result.ok(idleDrafts.confirm(UserContext.getUid(), id, request));
     }
 
     @PostMapping("/idle-appointments/{id}/confirm")
-    public R<IdleAppointmentActions.Card> confirmIdleAppointment(@PathVariable String id, @Valid @RequestBody(required = false) ActionInput input) {
+    public Result<IdleAppointmentActions.Card> confirmIdleAppointment(@PathVariable String id, @Valid @RequestBody(required = false) ActionInput input) {
         checkEnabled();
-        return R.ok(idleAppointments.confirm(UserContext.getUid(), id, input == null ? null : input.remark()));
+        return Result.ok(idleAppointments.confirm(UserContext.getUid(), id, input == null ? null : input.remark()));
     }
 
     @PostMapping("/campus-drafts/{id}/confirm")
-    public R<CampusPublishDrafts.Draft> confirmCampusDraft(@PathVariable String id,
+    public Result<CampusPublishDrafts.Draft> confirmCampusDraft(@PathVariable String id,
                                                          @RequestBody JsonNode request) {
         checkEnabled();
-        return R.ok(campusDrafts.confirm(UserContext.getUid(), id, request));
+        return Result.ok(campusDrafts.confirm(UserContext.getUid(), id, request));
     }
 
     private void checkEnabled() {

@@ -1,6 +1,6 @@
 package com.campus.platform.module.ai.rag;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -24,19 +24,19 @@ public class KnowledgeController {
     private final KnowledgeAnswerService answers;
 
     @PostMapping("/pdf/{pdfId}/index")
-    public R<KnowledgeService.Status> index(@PathVariable long pdfId,
+    public Result<KnowledgeService.Status> index(@PathVariable long pdfId,
                                             @RequestParam(defaultValue = "false") boolean rebuild) {
-        return R.ok(knowledge.enqueue(UserContext.getUid(), pdfId, rebuild));
+        return Result.ok(knowledge.enqueue(UserContext.getUid(), pdfId, rebuild));
     }
 
     @GetMapping("/{id}")
-    public R<KnowledgeService.Status> status(@PathVariable long id) {
-        return R.ok(knowledge.status(id, UserContext.getUid()));
+    public Result<KnowledgeService.Status> status(@PathVariable long id) {
+        return Result.ok(knowledge.status(id, UserContext.getUid()));
     }
 
     @PostMapping("/{id}/ask")
-    public R<KnowledgeAnswerService.Reply> ask(@PathVariable long id, @Valid @RequestBody Question request) {
-        return R.ok(answers.ask(UserContext.getUid(), id, request.question().strip(), request.sessionId()));
+    public Result<KnowledgeAnswerService.Reply> ask(@PathVariable long id, @Valid @RequestBody Question request) {
+        return Result.ok(answers.ask(UserContext.getUid(), id, request.question().strip(), request.sessionId()));
     }
 
     @GetMapping("/{id}/file")
@@ -50,9 +50,9 @@ public class KnowledgeController {
     }
 
     @DeleteMapping("/{id}")
-    public R<Void> delete(@PathVariable long id) {
+    public Result<Void> delete(@PathVariable long id) {
         knowledge.delete(id, UserContext.getUid());
-        return R.ok();
+        return Result.ok();
     }
 
     public record Question(@NotBlank @Size(max = 2000) String question, Long sessionId) {}

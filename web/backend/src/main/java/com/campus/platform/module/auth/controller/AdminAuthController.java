@@ -5,7 +5,7 @@ import com.campus.platform.module.auth.vo.AdminLoginVO;
 import com.campus.platform.module.auth.service.AuthService;
 import com.campus.platform.module.auth.service.CaptchaService;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.module.admin.service.AdminPermissionService;
 
 import java.util.List;
@@ -22,15 +22,15 @@ public class AdminAuthController {
     private final AdminPermissionService permissions;
 
     @PostMapping("/login")
-    public R<AdminLoginVO> login(@Valid @RequestBody AdminLoginDTO dto) {
+    public Result<AdminLoginVO> login(@Valid @RequestBody AdminLoginDTO dto) {
         captchaService.validateAndConsume(dto.getCaptchaId(), dto.getCaptchaCode());
-        return R.ok(authService.adminLogin(dto));
+        return Result.ok(authService.adminLogin(dto));
     }
 
     @GetMapping("/me")
-    public R<AdminSession> me() {
+    public Result<AdminSession> me() {
         var admin = permissions.currentAdmin();
-        return R.ok(new AdminSession(String.valueOf(admin.getId()), admin.getUsername(), admin.getNickname(),
+        return Result.ok(new AdminSession(String.valueOf(admin.getId()), admin.getUsername(), admin.getNickname(),
                 admin.getAvatar(), admin.getRole(), permissions.permissionsFor(admin)));
     }
 

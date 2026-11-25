@@ -1,7 +1,7 @@
 package com.campus.platform.module.admin.controller;
 
 import com.campus.platform.common.PageResult;
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.module.admin.audit.AdminPermission;
 import com.campus.platform.module.admin.entity.AdminOperationLog;
 import com.campus.platform.module.admin.service.AdminOperationLogService;
@@ -23,7 +23,7 @@ public class AdminOperationLogController {
     private final AdminOperationLogService logs;
 
     @GetMapping
-    public R<PageResult<AdminOperationLog>> list(
+    public Result<PageResult<AdminOperationLog>> list(
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String module,
             @RequestParam(required = false) Long targetId,
@@ -33,6 +33,6 @@ public class AdminOperationLogController {
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "10") int pageSize) {
         permissions.require(AdminPermission.OPERATION_LOG_READ);
-        return R.ok(logs.list(username, module, targetId, succeeded, from, to, pageNum, pageSize));
+        return Result.ok(logs.list(username, module, targetId, succeeded, from, to, pageNum, pageSize));
     }
 }

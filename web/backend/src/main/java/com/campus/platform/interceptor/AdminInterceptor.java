@@ -2,7 +2,7 @@ package com.campus.platform.interceptor;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.common.UserContext;
 import com.campus.platform.module.admin.service.AdminPermissionService;
@@ -66,6 +66,6 @@ public class AdminInterceptor implements HandlerInterceptor {
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.getWriter().write(objectMapper.writeValueAsString(R.fail(rc)));
+        response.getWriter().write(objectMapper.writeValueAsString(Result.fail(rc)));
     }
 }

@@ -6,7 +6,7 @@ import com.campus.platform.module.auth.dto.RegisterDTO;
 import com.campus.platform.module.auth.dto.LoginDTO;
 import com.campus.platform.module.auth.vo.LoginVO;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -20,14 +20,14 @@ public class AuthController {
     private final CaptchaService captchaService;
 
     @PostMapping("/register")
-    public R<LoginVO> register(@Valid @RequestBody RegisterDTO dto) {
+    public Result<LoginVO> register(@Valid @RequestBody RegisterDTO dto) {
         captchaService.validateAndConsume(dto.getCaptchaId(), dto.getCaptchaCode());
-        return R.ok(authService.register(dto));
+        return Result.ok(authService.register(dto));
     }
 
     @PostMapping("/login")
-    public R<LoginVO> login(@Valid @RequestBody LoginDTO dto) {
+    public Result<LoginVO> login(@Valid @RequestBody LoginDTO dto) {
         captchaService.validateAndConsume(dto.getCaptchaId(), dto.getCaptchaCode());
-        return R.ok(authService.login(dto));
+        return Result.ok(authService.login(dto));
     }
 }

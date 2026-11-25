@@ -3,7 +3,7 @@ package com.campus.platform.module.admin.controller;
 import com.campus.platform.module.admin.vo.StatsOverviewVO;
 import com.campus.platform.module.admin.service.StatsService;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,28 +17,28 @@ public class AdminStatsController {
     private final StatsService statsService;
 
     @GetMapping("/overview")
-    public R<StatsOverviewVO> overview() {
-        return R.ok(statsService.overview());
+    public Result<StatsOverviewVO> overview() {
+        return Result.ok(statsService.overview());
     }
 
     /** 各类型待办数（后端准确 COUNT；ai 为待审子集，不参与角标合计） */
     @GetMapping("/pending-counts")
-    public R<Map<String, Long>> pendingCounts() {
-        return R.ok(statsService.pendingCounts());
+    public Result<Map<String, Long>> pendingCounts() {
+        return Result.ok(statsService.pendingCounts());
     }
 
     @GetMapping("/trend")
-    public R<Map<String, Object>> trend() {
-        return R.ok(statsService.trend());
+    public Result<Map<String, Object>> trend() {
+        return Result.ok(statsService.trend());
     }
 
     @GetMapping("/module")
-    public R<List<Map<String, Object>>> moduleStats() {
-        return R.ok(statsService.moduleStats());
+    public Result<List<Map<String, Object>>> moduleStats() {
+        return Result.ok(statsService.moduleStats());
     }
 
     @GetMapping("/pie")
-    public R<Map<String, Object>> pieStats() {
-        return R.ok(statsService.pieStats());
+    public Result<Map<String, Object>> pieStats() {
+        return Result.ok(statsService.pieStats());
     }
 }

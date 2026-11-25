@@ -3,7 +3,7 @@ package com.campus.platform.module.ai.adminassistant;
 import com.campus.platform.module.admin.audit.AdminOperation;
 import com.campus.platform.module.admin.audit.AdminPermission;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -36,68 +36,68 @@ public class AdminAssistantController {
     private boolean ragEnabled;
 
     @GetMapping("/capabilities")
-    public R<Map<String, Boolean>> capabilities() {
+    public Result<Map<String, Boolean>> capabilities() {
         boolean enabled = access.enabled();
         boolean canManageRules = enabled && "super".equals(access.requireAccess().getRole());
-        return R.ok(Map.of("enabled", enabled, "ragEnabled", enabled && ragEnabled, "canManageRules", canManageRules));
+        return Result.ok(Map.of("enabled", enabled, "ragEnabled", enabled && ragEnabled, "canManageRules", canManageRules));
     }
 
     @GetMapping("/sessions")
-    public R<List<AdminAssistantSessions.Session>> sessions() {
-        return R.ok(sessions.list(adminId()));
+    public Result<List<AdminAssistantSessions.Session>> sessions() {
+        return Result.ok(sessions.list(adminId()));
     }
 
     @GetMapping("/sessions/{id}")
-    public R<List<AdminAssistantService.TurnView>> history(@PathVariable String id) {
-        return R.ok(assistant.history(adminId(), id));
+    public Result<List<AdminAssistantService.TurnView>> history(@PathVariable String id) {
+        return Result.ok(assistant.history(adminId(), id));
     }
 
     @PostMapping("/ask")
-    public R<AdminAssistantService.Reply> ask(@Valid @RequestBody Question question) {
-        return R.ok(assistant.ask(adminId(), question.sessionId(), question.question().strip()));
+    public Result<AdminAssistantService.Reply> ask(@Valid @RequestBody Question question) {
+        return Result.ok(assistant.ask(adminId(), question.sessionId(), question.question().strip()));
     }
 
     @GetMapping("/sessions/{id}/reviews")
-    public R<List<AdminAssistantReviewActions.Card>> reviews(@PathVariable String id) {
-        return R.ok(reviews.list(adminId(), id));
+    public Result<List<AdminAssistantReviewActions.Card>> reviews(@PathVariable String id) {
+        return Result.ok(reviews.list(adminId(), id));
     }
 
     @PostMapping("/reviews/prepare")
-    public R<AdminAssistantReviewActions.Card> prepareReview(@Valid @RequestBody AdminAssistantReviewActions.Request request) {
-        return R.ok(reviews.prepare(adminId(), request));
+    public Result<AdminAssistantReviewActions.Card> prepareReview(@Valid @RequestBody AdminAssistantReviewActions.Request request) {
+        return Result.ok(reviews.prepare(adminId(), request));
     }
 
     @PostMapping("/reviews/{id}/confirm")
     @AdminOperation(permission = AdminPermission.CONTENT_REVIEW, module = "audit", action = "confirm-review", assistant = true)
-    public R<AdminAssistantReviewActions.Card> confirmReview(@PathVariable String id) {
-        return R.ok(reviews.confirm(adminId(), id));
+    public Result<AdminAssistantReviewActions.Card> confirmReview(@PathVariable String id) {
+        return Result.ok(reviews.confirm(adminId(), id));
     }
 
     @GetMapping("/notice-drafts")
-    public R<List<AdminAssistantNoticeDrafts.Draft>> noticeDrafts() {
-        return R.ok(notices.list(adminId()));
+    public Result<List<AdminAssistantNoticeDrafts.Draft>> noticeDrafts() {
+        return Result.ok(notices.list(adminId()));
     }
 
     @PostMapping("/notice-drafts")
-    public R<AdminAssistantNoticeDrafts.Draft> prepareNotice(@Valid @RequestBody NoticeRequest request) {
-        return R.ok(notices.prepare(adminId(), request.request().strip()));
+    public Result<AdminAssistantNoticeDrafts.Draft> prepareNotice(@Valid @RequestBody NoticeRequest request) {
+        return Result.ok(notices.prepare(adminId(), request.request().strip()));
     }
 
     @GetMapping("/notice-drafts/{id}")
-    public R<AdminAssistantNoticeDrafts.Draft> noticeDraft(@PathVariable String id) {
-        return R.ok(notices.get(adminId(), id));
+    public Result<AdminAssistantNoticeDrafts.Draft> noticeDraft(@PathVariable String id) {
+        return Result.ok(notices.get(adminId(), id));
     }
 
     @PostMapping("/notice-drafts/{id}/confirm")
     @AdminOperation(permission = AdminPermission.NOTICE_WRITE, module = "notice", action = "confirm-draft", assistant = true)
-    public R<AdminAssistantNoticeDrafts.Draft> confirmNotice(@PathVariable String id, @Valid @RequestBody AdminAssistantNoticeDrafts.Form form) {
-        return R.ok(notices.confirm(adminId(), id, form));
+    public Result<AdminAssistantNoticeDrafts.Draft> confirmNotice(@PathVariable String id, @Valid @RequestBody AdminAssistantNoticeDrafts.Form form) {
+        return Result.ok(notices.confirm(adminId(), id, form));
     }
 
     @GetMapping("/diagnostics")
-    public R<AdminAssistantDiagnostics.Summary> diagnostics(@RequestParam(defaultValue = "1") int days) {
+    public Result<AdminAssistantDiagnostics.Summary> diagnostics(@RequestParam(defaultValue = "1") int days) {
         adminId();
-        return R.ok(diagnostics.summarize(days));
+        return Result.ok(diagnostics.summarize(days));
     }
 
     private Long adminId() { return access.requireAccess().getId(); }

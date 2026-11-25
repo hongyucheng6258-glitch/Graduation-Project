@@ -5,7 +5,7 @@ import com.campus.platform.module.admin.audit.AdminPermission;
 import com.campus.platform.module.admin.service.AdminPermissionService;
 
 import com.campus.platform.common.PageResult;
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import com.campus.platform.module.report.dto.ReportHandleDTO;
 import com.campus.platform.module.report.entity.Report;
@@ -22,29 +22,29 @@ public class AdminReportController {
     private final AdminPermissionService adminPermissions;
 
     @GetMapping("/list")
-    public R<PageResult<Report>> list(
+    public Result<PageResult<Report>> list(
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Long record,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
-        return R.ok(reportAdminService.list(status, record, pageNum, pageSize));
+        return Result.ok(reportAdminService.list(status, record, pageNum, pageSize));
     }
 
     @GetMapping("/{id}")
-    public R<Report> detail(@PathVariable Long id) {
-        return R.ok(reportAdminService.detail(id));
+    public Result<Report> detail(@PathVariable Long id) {
+        return Result.ok(reportAdminService.detail(id));
     }
 
     @GetMapping("/{id}/chat-evidence")
-    public R<ReportAdminService.ChatEvidence> chatEvidence(@PathVariable Long id) {
+    public Result<ReportAdminService.ChatEvidence> chatEvidence(@PathVariable Long id) {
         adminPermissions.require(AdminPermission.REPORT_HANDLE);
-        return R.ok(reportAdminService.chatEvidence(id));
+        return Result.ok(reportAdminService.chatEvidence(id));
     }
 
     @PutMapping("/{id}/handle")
     @AdminOperation(permission = AdminPermission.REPORT_HANDLE, module = "report", action = "handle", idArgument = 0)
-    public R<Void> handle(@PathVariable Long id, @Valid @RequestBody ReportHandleDTO dto) {
+    public Result<Void> handle(@PathVariable Long id, @Valid @RequestBody ReportHandleDTO dto) {
         reportAdminService.handle(UserContext.getUid(), id, dto);
-        return R.ok();
+        return Result.ok();
     }
 }

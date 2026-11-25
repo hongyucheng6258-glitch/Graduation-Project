@@ -1,6 +1,6 @@
 package com.campus.platform.module.auth.controller;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.module.admin.audit.AdminOperation;
 import com.campus.platform.module.admin.audit.AdminPermission;
 import com.campus.platform.module.admin.service.AdminPermissionService;
@@ -24,33 +24,33 @@ public class PasswordRecoveryController {
     public record Decision(boolean approve, String reason) {}
 
     @PostMapping("/api/auth/recovery/apply")
-    public R<Receipt> apply(@RequestBody Request request) {
+    public Result<Receipt> apply(@RequestBody Request request) {
         captcha.validateAndConsume(request.captchaId(), request.captchaCode());
-        return R.ok(new Receipt(recovery.submit(new PasswordRecoveryService.Application(
+        return Result.ok(new Receipt(recovery.submit(new PasswordRecoveryService.Application(
                 request.studentNo(), request.name(), request.contact(), request.explanation()))));
     }
 
     @PostMapping("/api/auth/recovery/status")
-    public R<PasswordRecoveryService.Status> status(@RequestBody Receipt receipt) {
-        return R.ok(recovery.status(receipt.receipt()));
+    public Result<PasswordRecoveryService.Status> status(@RequestBody Receipt receipt) {
+        return Result.ok(recovery.status(receipt.receipt()));
     }
 
     @PostMapping("/api/auth/recovery/claim")
-    public R<Map<String, String>> claim(@RequestBody Receipt receipt, jakarta.servlet.http.HttpServletResponse response) {
+    public Result<Map<String, String>> claim(@RequestBody Receipt receipt, jakarta.servlet.http.HttpServletResponse response) {
         response.setHeader("Cache-Control", "no-store");
-        return R.ok(Map.of("temporaryPassword", recovery.claim(receipt.receipt())));
+        return Result.ok(Map.of("temporaryPassword", recovery.claim(receipt.receipt())));
     }
 
     @GetMapping("/api/admin/password-recovery")
-    public R<List<Map<String, Object>>> list(@RequestParam(defaultValue = "9223372036854775807") long before) {
+    public Result<List<Map<String, Object>>> list(@RequestParam(defaultValue = "9223372036854775807") long before) {
         permissions.require(AdminPermission.USER_PASSWORD_RESET);
-        return R.ok(recovery.list(before));
+        return Result.ok(recovery.list(before));
     }
 
     @PutMapping("/api/admin/password-recovery/{id}")
     @AdminOperation(permission = AdminPermission.USER_PASSWORD_RESET, module = "password-recovery", action = "review", idArgument = 0)
-    public R<Void> decide(@PathVariable Long id, @RequestBody Decision decision) {
+    public Result<Void> decide(@PathVariable Long id, @RequestBody Decision decision) {
         recovery.decide(id, decision.approve(), decision.reason());
-        return R.ok();
+        return Result.ok();
     }
 }

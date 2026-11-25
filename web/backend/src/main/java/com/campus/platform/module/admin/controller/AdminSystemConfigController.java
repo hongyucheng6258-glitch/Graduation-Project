@@ -3,7 +3,7 @@ package com.campus.platform.module.admin.controller;
 import com.campus.platform.module.admin.audit.AdminOperation;
 import com.campus.platform.module.admin.audit.AdminPermission;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.module.admin.service.AdminPermissionService;
 import com.campus.platform.module.site.entity.SystemConfig;
 import com.campus.platform.module.site.service.SystemConfigService;
@@ -30,47 +30,47 @@ public class AdminSystemConfigController {
 
     /** 获取全部系统配置（按分组排序） */
     @GetMapping
-    public R<List<SystemConfig>> list(
+    public Result<List<SystemConfig>> list(
             @RequestParam(required = false) String category) {
         adminPermissionService.requireSuper();
-        return R.ok(systemConfigService.listByCategory(category));
+        return Result.ok(systemConfigService.listByCategory(category));
     }
 
     /** 批量更新配置值（最常用：管理端表单保存）→ 即时生效 */
     @PutMapping
     @AdminOperation(permission = AdminPermission.SYSTEM_CONFIG_EDIT, module = "system", action = "update-config")
-    public R<Void> updateConfigs(@RequestBody Map<String, String> configs) {
+    public Result<Void> updateConfigs(@RequestBody Map<String, String> configs) {
         systemConfigService.updateConfigs(configs);
-        return R.ok();
+        return Result.ok();
     }
 
     /** 新增配置项 */
     @PostMapping
     @AdminOperation(permission = AdminPermission.SYSTEM_CONFIG_EDIT, module = "system", action = "create-config")
-    public R<SystemConfig> create(@RequestBody SystemConfig config) {
-        return R.ok(systemConfigService.create(config));
+    public Result<SystemConfig> create(@RequestBody SystemConfig config) {
+        return Result.ok(systemConfigService.create(config));
     }
 
     /** 更新配置项（含元信息） */
     @PutMapping("/{id}")
     @AdminOperation(permission = AdminPermission.SYSTEM_CONFIG_EDIT, module = "system", action = "update-config", idArgument = 0)
-    public R<SystemConfig> update(@PathVariable Long id, @RequestBody SystemConfig config) {
-        return R.ok(systemConfigService.update(id, config));
+    public Result<SystemConfig> update(@PathVariable Long id, @RequestBody SystemConfig config) {
+        return Result.ok(systemConfigService.update(id, config));
     }
 
     /** 删除配置项 */
     @DeleteMapping("/{id}")
     @AdminOperation(permission = AdminPermission.SYSTEM_CONFIG_EDIT, module = "system", action = "delete-config", idArgument = 0)
-    public R<Void> delete(@PathVariable Long id) {
+    public Result<Void> delete(@PathVariable Long id) {
         systemConfigService.delete(id);
-        return R.ok();
+        return Result.ok();
     }
 
     /** 手动刷新配置缓存 */
     @PostMapping("/refresh")
     @AdminOperation(permission = AdminPermission.SYSTEM_CONFIG_EDIT, module = "system", action = "refresh-config")
-    public R<Void> refresh() {
+    public Result<Void> refresh() {
         systemConfigService.refresh();
-        return R.ok();
+        return Result.ok();
     }
 }

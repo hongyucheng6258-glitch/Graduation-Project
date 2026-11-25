@@ -1,7 +1,7 @@
 package com.campus.platform.module.admin.audit;
 
 import com.campus.platform.common.BizException;
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.admin.entity.AdminOperationLog;
 import com.campus.platform.module.admin.service.AdminOperationLogService;
@@ -50,10 +50,10 @@ public class AdminOperationAspect {
         try {
             permissions.check(admin, operation.permission());
             Object response = call.proceed();
-            int code = response instanceof R<?> result ? result.getCode() : ResultCode.SUCCESS.getCode();
+            int code = response instanceof Result<?> result ? result.getCode() : ResultCode.SUCCESS.getCode();
             entry.setResultCode(code);
             entry.setSucceeded(code == ResultCode.SUCCESS.getCode().intValue());
-            if (entry.isSucceeded() && response instanceof R<?> result) {
+            if (entry.isSucceeded() && response instanceof Result<?> result) {
                 readResultTarget(entry, result.getData());
             }
             return response;
