@@ -1,15 +1,15 @@
 package com.campus.platform.module.drawgame.controller;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.common.UserContext;
 import com.campus.platform.module.drawgame.dto.DrawGuessCreateRoomDTO;
 import com.campus.platform.module.drawgame.dto.DrawGuessJoinRoomDTO;
 import com.campus.platform.module.drawgame.dto.DrawGuessWsTicketDTO;
-import com.campus.platform.module.drawgame.service.DrawGuessRoomService;
+import com.campus.platform.module.drawgame.service.IDrawGuessRoomService;
 import com.campus.platform.module.drawgame.vo.DrawGuessRecordVO;
 import com.campus.platform.module.drawgame.vo.DrawGuessRoomVO;
-import com.campus.platform.module.drawgame.websocket.DrawGuessWsTicketService;
+import com.campus.platform.module.drawgame.websocket.IDrawGuessWsTicketService;
 import com.campus.platform.module.upload.vo.UploadVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,65 +29,65 @@ import java.util.Map;
 @RequestMapping("/api/draw-guess")
 @RequiredArgsConstructor
 public class DrawGuessController {
-    private final DrawGuessRoomService roomService;
-    private final DrawGuessWsTicketService ticketService;
+    private final IDrawGuessRoomService roomService;
+    private final IDrawGuessWsTicketService ticketService;
 
     @GetMapping("/rooms")
-    public R<List<DrawGuessRoomVO>> publicRooms() {
-        return R.ok(roomService.listPublicRooms(currentUserId()));
+    public Result<List<DrawGuessRoomVO>> publicRooms() {
+        return Result.ok(roomService.listPublicRooms(currentUserId()));
     }
 
     @GetMapping("/rooms/recent")
-    public R<List<DrawGuessRoomVO>> recentRooms() {
-        return R.ok(roomService.recentRooms(currentUserId()));
+    public Result<List<DrawGuessRoomVO>> recentRooms() {
+        return Result.ok(roomService.recentRooms(currentUserId()));
     }
 
     @PostMapping("/rooms")
-    public R<DrawGuessRoomVO> createRoom(@Valid @RequestBody DrawGuessCreateRoomDTO dto) {
-        return R.ok(roomService.createRoom(currentUserId(), dto));
+    public Result<DrawGuessRoomVO> createRoom(@Valid @RequestBody DrawGuessCreateRoomDTO dto) {
+        return Result.ok(roomService.createRoom(currentUserId(), dto));
     }
 
     @PostMapping("/rooms/{roomCode}/join")
-    public R<DrawGuessRoomVO> joinRoom(@PathVariable String roomCode,
+    public Result<DrawGuessRoomVO> joinRoom(@PathVariable String roomCode,
                                        @Valid @RequestBody(required = false) DrawGuessJoinRoomDTO dto) {
-        return R.ok(roomService.joinRoom(currentUserId(), roomCode, dto == null ? null : dto.getPassword()));
+        return Result.ok(roomService.joinRoom(currentUserId(), roomCode, dto == null ? null : dto.getPassword()));
     }
 
     @GetMapping("/rooms/{roomId}")
-    public R<DrawGuessRoomVO> room(@PathVariable Long roomId) {
-        return R.ok(roomService.getRoom(roomId, currentUserId()));
+    public Result<DrawGuessRoomVO> room(@PathVariable Long roomId) {
+        return Result.ok(roomService.getRoom(roomId, currentUserId()));
     }
 
     @PostMapping("/rooms/{roomId}/start")
-    public R<DrawGuessRoomVO> start(@PathVariable Long roomId) {
-        return R.ok(roomService.startRoom(roomId, currentUserId()));
+    public Result<DrawGuessRoomVO> start(@PathVariable Long roomId) {
+        return Result.ok(roomService.startRoom(roomId, currentUserId()));
     }
 
     @PostMapping("/rooms/{roomId}/leave")
-    public R<DrawGuessRoomVO> leave(@PathVariable Long roomId) {
-        return R.ok(roomService.leaveRoom(roomId, currentUserId()));
+    public Result<DrawGuessRoomVO> leave(@PathVariable Long roomId) {
+        return Result.ok(roomService.leaveRoom(roomId, currentUserId()));
     }
 
     @PostMapping("/ws-ticket")
-    public R<Map<String, String>> wsTicket(@Valid @RequestBody DrawGuessWsTicketDTO dto) {
+    public Result<Map<String, String>> wsTicket(@Valid @RequestBody DrawGuessWsTicketDTO dto) {
         Long userId = currentUserId();
         if (!roomService.isActiveMember(dto.getRoomId(), userId)) {
-            return R.fail(ResultCode.FORBIDDEN, "你不是这个房间的成员");
+            return Result.fail(ResultCode.FORBIDDEN, "你不是这个房间的成员");
         }
-        return R.ok(Map.of("ticket", ticketService.issue(userId, dto.getRoomId())));
+        return Result.ok(Map.of("ticket", ticketService.issue(userId, dto.getRoomId())));
     }
 
     @PostMapping("/rooms/{roomId}/rounds/{roundId}/snapshot")
-    public R<UploadVO> uploadSnapshot(@PathVariable Long roomId,
+    public Result<UploadVO> uploadSnapshot(@PathVariable Long roomId,
                                       @PathVariable Long roundId,
                                       @RequestParam("file") MultipartFile file) {
-        return R.ok(roomService.uploadSnapshot(roomId, roundId, currentUserId(), file));
+        return Result.ok(roomService.uploadSnapshot(roomId, roundId, currentUserId(), file));
     }
 
     @GetMapping("/records")
-    public R<List<DrawGuessRecordVO>> records() {
+    public Result<List<DrawGuessRecordVO>> records() {
         currentUserId();
-        return R.ok(roomService.listRecords());
+        return Result.ok(roomService.listRecords());
     }
 
     private Long currentUserId() {

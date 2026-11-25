@@ -4,7 +4,7 @@ import com.campus.platform.common.Constants;
 import com.campus.platform.module.activity.mapper.ActivityReminderMapper;
 import com.campus.platform.module.activity.mapper.ActivityReminderMapper.Candidate;
 import com.campus.platform.module.activity.mapper.ActivityReminderMapper.Reminder;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
@@ -24,11 +24,11 @@ public class ActivityReminderTask {
 
     private final ActivityReminderMapper reminders;
     private final TransactionTemplate transactions;
-    private final MessageService messages;
+    private final IMessageService messages;
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 60_000)
     public void sendUpcomingReminders() {
-        LocalDateTime now = LocalDateTime.now(ActivityScheduleService.CAMPUS_ZONE);
+        LocalDateTime now = LocalDateTime.now(IActivityScheduleService.CAMPUS_ZONE);
         var candidates = reminders.findCandidates(Constants.AUDIT_PASS, Constants.ACTIVITY_SIGNING,
                 Constants.ACTIVITY_FULL, Constants.MEMBER_APPROVED, now, now.plusHours(1));
         for (Candidate candidate : candidates) {
@@ -43,7 +43,7 @@ public class ActivityReminderTask {
     }
 
     private void sendIfEligible(Candidate candidate) {
-        LocalDateTime now = LocalDateTime.now(ActivityScheduleService.CAMPUS_ZONE);
+        LocalDateTime now = LocalDateTime.now(IActivityScheduleService.CAMPUS_ZONE);
         Reminder reminder = reminders.lockEligible(Constants.AUDIT_PASS, Constants.ACTIVITY_SIGNING,
                 Constants.ACTIVITY_FULL, Constants.MEMBER_APPROVED, now, now.plusHours(1),
                 candidate.memberId(), candidate.startTime());

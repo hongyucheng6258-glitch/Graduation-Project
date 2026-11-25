@@ -1,9 +1,9 @@
 package com.campus.platform.module.auth.controller;
 
-import com.campus.platform.common.R;
-import com.campus.platform.module.auth.service.CaptchaService;
+import com.campus.platform.common.Result;
+import com.campus.platform.module.auth.service.ICaptchaService;
 import com.campus.platform.module.auth.vo.CaptchaVO;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,13 +13,13 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
 public class CaptchaController {
 
-    private final CaptchaService captchaService;
+    @Resource
+    private ICaptchaService captchaService;
 
     @GetMapping("/captcha")
-    public R<CaptchaVO> captcha() {
-        return R.ok(captchaService.generate());
+    public Result<CaptchaVO> captcha() {
+        return Result.ok(captchaService.generate());
     }
 }

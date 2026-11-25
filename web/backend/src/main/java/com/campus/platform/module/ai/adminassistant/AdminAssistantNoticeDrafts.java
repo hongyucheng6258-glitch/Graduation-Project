@@ -4,7 +4,7 @@ import com.campus.platform.module.admin.audit.AdminOperationTarget;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
-import com.campus.platform.module.admin.service.AdminNoticeService;
+import com.campus.platform.module.admin.service.IAdminNoticeService;
 import com.campus.platform.module.ai.agent.AgentModelClient;
 import com.campus.platform.module.notice.dto.NoticeSaveDTO;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -28,7 +28,7 @@ public class AdminAssistantNoticeDrafts {
     private final AdminAssistantNoticeDraftMapper drafts;
     private final ObjectMapper json;
     private final AgentModelClient model;
-    private final AdminNoticeService notices;
+    private final IAdminNoticeService notices;
     private final AdminAssistantAccess access;
 
     Draft prepare(Long adminId, String request) {

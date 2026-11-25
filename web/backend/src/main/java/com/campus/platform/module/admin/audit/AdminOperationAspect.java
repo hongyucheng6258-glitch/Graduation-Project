@@ -1,10 +1,10 @@
 package com.campus.platform.module.admin.audit;
 
 import com.campus.platform.common.BizException;
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.admin.entity.AdminOperationLog;
-import com.campus.platform.module.admin.service.AdminOperationLogService;
+import com.campus.platform.module.admin.service.IAdminOperationLogService;
 import com.campus.platform.module.admin.service.AdminPermissionService;
 import com.campus.platform.module.ai.entity.PromptTemplate;
 import com.campus.platform.module.notice.entity.Notice;
@@ -26,7 +26,7 @@ public class AdminOperationAspect {
     private static final Set<String> REVIEW_TYPES = Set.of("idle", "activity", "lostfound", "post", "partner");
 
     private final AdminPermissionService permissions;
-    private final AdminOperationLogService logs;
+    private final IAdminOperationLogService logs;
 
     @Around("@annotation(operation)")
     public Object authorizeAndRecord(ProceedingJoinPoint call, AdminOperation operation) throws Throwable {
@@ -50,10 +50,10 @@ public class AdminOperationAspect {
         try {
             permissions.check(admin, operation.permission());
             Object response = call.proceed();
-            int code = response instanceof R<?> result ? result.getCode() : ResultCode.SUCCESS.getCode();
+            int code = response instanceof Result<?> result ? result.getCode() : ResultCode.SUCCESS.getCode();
             entry.setResultCode(code);
             entry.setSucceeded(code == ResultCode.SUCCESS.getCode().intValue());
-            if (entry.isSucceeded() && response instanceof R<?> result) {
+            if (entry.isSucceeded() && response instanceof Result<?> result) {
                 readResultTarget(entry, result.getData());
             }
             return response;

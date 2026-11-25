@@ -17,15 +17,15 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-class AdminAssistantEvidence {
+public class AdminAssistantEvidence {
     private final AdminAssistantEvidenceMapper evidence;
 
-    List<Ref> pendingIdle(String keyword) {
+    public List<Ref> pendingIdle(String keyword) {
         return evidence.findPendingIdle(Constants.AUDIT_PENDING, keywordTerm(keyword)).stream()
                 .map(id -> new Ref("idle", id)).toList();
     }
 
-    List<Ref> pendingActivity(Long id, String keyword) {
+    public List<Ref> pendingActivity(Long id, String keyword) {
         String term = id == null ? keywordTerm(keyword) : null;
         return evidence.findPendingActivity(Constants.AUDIT_PENDING, id, term).stream()
                 .map(itemId -> new Ref("activity", itemId)).toList();
@@ -37,12 +37,12 @@ class AdminAssistantEvidence {
                 : "%" + keyword.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
     }
 
-    List<Ref> report(long id) {
+    public List<Ref> report(long id) {
         if (id <= 0) throw new BizException(ResultCode.BAD_REQUEST, "举报编号无效");
         return List.of(new Ref("report", id));
     }
 
-    Map<Ref, Card> cards(List<Ref> refs) {
+    public Map<Ref, Card> cards(List<Ref> refs) {
         if (refs.isEmpty()) return Map.of();
         var byKind = refs.stream().distinct().collect(Collectors.groupingBy(Ref::kind));
         var cards = new HashMap<Ref, Card>();
@@ -104,11 +104,11 @@ class AdminAssistantEvidence {
     }
 
     private record Report(long id, int status, Ref target, String reason) {}
-    record Ref(String kind, long id) {}
-    record Target(String kind, String id, String title, String excerpt) {}
-    record ActivityFields(String location, LocalDateTime startTime, LocalDateTime endTime, Integer maxMembers,
+    public record Ref(String kind, long id) {}
+    public record Target(String kind, String id, String title, String excerpt) {}
+    public record ActivityFields(String location, LocalDateTime startTime, LocalDateTime endTime, Integer maxMembers,
                           LocalDateTime signupDeadline, String version) {}
-    record Card(String kind, String id, String title, int status, Integer riskLevel, String riskReason,
+    public record Card(String kind, String id, String title, int status, Integer riskLevel, String riskReason,
                 String excerpt, String reason, Target target,
                 @JsonInclude(JsonInclude.Include.NON_NULL) ActivityFields activity) {
         Ref ref() { return new Ref(kind, Long.parseLong(id)); }

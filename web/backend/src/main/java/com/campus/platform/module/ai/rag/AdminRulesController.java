@@ -1,9 +1,9 @@
 package com.campus.platform.module.ai.rag;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.module.ai.adminassistant.AdminAssistantAccess;
 import com.campus.platform.module.ai.mapper.PdfDocumentMapper;
-import com.campus.platform.module.ai.service.PdfService;
+import com.campus.platform.module.ai.service.IPdfService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -25,42 +25,42 @@ import java.util.List;
 public class AdminRulesController {
     private static final String SCOPE = "ADMIN";
     private final AdminAssistantAccess access;
-    private final KnowledgeService knowledge;
-    private final KnowledgeAnswerService answers;
-    private final PdfService pdfService;
+    private final IKnowledgeService knowledge;
+    private final IKnowledgeAnswerService answers;
+    private final IPdfService pdfService;
     private final PdfDocumentMapper pdfs;
 
     @GetMapping
-    public R<List<KnowledgeService.PublicDocument>> list() {
+    public Result<List<IKnowledgeService.PublicDocument>> list() {
         access.requireAccess();
-        return R.ok(knowledge.documents(SCOPE));
+        return Result.ok(knowledge.documents(SCOPE));
     }
 
     @PostMapping
     @Transactional
-    public R<KnowledgeService.Status> upload(@RequestParam MultipartFile file) {
+    public Result<IKnowledgeService.Status> upload(@RequestParam MultipartFile file) {
         var admin = access.requireSuper();
         var uploaded = pdfService.upload(-admin.getId(), file);
-        return R.ok(knowledge.enqueuePdf(pdfs.selectById(uploaded.getDocId()), SCOPE));
+        return Result.ok(knowledge.enqueuePdf(pdfs.selectById(uploaded.getDocId()), SCOPE));
     }
 
     @PostMapping("/{id}/reindex")
-    public R<KnowledgeService.Status> reindex(@PathVariable long id) {
+    public Result<IKnowledgeService.Status> reindex(@PathVariable long id) {
         access.requireSuper();
-        return R.ok(knowledge.reindexScoped(id, SCOPE));
+        return Result.ok(knowledge.reindexScoped(id, SCOPE));
     }
 
     @DeleteMapping("/{id}")
-    public R<Void> withdraw(@PathVariable long id) {
+    public Result<Void> withdraw(@PathVariable long id) {
         access.requireSuper();
         knowledge.remove(id, null, SCOPE);
-        return R.ok();
+        return Result.ok();
     }
 
     @PostMapping("/ask")
-    public R<KnowledgeAnswerService.InternalReply> ask(@Valid @RequestBody Question request) {
+    public Result<IKnowledgeAnswerService.InternalReply> ask(@Valid @RequestBody Question request) {
         access.charge(access.requireAccess().getId());
-        return R.ok(answers.askInternal(request.question().strip()));
+        return Result.ok(answers.askInternal(request.question().strip()));
     }
 
     @GetMapping("/{id}/file")

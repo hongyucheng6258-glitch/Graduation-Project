@@ -3,7 +3,7 @@ package com.campus.platform.module.ai.agent;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.activity.dto.SignupDTO;
-import com.campus.platform.module.activity.service.ActivityService;
+import com.campus.platform.module.activity.service.IActivityService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.campus.platform.module.ai.mapper.ActivitySignupActionMapper;
@@ -19,7 +19,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class ActivitySignupActions implements AgentToolSource {
-    private final ActivityService activities;
+    private final IActivityService activities;
     private final ActivitySignupActionMapper actions;
     private final ObjectMapper json;
 

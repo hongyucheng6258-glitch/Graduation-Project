@@ -1,8 +1,8 @@
 package com.campus.platform.module.ai.mapper;
 
-import com.campus.platform.module.ai.rag.KnowledgeService.Evidence;
-import com.campus.platform.module.ai.rag.KnowledgeService.PublicDocument;
-import com.campus.platform.module.ai.rag.KnowledgeService.Status;
+import com.campus.platform.module.ai.rag.IKnowledgeService.Evidence;
+import com.campus.platform.module.ai.rag.IKnowledgeService.PublicDocument;
+import com.campus.platform.module.ai.rag.IKnowledgeService.Status;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;

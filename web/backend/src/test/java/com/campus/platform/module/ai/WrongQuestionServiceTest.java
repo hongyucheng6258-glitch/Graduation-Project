@@ -1,9 +1,11 @@
 package com.campus.platform.module.ai;
 
+import com.campus.platform.module.ai.service.WrongQuestionServiceImpl;
+
 import com.campus.platform.module.ai.mapper.WrongQuestionGeneratedMapper;
 import com.campus.platform.module.ai.mapper.WrongQuestionReviewMapper;
 import com.campus.platform.module.ai.entity.WrongQuestionGenerated;
-import com.campus.platform.module.ai.service.WrongQuestionService;
+import com.campus.platform.module.ai.service.IWrongQuestionService;
 import com.campus.platform.module.ai.vo.WrongQuestionStatsVO;
 import com.campus.platform.module.ai.mapper.WrongQuestionMapper;
 import com.campus.platform.module.ai.entity.WrongQuestionReview;
@@ -53,7 +55,7 @@ class WrongQuestionServiceTest {
     private WrongQuestionGeneratedMapper wrongQuestionGeneratedMapper;
 
     @InjectMocks
-    private WrongQuestionService service;
+    private WrongQuestionServiceImpl service;
 
     // ---------- 快速收录 ----------
 

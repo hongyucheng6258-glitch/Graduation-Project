@@ -9,11 +9,10 @@ import com.campus.platform.module.admin.controller.AdminAiController;
 import com.campus.platform.module.admin.entity.Admin;
 import com.campus.platform.module.admin.entity.AdminOperationLog;
 import com.campus.platform.module.admin.mapper.AdminMapper;
-import com.campus.platform.module.admin.service.AdminOperationLogService;
+import com.campus.platform.module.admin.service.IAdminOperationLogService;
 import com.campus.platform.module.admin.service.AdminPermissionService;
-import com.campus.platform.module.admin.service.AiAdminService;
+import com.campus.platform.module.admin.service.IAiAdminService;
 import com.campus.platform.module.ai.dto.AiConfigUpdateDTO;
-import com.campus.platform.utils.RedisUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,9 +30,9 @@ import static org.mockito.Mockito.when;
 
 class AdminOperationAspectTest {
     private final AdminMapper admins = mock(AdminMapper.class);
-    private final AdminPermissionService permissions = new AdminPermissionService(admins, mock(RedisUtils.class));
-    private final AdminOperationLogService logs = mock(AdminOperationLogService.class);
-    private final AiAdminService configs = mock(AiAdminService.class);
+    private final AdminPermissionService permissions = new AdminPermissionService(admins);
+    private final IAdminOperationLogService logs = mock(IAdminOperationLogService.class);
+    private final IAiAdminService configs = mock(IAiAdminService.class);
     private final Admin admin = new Admin();
     private AdminAiController controller;
 

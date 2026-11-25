@@ -43,7 +43,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 针对当前 AiGatewayService 实现的同步调用测试。
+ * 针对当前 IAiGatewayService 实现的同步调用测试。
  *
  * 当前生产实现直接依赖 OkHttp、PromptTemplateMapper 和 RedisUtils，
  * 因此测试使用本地 HTTP 服务验证真实请求，不再引用已删除的旧网关组件。
@@ -61,13 +61,13 @@ class AiGatewayServiceTest {
     private volatile String responseBody;
 
     private AiConfigHolder configHolder;
-    private ChatMemoryService chatMemoryService;
+    private IChatMemoryService chatMemoryService;
     private SensitiveWordService sensitiveWordService;
     private PromptTemplateMapper promptTemplateMapper;
     private AiCallLogMapper aiCallLogMapper;
     private PdfDocumentMapper pdfDocumentMapper;
     private RedisUtils redisUtils;
-    private AiGatewayService gateway;
+    private AiGatewayServiceImpl gateway;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -85,7 +85,7 @@ class AiGatewayServiceTest {
         server.start();
 
         configHolder = mock(AiConfigHolder.class);
-        chatMemoryService = mock(ChatMemoryService.class);
+        chatMemoryService = mock(IChatMemoryService.class);
         sensitiveWordService = mock(SensitiveWordService.class);
         promptTemplateMapper = mock(PromptTemplateMapper.class);
         aiCallLogMapper = mock(AiCallLogMapper.class);
@@ -105,7 +105,7 @@ class AiGatewayServiceTest {
 
         responseStatus = 200;
         responseBody = successResponse("答案", 11, 22);
-        gateway = new AiGatewayService(configHolder, chatMemoryService, sensitiveWordService,
+        gateway = new AiGatewayServiceImpl(configHolder, chatMemoryService, sensitiveWordService,
                 promptTemplateMapper, aiCallLogMapper, pdfDocumentMapper, redisUtils);
     }
 

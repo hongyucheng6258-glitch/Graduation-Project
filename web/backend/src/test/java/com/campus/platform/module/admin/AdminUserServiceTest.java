@@ -1,17 +1,18 @@
 package com.campus.platform.module.admin;
 
-import com.campus.platform.module.admin.service.AdminUserService;
-import com.campus.platform.module.admin.service.AdminPermissionService;
-import com.campus.platform.module.admin.mapper.AdminMapper;
+import com.campus.platform.module.admin.service.impl.AdminUserServiceImpl;
 
-import com.campus.platform.module.auth.service.AuthService;
+import com.campus.platform.module.auth.service.impl.AuthServiceImpl;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
+import com.campus.platform.module.admin.mapper.AdminMapper;
+import com.campus.platform.module.admin.service.IAdminUserService;
+import com.campus.platform.module.auth.service.IAuthService;
+import com.campus.platform.module.auth.service.TokenService;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
-import com.campus.platform.utils.RedisUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -26,19 +27,18 @@ import org.mockito.quality.Strictness;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * P1-1 回归：D1 用户禁用/解封与鉴权黑名单联动。
+ * 管理端用户管理：禁用/解封与登录态联动。
  *
- * <p>关键约束：本类写入的 Redis key 必须与 {@code JwtInterceptor} 查询的 key 逐字符一致，
- * 否则黑名单会「静默失效」——没有异常、没有编译错误，只是封禁不生效。
- * 因此这里用 ArgumentCaptor 锁定 key 的字面量格式。
+ * <p>禁用学生后必须清掉其全部登录态（Sa-Token kickout），否则存量 token 仍可调用接口；
+ * 解封不重新签发，学生重新登录即可。
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("P1-1 AdminUserService 禁用/解封与黑名单联动")
+@DisplayName("IAdminUserService 禁用/解封与登录态联动")
 class AdminUserServiceTest {
 
     @Mock
@@ -46,16 +46,15 @@ class AdminUserServiceTest {
     @Mock
     private AdminMapper adminMapper;
     @Mock
-    private AuthService authService;
+    private AuthServiceImpl authService;
     @Mock
-    private RedisUtils redisUtils;
-    @Mock
-    private AdminPermissionService adminPermissionService;
+    private TokenService tokenService;
 
     @Mock private com.campus.platform.module.chat.websocket.ChatSessionRegistry chatSessions;
     @Mock private com.campus.platform.module.drawgame.websocket.DrawGuessSessionRegistry drawSessions;
+
     @InjectMocks
-    private AdminUserService adminUserService;
+    private AdminUserServiceImpl adminUserService;
 
     private User existingUser(long id) {
         User u = new User();
@@ -70,8 +69,8 @@ class AdminUserServiceTest {
     class Ban {
 
         @Test
-        @DisplayName("禁用应落库 status=1 并写入黑名单")
-        void ban_shouldPersistStatusAndWriteBlacklist() {
+        @DisplayName("禁用应落库 status=1 并清掉登录态")
+        void ban_shouldPersistStatusAndKickout() {
             when(userMapper.selectById(42L)).thenReturn(existingUser(42L));
 
             adminUserService.updateStatus(42L, Constants.USER_STATUS_BANNED);
@@ -79,28 +78,12 @@ class AdminUserServiceTest {
             ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
             verify(userMapper).updateById(saved.capture());
             assertThat(saved.getValue().getStatus())
-                    .as("禁用语义由 Constants.USER_STATUS_BANNED 定义，须与 AuthService.login 的判断一致")
+                    .as("禁用语义由 Constants.USER_STATUS_BANNED 定义，须与 IAuthService.login 的判断一致")
                     .isEqualTo(Constants.USER_STATUS_BANNED);
 
-            verify(redisUtils).set("auth:blacklist:" + Constants.ROLE_STUDENT + ":42", "1");
-            verify(redisUtils, never()).delete(anyString());
-        }
-
-        @Test
-        @DisplayName("黑名单 key 格式必须与 JwtInterceptor 查询格式逐字符对齐")
-        void blacklistKey_mustMatchInterceptorLookupFormat() {
-            when(userMapper.selectById(42L)).thenReturn(existingUser(42L));
-
-            adminUserService.updateStatus(42L, Constants.USER_STATUS_BANNED);
-
-            ArgumentCaptor<String> key = ArgumentCaptor.forClass(String.class);
-            verify(redisUtils).set(key.capture(), eq("1"));
-
-            // JwtInterceptor 拼接方式：("auth:blacklist:" + role + ":" + uid)，role 取自 JWT
-            String interceptorLookupKey = "auth:blacklist:" + Constants.ROLE_STUDENT + ":" + 42L;
-            assertThat(key.getValue())
-                    .as("写入 key 与拦截器查询 key 一旦不一致，封禁将静默失效（无异常、无日志）")
-                    .isEqualTo(interceptorLookupKey);
+            verify(tokenService).kickoutStudent(42L);
+            verify(chatSessions).closeUserSessions(42L);
+            verify(drawSessions).closeUserSessions(42L);
         }
     }
 
@@ -109,8 +92,8 @@ class AdminUserServiceTest {
     class Unban {
 
         @Test
-        @DisplayName("解封应落库 status=0 并移除黑名单")
-        void unban_shouldPersistStatusAndRemoveBlacklist() {
+        @DisplayName("解封应落库 status=0，不触发登录态清理")
+        void unban_shouldPersistStatusWithoutKickout() {
             when(userMapper.selectById(42L)).thenReturn(existingUser(42L));
 
             adminUserService.updateStatus(42L, Constants.USER_STATUS_NORMAL);
@@ -119,8 +102,8 @@ class AdminUserServiceTest {
             verify(userMapper).updateById(saved.capture());
             assertThat(saved.getValue().getStatus()).isEqualTo(Constants.USER_STATUS_NORMAL);
 
-            verify(redisUtils).delete("auth:blacklist:" + Constants.ROLE_STUDENT + ":42");
-            verify(redisUtils, never()).set(anyString(), any());
+            verify(tokenService, never()).kickoutStudent(anyLong());
+            verify(chatSessions, never()).closeUserSessions(anyLong());
         }
 
         @Test
@@ -131,7 +114,8 @@ class AdminUserServiceTest {
             adminUserService.updateStatus(42L, Constants.USER_STATUS_NORMAL);
             adminUserService.updateStatus(42L, Constants.USER_STATUS_NORMAL);
 
-            verify(redisUtils, times(2)).delete("auth:blacklist:student:42");
+            verify(userMapper, times(2)).updateById(any(User.class));
+            verify(tokenService, never()).kickoutStudent(anyLong());
         }
     }
 
@@ -140,8 +124,8 @@ class AdminUserServiceTest {
     class EdgeCases {
 
         @Test
-        @DisplayName("用户不存在应抛 404，且不得写任何黑名单")
-        void userNotFound_shouldThrow404AndNotTouchRedis() {
+        @DisplayName("用户不存在应抛 404，且不得清理任何登录态")
+        void userNotFound_shouldThrow404AndNotKickout() {
             when(userMapper.selectById(999L)).thenReturn(null);
 
             assertThatThrownBy(() -> adminUserService.updateStatus(999L, Constants.USER_STATUS_BANNED))
@@ -149,8 +133,7 @@ class AdminUserServiceTest {
                     .hasFieldOrPropertyWithValue("code", ResultCode.NOT_FOUND.getCode());
 
             verify(userMapper, never()).updateById(any(User.class));
-            verify(redisUtils, never()).set(anyString(), any());
-            verify(redisUtils, never()).delete(anyString());
+            verify(tokenService, never()).kickoutStudent(anyLong());
         }
 
         @Test
@@ -160,26 +143,24 @@ class AdminUserServiceTest {
 
             adminUserService.updateStatus(42L, null);
 
-            // 源码用 (status != null && status == 1) 判断，null 落到 else 分支
-            verify(redisUtils).delete("auth:blacklist:student:42");
+            verify(tokenService, never()).kickoutStudent(anyLong());
         }
 
         @Test
-        @DisplayName("禁用→解封→再禁用，黑名单应随状态正确翻转")
-        void banUnbanBan_shouldFlipBlacklistConsistently() {
+        @DisplayName("禁用→解封→再禁用，登录态应只在禁用时清理")
+        void banUnbanBan_shouldKickoutOnEachBan() {
             when(userMapper.selectById(42L)).thenReturn(existingUser(42L));
 
             adminUserService.updateStatus(42L, Constants.USER_STATUS_BANNED);
             adminUserService.updateStatus(42L, Constants.USER_STATUS_NORMAL);
             adminUserService.updateStatus(42L, Constants.USER_STATUS_BANNED);
 
-            verify(redisUtils, times(2)).set("auth:blacklist:student:42", "1");
-            verify(redisUtils, times(1)).delete("auth:blacklist:student:42");
+            verify(tokenService, times(2)).kickoutStudent(42L);
         }
     }
 
     @Nested
-    @DisplayName("子管理员删除/降权后令牌撤销（P1）")
+    @DisplayName("子管理员删除/降权后登录态清理")
     class AdminTokenRevocation {
 
         private com.campus.platform.module.admin.entity.Admin existingAdmin(long id, String role) {
@@ -192,20 +173,20 @@ class AdminUserServiceTest {
         }
 
         @Test
-        @DisplayName("删除管理员后必须撤销其存量令牌")
-        void deleteAdmin_shouldRevokeToken() {
+        @DisplayName("删除管理员后必须清掉其全部登录态")
+        void deleteAdmin_shouldKickout() {
             when(adminMapper.selectById(7L)).thenReturn(existingAdmin(7L, "audit"));
             when(adminMapper.selectCount(any())).thenReturn(5L);
 
             adminUserService.deleteAdmin(7L, 1L);
 
             verify(adminMapper).deleteById(7L);
-            verify(adminPermissionService).revokeToken(7L);
+            verify(tokenService).kickoutAdmin(7L);
         }
 
         @Test
-        @DisplayName("修改角色（如 super 降为 audit）后必须撤销其存量令牌")
-        void updateAdmin_roleChanged_shouldRevokeToken() {
+        @DisplayName("修改角色（如 super 降为 audit）后必须清掉其全部登录态")
+        void updateAdmin_roleChanged_shouldKickout() {
             when(adminMapper.selectById(7L)).thenReturn(existingAdmin(7L, "super"));
 
             com.campus.platform.module.admin.dto.AdminSaveDTO dto = new com.campus.platform.module.admin.dto.AdminSaveDTO();
@@ -214,12 +195,12 @@ class AdminUserServiceTest {
             dto.setRole("audit");
             adminUserService.updateAdmin(7L, dto);
 
-            verify(adminPermissionService).revokeToken(7L);
+            verify(tokenService).kickoutAdmin(7L);
         }
 
         @Test
-        @DisplayName("角色未变化时不触发令牌撤销")
-        void updateAdmin_roleUnchanged_shouldNotRevoke() {
+        @DisplayName("角色未变化时不触发登录态清理")
+        void updateAdmin_roleUnchanged_shouldNotKickout() {
             when(adminMapper.selectById(7L)).thenReturn(existingAdmin(7L, "audit"));
 
             com.campus.platform.module.admin.dto.AdminSaveDTO dto = new com.campus.platform.module.admin.dto.AdminSaveDTO();
@@ -228,11 +209,11 @@ class AdminUserServiceTest {
             dto.setRole("audit");
             adminUserService.updateAdmin(7L, dto);
 
-            verify(adminPermissionService, never()).revokeToken(anyLong());
+            verify(tokenService, never()).kickoutAdmin(anyLong());
         }
 
         @Test
-        @DisplayName("不能删除最后一个超级管理员，且不得撤销令牌")
+        @DisplayName("不能删除最后一个超级管理员，且不得清理登录态")
         void deleteLastSuper_shouldBeRejected() {
             when(adminMapper.selectById(7L)).thenReturn(existingAdmin(7L, "super"));
             when(adminMapper.selectCount(any())).thenReturn(1L);
@@ -242,7 +223,7 @@ class AdminUserServiceTest {
                     .hasFieldOrPropertyWithValue("code", ResultCode.BAD_REQUEST.getCode());
 
             verify(adminMapper, never()).deleteById(anyLong());
-            verify(adminPermissionService, never()).revokeToken(anyLong());
+            verify(tokenService, never()).kickoutAdmin(anyLong());
         }
     }
 }

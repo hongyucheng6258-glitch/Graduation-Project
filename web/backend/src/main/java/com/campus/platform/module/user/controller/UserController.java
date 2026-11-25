@@ -2,73 +2,75 @@ package com.campus.platform.module.user.controller;
 
 import com.campus.platform.module.user.dto.PasswordUpdateDTO;
 import com.campus.platform.module.user.dto.ProfileUpdateDTO;
-import com.campus.platform.module.user.service.UserPublicService;
-import com.campus.platform.module.user.service.UserService;
+import com.campus.platform.module.user.service.IUserPublicService;
+import com.campus.platform.module.user.service.IUserService;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.vo.UserContentVO;
 import com.campus.platform.module.user.vo.UserProfileVO;
 import com.campus.platform.module.user.vo.UserReviewVO;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/user")
-@RequiredArgsConstructor
 public class UserController {
-    private final UserService userService;
-    private final UserPublicService userPublicService;
+    @Resource
+    private IUserService userService;
+
+    @Resource
+    private IUserPublicService userPublicService;
 
     @GetMapping("/info")
-    public R<User> info() {
-        return R.ok(userService.getById(UserContext.getUid()));
+    public Result<User> info() {
+        return Result.ok(userService.getById(UserContext.getUid()));
     }
 
     @PutMapping("/profile")
-    public R<User> updateProfile(@Valid @RequestBody ProfileUpdateDTO dto) {
-        return R.ok(userService.updateProfile(UserContext.getUid(), dto));
+    public Result<User> updateProfile(@Valid @RequestBody ProfileUpdateDTO dto) {
+        return Result.ok(userService.updateProfile(UserContext.getUid(), dto));
     }
 
     @PutMapping("/password")
-    public R<Void> updatePassword(@Valid @RequestBody PasswordUpdateDTO dto) {
+    public Result<Void> updatePassword(@Valid @RequestBody PasswordUpdateDTO dto) {
         userService.updatePassword(UserContext.getUid(), dto);
-        return R.ok();
+        return Result.ok();
     }
 
     /* ---------- 他人主页（公开只读，脱敏） ---------- */
 
     @GetMapping("/profile/{id}")
-    public R<UserProfileVO> profile(@PathVariable Long id) {
-        return R.ok(userPublicService.profile(id));
+    public Result<UserProfileVO> profile(@PathVariable Long id) {
+        return Result.ok(userPublicService.profile(id));
     }
 
     @GetMapping("/{id}/idles")
-    public R<List<UserContentVO>> idles(@PathVariable Long id) {
-        return R.ok(userPublicService.idles(id));
+    public Result<List<UserContentVO>> idles(@PathVariable Long id) {
+        return Result.ok(userPublicService.idles(id));
     }
 
     @GetMapping("/{id}/posts")
-    public R<List<UserContentVO>> posts(@PathVariable Long id) {
-        return R.ok(userPublicService.posts(id));
+    public Result<List<UserContentVO>> posts(@PathVariable Long id) {
+        return Result.ok(userPublicService.posts(id));
     }
 
     @GetMapping("/{id}/activities")
-    public R<List<UserContentVO>> activities(@PathVariable Long id) {
-        return R.ok(userPublicService.activities(id));
+    public Result<List<UserContentVO>> activities(@PathVariable Long id) {
+        return Result.ok(userPublicService.activities(id));
     }
 
     @GetMapping("/{id}/lostfounds")
-    public R<List<UserContentVO>> lostfounds(@PathVariable Long id) {
-        return R.ok(userPublicService.lostfounds(id));
+    public Result<List<UserContentVO>> lostfounds(@PathVariable Long id) {
+        return Result.ok(userPublicService.lostfounds(id));
     }
 
     @GetMapping("/{id}/reviews")
-    public R<List<UserReviewVO>> reviews(@PathVariable Long id) {
-        return R.ok(userPublicService.reviews(id));
+    public Result<List<UserReviewVO>> reviews(@PathVariable Long id) {
+        return Result.ok(userPublicService.reviews(id));
     }
 }

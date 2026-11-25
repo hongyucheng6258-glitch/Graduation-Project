@@ -1,7 +1,7 @@
 package com.campus.platform.module.drawgame.websocket;
 
 import com.campus.platform.common.BizException;
-import com.campus.platform.module.drawgame.service.DrawGuessRoomService;
+import com.campus.platform.module.drawgame.service.IDrawGuessRoomService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ public class DrawGuessWebSocketHandler extends TextWebSocketHandler {
     private static final int MAX_MESSAGE_BYTES = 8192;
 
     private final ObjectMapper objectMapper;
-    private final DrawGuessRoomService roomService;
+    private final IDrawGuessRoomService roomService;
     private final DrawGuessSessionRegistry sessionRegistry;
 
     @Override

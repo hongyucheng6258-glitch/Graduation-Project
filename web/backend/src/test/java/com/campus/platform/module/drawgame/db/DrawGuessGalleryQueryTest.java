@@ -1,15 +1,17 @@
 package com.campus.platform.module.drawgame.db;
 
+import com.campus.platform.module.drawgame.service.impl.DrawGuessRoomServiceImpl;
+
 import com.campus.platform.module.drawgame.entity.DrawGuessRoom;
 import com.campus.platform.module.drawgame.entity.DrawGuessRound;
 import com.campus.platform.module.drawgame.mapper.DrawGuessMemberMapper;
 import com.campus.platform.module.drawgame.mapper.DrawGuessRoomMapper;
 import com.campus.platform.module.drawgame.mapper.DrawGuessRoundMapper;
 import com.campus.platform.module.drawgame.mapper.DrawGuessWordMapper;
-import com.campus.platform.module.drawgame.service.DrawGuessRoomService;
+import com.campus.platform.module.drawgame.service.IDrawGuessRoomService;
 import com.campus.platform.module.upload.entity.UploadResource;
 import com.campus.platform.module.upload.mapper.UploadResourceMapper;
-import com.campus.platform.module.upload.service.UploadService;
+import com.campus.platform.module.upload.service.IUploadService;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.user.mapper.UserMapper;
 import com.campus.platform.module.drawgame.websocket.DrawGuessSessionRegistry;
@@ -78,7 +80,7 @@ class DrawGuessGalleryQueryTest {
         DrawGuessWordMapper wordMapper = mock(DrawGuessWordMapper.class);
         UserMapper userMapper = mock(UserMapper.class);
         UploadResourceMapper resourceMapper = mock(UploadResourceMapper.class);
-        UploadService uploadService = mock(UploadService.class);
+        IUploadService uploadService = mock(IUploadService.class);
 
         DrawGuessRoom room = new DrawGuessRoom();
         room.setId(88L);
@@ -95,7 +97,7 @@ class DrawGuessGalleryQueryTest {
         drawer.setNickname("画手小林");
         when(userMapper.selectById(7L)).thenReturn(drawer);
 
-        DrawGuessRoomService service = new DrawGuessRoomService(roomMapper, memberMapper, roundMapper,
+        IDrawGuessRoomService service = new DrawGuessRoomServiceImpl(roomMapper, memberMapper, roundMapper,
                 wordMapper, userMapper, resourceMapper, uploadService,
                 new DrawGuessSessionRegistry(new ObjectMapper()));
         try {

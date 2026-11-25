@@ -1,9 +1,13 @@
 package com.campus.platform.module.idle;
 
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.ai.service.ContentAiAuditServiceImpl;
 
-import com.campus.platform.module.ai.service.ContentAiAuditService;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.impl.MessageServiceImpl;
+
+import com.campus.platform.module.idle.service.impl.IdleServiceImpl;
+
+import com.campus.platform.module.ai.service.IContentAiAuditService;
+import com.campus.platform.module.message.service.IMessageService;
 
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
 import com.campus.platform.common.Constants;
@@ -45,25 +49,17 @@ class IdleDetailReviewEntryTest {
     @Mock
     private UserMapper userMapper;
     @Mock
-    private MessageService messageService;
+    private MessageServiceImpl messageService;
     @Mock
     private SensitiveWordService sensitiveWordService;
     @Mock
-    private ContentAiAuditService contentAiAuditService;
+    private ContentAiAuditServiceImpl contentAiAuditService;
 
-    private IdleService idleService;
+    @org.mockito.InjectMocks
+    private IdleServiceImpl idleService;
 
     @BeforeEach
     void setUp() {
-        idleService = new IdleService(
-                idleItemMapper,
-                appointmentMapper,
-                reviewMapper,
-                userMapper,
-                messageService,
-                sensitiveWordService,
-                contentAiAuditService,
-                org.mockito.Mockito.mock(com.campus.platform.module.idle.service.IdleHandoffService.class));
     }
 
     @Test

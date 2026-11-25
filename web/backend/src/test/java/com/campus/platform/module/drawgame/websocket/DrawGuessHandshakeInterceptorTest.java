@@ -1,6 +1,10 @@
 package com.campus.platform.module.drawgame.websocket;
 
-import com.campus.platform.module.drawgame.service.DrawGuessRoomService;
+import com.campus.platform.module.drawgame.service.impl.DrawGuessRoomServiceImpl;
+
+import com.campus.platform.module.drawgame.websocket.impl.DrawGuessWsTicketServiceImpl;
+
+import com.campus.platform.module.drawgame.service.IDrawGuessRoomService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -17,9 +21,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DrawGuessHandshakeInterceptorTest {
     @Mock
-    private DrawGuessWsTicketService ticketService;
+    private DrawGuessWsTicketServiceImpl ticketService;
     @Mock
-    private DrawGuessRoomService roomService;
+    private DrawGuessRoomServiceImpl roomService;
     @Mock
     private ServerHttpResponse response;
 
@@ -28,7 +32,7 @@ class DrawGuessHandshakeInterceptorTest {
         MockHttpServletRequest servletRequest = new MockHttpServletRequest();
         servletRequest.setParameter("ticket", "single-use-ticket");
         when(ticketService.consume("single-use-ticket"))
-                .thenReturn(new DrawGuessWsTicketService.TicketClaims(19L, 7L));
+                .thenReturn(new IDrawGuessWsTicketService.TicketClaims(19L, 7L));
         when(roomService.isActiveMember(7L, 19L)).thenReturn(true);
         HashMap<String, Object> attributes = new HashMap<>();
 
@@ -54,7 +58,7 @@ class DrawGuessHandshakeInterceptorTest {
 
         servletRequest.setParameter("ticket", "not-member");
         when(ticketService.consume("not-member"))
-                .thenReturn(new DrawGuessWsTicketService.TicketClaims(20L, 7L));
+                .thenReturn(new IDrawGuessWsTicketService.TicketClaims(20L, 7L));
         when(roomService.isActiveMember(7L, 20L)).thenReturn(false);
         assertFalse(interceptor.beforeHandshake(new ServletServerHttpRequest(servletRequest),
                 response, null, new HashMap<>()));

@@ -1,13 +1,21 @@
 package com.campus.platform.module.ai;
 
+import com.campus.platform.module.ai.service.AiChatServiceImpl;
+
+import com.campus.platform.module.ai.service.WrongQuestionServiceImpl;
+
+import com.campus.platform.module.ai.gateway.ChatMemoryServiceImpl;
+
+import com.campus.platform.module.ai.gateway.AiGatewayServiceImpl;
+
 import com.campus.platform.module.ai.mapper.WrongQuestionGeneratedMapper;
 import com.campus.platform.module.ai.entity.WrongQuestionGenerated;
-import com.campus.platform.module.ai.service.WrongQuestionService;
+import com.campus.platform.module.ai.service.IWrongQuestionService;
 import com.campus.platform.module.ai.vo.GeneratedQuestionVO;
 import com.campus.platform.module.ai.mapper.PdfDocumentMapper;
 import com.campus.platform.module.ai.mapper.AiMessageMapper;
 import com.campus.platform.module.ai.mapper.AiSessionMapper;
-import com.campus.platform.module.ai.service.AiChatService;
+import com.campus.platform.module.ai.service.IAiChatService;
 import com.campus.platform.module.ai.entity.WrongQuestion;
 import com.campus.platform.module.ai.entity.PdfDocument;
 import com.campus.platform.module.ai.entity.AiSession;
@@ -15,8 +23,8 @@ import com.campus.platform.module.ai.dto.PdfAskDTO;
 import com.campus.platform.module.ai.dto.OutlineDTO;
 import com.campus.platform.module.ai.dto.QuizDTO;
 
-import com.campus.platform.module.ai.gateway.AiGatewayService;
-import com.campus.platform.module.ai.gateway.ChatMemoryService;
+import com.campus.platform.module.ai.gateway.IAiGatewayService;
+import com.campus.platform.module.ai.gateway.IChatMemoryService;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import org.junit.jupiter.api.DisplayName;
@@ -53,18 +61,18 @@ class AiChatServiceTest {
     @Mock
     private AiMessageMapper aiMessageMapper;
     @Mock
-    private AiGatewayService aiGatewayService;
+    private AiGatewayServiceImpl aiGatewayService;
     @Mock
-    private ChatMemoryService chatMemoryService;
+    private ChatMemoryServiceImpl chatMemoryService;
     @Mock
-    private WrongQuestionService wrongQuestionService;
+    private WrongQuestionServiceImpl wrongQuestionService;
     @Mock
     private PdfDocumentMapper pdfDocumentMapper;
     @Mock
     private WrongQuestionGeneratedMapper wrongQuestionGeneratedMapper;
 
     @InjectMocks
-    private AiChatService service;
+    private AiChatServiceImpl service;
 
     @Test
     @DisplayName("已有 PDF 会话提问时应持久化最新文档ID")

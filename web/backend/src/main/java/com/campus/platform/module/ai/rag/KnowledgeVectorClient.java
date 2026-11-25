@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 @ConditionalOnProperty(name = "campus.agent.rag.enabled", havingValue = "true")
-class KnowledgeVectorClient {
+public class KnowledgeVectorClient {
     private static final MediaType JSON = MediaType.get("application/json");
     private final OkHttpClient http = new OkHttpClient.Builder().callTimeout(Duration.ofSeconds(25))
             .followRedirects(false).build();

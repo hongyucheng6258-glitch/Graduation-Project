@@ -5,7 +5,7 @@ import cn.hutool.crypto.SecureUtil;
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.activity.dto.ActivityPublishDTO;
-import com.campus.platform.module.activity.service.ActivityService;
+import com.campus.platform.module.activity.service.IActivityService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -43,7 +43,7 @@ public class ActivityPublishDrafts implements AgentToolSource {
 
     private final AgentActivityDraftMapper drafts;
     private final ObjectMapper json;
-    private final ActivityService activities;
+    private final IActivityService activities;
 
     @Override
     public List<AgentTool> tools() {

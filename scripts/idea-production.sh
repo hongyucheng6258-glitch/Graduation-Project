@@ -89,7 +89,7 @@ write_settings() {
     local key value
     while IFS='=' read -r key value; do
         case "$key" in
-            MYSQL_USER|MYSQL_PASSWORD|MYSQL_DB|REDIS_PASSWORD|JWT_SECRET|SIGNIN_SECRET|TRUSTED_ORIGINS|AI_API_KEY|AI_BASE_URL|AI_MODEL|CAMPUS_ADMIN_ASSISTANT_ENABLED|MINIO_*)
+            MYSQL_USER|MYSQL_PASSWORD|MYSQL_DB|REDIS_PASSWORD|SIGNIN_SECRET|TRUSTED_ORIGINS|AI_API_KEY|AI_BASE_URL|AI_MODEL|CAMPUS_ADMIN_ASSISTANT_ENABLED|MINIO_*)
                 property "$key" "$value" ;;
             PLATFORM_CAPTCHA_ENABLED) property platform.captcha.enabled "$value" ;;
             PLATFORM_SMS_CONSOLE_ENABLED) property platform.sms.console-enabled "$value" ;;
@@ -132,8 +132,7 @@ SQL
         [[ "$active_rooms" = 0 ]] || fail "还有 $active_rooms 个画板房间等待或进行中，请等房间关闭后再切换。"
 
         prepared=$(mktemp "${settings}.XXXXXX")
-        if ! write_settings > "$prepared" || ! grep -q '^JWT_SECRET=.' "$prepared" ||
-            ! grep -q '^MYSQL_PASSWORD=.' "$prepared" || ! grep -q '^REDIS_PASSWORD=.' "$prepared"; then
+        if ! write_settings > "$prepared" || ! grep -q '^MYSQL_PASSWORD=.' "$prepared" || ! grep -q '^REDIS_PASSWORD=.' "$prepared"; then
             unlink "$prepared"
             fail '读取容器配置失败。'
         fi

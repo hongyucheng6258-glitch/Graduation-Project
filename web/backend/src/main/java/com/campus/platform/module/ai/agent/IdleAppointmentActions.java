@@ -4,7 +4,7 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.idle.dto.AppointDTO;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.IIdleService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.campus.platform.module.ai.mapper.AgentIdleAppointmentMapper;
@@ -24,7 +24,7 @@ public class IdleAppointmentActions implements AgentToolSource {
     static final String PREPARE = "prepare_idle_appointment";
     private final AgentIdleAppointmentMapper appointments;
     private final ObjectMapper json;
-    private final IdleService idle;
+    private final IIdleService idle;
 
     @Override
     public List<AgentTool> tools() {

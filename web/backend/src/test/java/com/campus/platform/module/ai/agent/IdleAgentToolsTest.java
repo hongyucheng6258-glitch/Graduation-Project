@@ -1,7 +1,7 @@
 package com.campus.platform.module.ai.agent;
 
 import com.campus.platform.common.BizException;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.IIdleService;
 import com.campus.platform.module.idle.vo.IdleGuideCard;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -14,7 +14,7 @@ import static org.mockito.Mockito.*;
 
 class IdleAgentToolsTest {
     private final ObjectMapper json = new ObjectMapper();
-    private final IdleService idle = mock(IdleService.class);
+    private final IIdleService idle = mock(IIdleService.class);
     private final IdleAgentTools tools = new IdleAgentTools(idle, json);
 
     @Test

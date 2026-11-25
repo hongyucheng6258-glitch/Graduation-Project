@@ -1,6 +1,6 @@
 package com.campus.platform.module.site.controller;
 
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.config.SystemConfigHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,8 +20,8 @@ public class SiteConfigController {
     private final SystemConfigHolder systemConfigHolder;
 
     @GetMapping("/config")
-    public R<Map<String, Object>> config() {
-        return R.ok(Map.of(
+    public Result<Map<String, Object>> config() {
+        return Result.ok(Map.of(
                 "siteName", systemConfigHolder.getSiteName(),
                 "siteSlogan", systemConfigHolder.get("site_slogan"),
                 "maintenance", systemConfigHolder.isMaintenanceMode(),

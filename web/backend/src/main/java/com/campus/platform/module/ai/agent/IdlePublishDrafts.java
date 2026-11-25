@@ -4,7 +4,7 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.config.SystemConfigHolder;
 import com.campus.platform.module.idle.dto.IdlePublishDTO;
-import com.campus.platform.module.idle.service.IdleService;
+import com.campus.platform.module.idle.service.IIdleService;
 import com.campus.platform.module.upload.mapper.UploadResourceMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,7 +32,7 @@ public class IdlePublishDrafts implements AgentToolSource {
 
     private final AgentIdleDraftMapper drafts;
     private final ObjectMapper json;
-    private final IdleService idle;
+    private final IIdleService idle;
     private final UploadResourceMapper uploads;
     private final SystemConfigHolder config;
 

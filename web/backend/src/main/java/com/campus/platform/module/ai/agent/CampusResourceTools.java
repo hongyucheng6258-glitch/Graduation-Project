@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
-class CampusResourceTools implements AgentToolSource {
+public class CampusResourceTools implements AgentToolSource {
     static final String SEARCH = "search_campus_resources";
     private static final Pattern LOOKUP = Pattern.compile("^(?:请\\s*)?(?:帮我\\s*|我想\\s*)?(?:查|搜|找|看看|有没有|有人捡到|有人拾到)");
     private static final Pattern MATERIAL_LOOKUP = Pattern.compile(
@@ -107,6 +107,6 @@ class CampusResourceTools implements AgentToolSource {
         }
     }
 
-    record Ref(String kind, long id) {}
-    record Card(String kind, long id, String title, String subtitle, int status, Long profileId) {}
+    public record Ref(String kind, long id) {}
+    public record Card(String kind, long id, String title, String subtitle, int status, Long profileId) {}
 }

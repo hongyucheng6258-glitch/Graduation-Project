@@ -1,7 +1,7 @@
 package com.campus.platform.module.ai.agent;
 
 import com.campus.platform.module.ai.mapper.AgentRunMapper;
-import com.campus.platform.common.R;
+import com.campus.platform.common.Result;
 import com.campus.platform.common.UserContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -18,28 +18,28 @@ import java.util.Map;
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "campus.agent.enabled", havingValue = "true")
 public class AdminAgentController {
-    private final AgentPromptService prompts;
+    private final IAgentPromptService prompts;
     private final AgentRunMapper runs;
 
     @GetMapping("/prompts/{scene}")
-    public R<List<AgentPromptService.Version>> list(@PathVariable String scene) {
-        return R.ok(prompts.versions(scene));
+    public Result<List<IAgentPromptService.Version>> list(@PathVariable String scene) {
+        return Result.ok(prompts.versions(scene));
     }
 
     @PostMapping("/prompts/{scene}")
-    public R<Long> create(@PathVariable String scene, @Valid @RequestBody Draft draft) {
-        return R.ok(prompts.create(scene, draft.content().strip(), UserContext.getUid()));
+    public Result<Long> create(@PathVariable String scene, @Valid @RequestBody Draft draft) {
+        return Result.ok(prompts.create(scene, draft.content().strip(), UserContext.getUid()));
     }
 
     @PutMapping("/prompts/{scene}/{version}")
-    public R<Void> publish(@PathVariable String scene, @PathVariable long version) {
+    public Result<Void> publish(@PathVariable String scene, @PathVariable long version) {
         prompts.publish(scene, version);
-        return R.ok();
+        return Result.ok();
     }
 
     @GetMapping("/runs")
-    public R<List<Map<String, Object>>> runs() {
-        return R.ok(runs.findRecent());
+    public Result<List<Map<String, Object>>> runs() {
+        return Result.ok(runs.findRecent());
     }
 
     public record Draft(@NotBlank @Size(max = 4000) String content) {}

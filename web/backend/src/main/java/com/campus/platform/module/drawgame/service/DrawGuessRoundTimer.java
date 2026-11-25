@@ -6,23 +6,23 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-final class DrawGuessRoundTimer {
+public final class DrawGuessRoundTimer {
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2,
             new DrawGuessTimerThreadFactory());
 
-    ScheduledFuture<?> start(Runnable tick) {
+    public ScheduledFuture<?> start(Runnable tick) {
         return executor.scheduleAtFixedRate(tick, 1, 1, TimeUnit.SECONDS);
     }
 
-    void cancel(ScheduledFuture<?> timer) {
+    public void cancel(ScheduledFuture<?> timer) {
         timer.cancel(false);
     }
 
-    void scheduleRoomCleanup(Runnable cleanup) {
+    public void scheduleRoomCleanup(Runnable cleanup) {
         executor.schedule(cleanup, 30, TimeUnit.MINUTES);
     }
 
-    void shutdown() {
+    public void shutdown() {
         executor.shutdownNow();
     }
 

@@ -6,7 +6,7 @@ import com.campus.platform.common.BizException;
 import com.campus.platform.common.ResultCode;
 import com.campus.platform.module.ai.entity.AiMessage;
 import com.campus.platform.module.ai.entity.AiSession;
-import com.campus.platform.module.ai.gateway.ChatMemoryService;
+import com.campus.platform.module.ai.gateway.IChatMemoryService;
 import com.campus.platform.module.ai.mapper.AiMessageMapper;
 import com.campus.platform.module.ai.mapper.AiSessionMapper;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +17,10 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-class AgentConversation {
+public class AgentConversation {
     private final AiSessionMapper sessions;
     private final AiMessageMapper messages;
-    private final ChatMemoryService memory;
+    private final IChatMemoryService memory;
     private final AgentMessageAttachments attachments;
 
     List<AiMessage> history(Long uid, Long sessionId) {

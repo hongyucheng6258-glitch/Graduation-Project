@@ -1,6 +1,6 @@
 package com.campus.platform.module.auth.mapper;
 
-import com.campus.platform.module.auth.service.PasswordRecoveryService.Status;
+import com.campus.platform.module.auth.service.IPasswordRecoveryService.Status;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

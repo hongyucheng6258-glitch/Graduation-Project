@@ -1,22 +1,28 @@
 package com.campus.platform.module.activity;
 
+import com.campus.platform.module.ai.service.ContentAiAuditServiceImpl;
+
+import com.campus.platform.module.activity.service.impl.ActivitySigninServiceImpl;
+
+import com.campus.platform.module.message.service.impl.MessageServiceImpl;
+
 import com.campus.platform.module.activity.mapper.ActivityMemberMapper;
 import com.campus.platform.module.activity.mapper.ActivitySigninMapper;
-import com.campus.platform.module.activity.service.ActivityService;
+import com.campus.platform.module.activity.service.impl.ActivityServiceImpl;
 import com.campus.platform.module.activity.mapper.ActivityMapper;
 import com.campus.platform.module.activity.entity.ActivityMember;
 import com.campus.platform.module.activity.dto.SignupDTO;
 import com.campus.platform.module.activity.entity.Activity;
 
-import com.campus.platform.module.ai.service.ContentAiAuditService;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.ai.service.IContentAiAuditService;
+import com.campus.platform.module.message.service.IMessageService;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
 import com.campus.platform.module.user.entity.User;
 import com.campus.platform.module.ai.gateway.SensitiveWordService;
 import com.campus.platform.module.user.mapper.UserMapper;
-import com.campus.platform.module.activity.service.ActivitySigninService;
+import com.campus.platform.module.activity.service.IActivitySigninService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeAll;
@@ -68,19 +74,19 @@ class ActivityServiceTest {
     @Mock
     private UserMapper userMapper;
     @Mock
-    private MessageService messageService;
+    private MessageServiceImpl messageService;
     @Mock
-    private ActivitySigninService signinService;
+    private ActivitySigninServiceImpl signinService;
     @Mock
     private SensitiveWordService sensitiveWordService;
     @Mock
-    private ContentAiAuditService contentAiAuditService;
+    private ContentAiAuditServiceImpl contentAiAuditService;
 
     @Mock
     private com.campus.platform.module.activity.service.ActivityWaitlist waitlist;
 
     @InjectMocks
-    private ActivityService service;
+    private ActivityServiceImpl service;
 
     private Activity activity(int status, LocalDateTime start, LocalDateTime end,
                               LocalDateTime deadline, int maxMembers) {
@@ -204,7 +210,7 @@ class ActivityServiceTest {
     @DisplayName("未开始、未截止、未满员 → 报名中且可报名")
     void resolve_signing() {
         Activity a = activity(Constants.ACTIVITY_SIGNING, FUTURE, FUTURE.plusHours(2), FUTURE, 10);
-        ActivityService.DisplayInfo info = ActivityService.resolveDisplayStatus(a, NOW, 0);
+        ActivityServiceImpl.DisplayInfo info = ActivityServiceImpl.resolveDisplayStatus(a, NOW, 0);
         assertThat(info.status).isEqualTo(Constants.ACT_DISPLAY_SIGNING);
         assertThat(info.text).isEqualTo("报名中");
         assertThat(info.canSignup).isTrue();
@@ -215,7 +221,7 @@ class ActivityServiceTest {
     @DisplayName("结束时间已过（即使数据库仍是报名中）→ 已结束，不可报名")
     void resolve_endedByTime() {
         Activity a = activity(Constants.ACTIVITY_SIGNING, PAST, PAST.plusHours(1), FUTURE, 10);
-        ActivityService.DisplayInfo info = ActivityService.resolveDisplayStatus(a, NOW, 0);
+        ActivityServiceImpl.DisplayInfo info = ActivityServiceImpl.resolveDisplayStatus(a, NOW, 0);
         assertThat(info.status).isEqualTo(Constants.ACT_DISPLAY_ENDED);
         assertThat(info.canSignup).isFalse();
         assertThat(info.reason).isEqualTo("活动已结束");
@@ -225,7 +231,7 @@ class ActivityServiceTest {
     @DisplayName("数据库已结束状态 → 已结束")
     void resolve_endedByDb() {
         Activity a = activity(Constants.ACTIVITY_ENDED, FUTURE, FUTURE.plusHours(2), FUTURE, 10);
-        ActivityService.DisplayInfo info = ActivityService.resolveDisplayStatus(a, NOW, 0);
+        ActivityServiceImpl.DisplayInfo info = ActivityServiceImpl.resolveDisplayStatus(a, NOW, 0);
         assertThat(info.status).isEqualTo(Constants.ACT_DISPLAY_ENDED);
     }
 
@@ -233,7 +239,7 @@ class ActivityServiceTest {
     @DisplayName("审批通过数达到上限 → 已满员")
     void resolve_full() {
         Activity a = activity(Constants.ACTIVITY_SIGNING, FUTURE, FUTURE.plusHours(2), FUTURE, 10);
-        ActivityService.DisplayInfo info = ActivityService.resolveDisplayStatus(a, NOW, 10);
+        ActivityServiceImpl.DisplayInfo info = ActivityServiceImpl.resolveDisplayStatus(a, NOW, 10);
         assertThat(info.status).isEqualTo(Constants.ACT_DISPLAY_FULL);
         assertThat(info.reason).isEqualTo("活动人数已满");
     }
@@ -242,7 +248,7 @@ class ActivityServiceTest {
     @DisplayName("报名截止时间已过 → 报名已截止")
     void resolve_deadlinePassed() {
         Activity a = activity(Constants.ACTIVITY_SIGNING, FUTURE, FUTURE.plusHours(2), PAST, 10);
-        ActivityService.DisplayInfo info = ActivityService.resolveDisplayStatus(a, NOW, 0);
+        ActivityServiceImpl.DisplayInfo info = ActivityServiceImpl.resolveDisplayStatus(a, NOW, 0);
         assertThat(info.status).isEqualTo(Constants.ACT_DISPLAY_DEADLINE_PASSED);
         assertThat(info.reason).isEqualTo("报名已截止");
     }
@@ -251,7 +257,7 @@ class ActivityServiceTest {
     @DisplayName("未设报名截止且活动已开始 → 活动进行中，不可报名")
     void resolve_ongoingWhenNoDeadline() {
         Activity a = activity(Constants.ACTIVITY_SIGNING, PAST, FUTURE, null, 10);
-        ActivityService.DisplayInfo info = ActivityService.resolveDisplayStatus(a, NOW, 0);
+        ActivityServiceImpl.DisplayInfo info = ActivityServiceImpl.resolveDisplayStatus(a, NOW, 0);
         assertThat(info.status).isEqualTo(Constants.ACT_DISPLAY_ONGOING);
         assertThat(info.reason).isEqualTo("活动已开始，无法报名");
     }
@@ -260,7 +266,7 @@ class ActivityServiceTest {
     @DisplayName("已下架 → 已下架，不可报名")
     void resolve_offShelf() {
         Activity a = activity(Constants.ACTIVITY_OFF, FUTURE, FUTURE.plusHours(2), FUTURE, 10);
-        ActivityService.DisplayInfo info = ActivityService.resolveDisplayStatus(a, NOW, 0);
+        ActivityServiceImpl.DisplayInfo info = ActivityServiceImpl.resolveDisplayStatus(a, NOW, 0);
         assertThat(info.status).isEqualTo(Constants.ACT_DISPLAY_OFF);
         assertThat(info.reason).isEqualTo("活动已下架");
     }

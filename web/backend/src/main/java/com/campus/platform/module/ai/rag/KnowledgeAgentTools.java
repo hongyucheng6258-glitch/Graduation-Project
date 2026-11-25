@@ -16,7 +16,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "campus.agent.rag.enabled", havingValue = "true")
 class KnowledgeAgentTools implements AgentToolSource {
-    private final KnowledgeService knowledge;
+    private final IKnowledgeService knowledge;
     private final ObjectMapper json;
 
     @Override

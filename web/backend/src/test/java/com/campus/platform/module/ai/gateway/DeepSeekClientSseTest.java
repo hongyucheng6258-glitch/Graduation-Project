@@ -34,9 +34,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 当前 AiGatewayService 的 SSE 真实链路测试。
+ * 当前 IAiGatewayService 的 SSE 真实链路测试。
  *
- * 旧 DeepSeekClient 已被移除，流式解析逻辑现在位于 AiGatewayService，
+ * 旧 DeepSeekClient 已被移除，流式解析逻辑现在位于 IAiGatewayService，
  * 因此测试直接覆盖公开的 streamChat 方法。
  */
 @DisplayName("AI 网关 SSE 流式出口")
@@ -48,11 +48,11 @@ class DeepSeekClientSseTest {
     private volatile int responseStatus;
     private volatile String sseBody;
 
-    private ChatMemoryService chatMemoryService;
+    private IChatMemoryService chatMemoryService;
     private SensitiveWordService sensitiveWordService;
     private AiCallLogMapper aiCallLogMapper;
     private RedisUtils redisUtils;
-    private AiGatewayService gateway;
+    private AiGatewayServiceImpl gateway;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -69,7 +69,7 @@ class DeepSeekClientSseTest {
         server.start();
 
         AiConfigHolder configHolder = mock(AiConfigHolder.class);
-        chatMemoryService = mock(ChatMemoryService.class);
+        chatMemoryService = mock(IChatMemoryService.class);
         sensitiveWordService = mock(SensitiveWordService.class);
         PromptTemplateMapper promptTemplateMapper = mock(PromptTemplateMapper.class);
         aiCallLogMapper = mock(AiCallLogMapper.class);
@@ -89,7 +89,7 @@ class DeepSeekClientSseTest {
 
         responseStatus = 200;
         sseBody = delta("校") + delta("园") + "data: [DONE]\n\n";
-        gateway = new AiGatewayService(configHolder, chatMemoryService, sensitiveWordService,
+        gateway = new AiGatewayServiceImpl(configHolder, chatMemoryService, sensitiveWordService,
                 promptTemplateMapper, aiCallLogMapper, pdfDocumentMapper, redisUtils);
     }
 

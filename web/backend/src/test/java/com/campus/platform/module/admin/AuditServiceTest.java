@@ -1,8 +1,12 @@
 package com.campus.platform.module.admin;
 
-import com.campus.platform.module.admin.service.AuditService;
+import com.campus.platform.module.admin.service.impl.AuditServiceImpl;
 
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.impl.MessageServiceImpl;
+
+import com.campus.platform.module.admin.service.IAuditService;
+
+import com.campus.platform.module.message.service.IMessageService;
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.common.Constants;
@@ -54,10 +58,10 @@ class AuditServiceTest {
     @Mock private LostFoundMapper lostFoundMapper;
     @Mock private PostMapper postMapper;
     @Mock private StudyPartnerMapper studyPartnerMapper;
-    @Mock private MessageService messageService;
+    @Mock private MessageServiceImpl messageService;
 
     @InjectMocks
-    private AuditService auditService;
+    private AuditServiceImpl auditService;
 
     // ==================== 状态机常量口径 ====================
 

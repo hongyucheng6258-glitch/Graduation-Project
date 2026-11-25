@@ -1,10 +1,14 @@
 package com.campus.platform.module.chat.controller;
 
+import com.campus.platform.module.chat.websocket.impl.ChatWsTicketServiceImpl;
+
+import com.campus.platform.module.chat.service.impl.ChatServiceImpl;
+
 
 import com.campus.platform.module.chat.entity.ChatConversation;
-import com.campus.platform.module.chat.service.ChatService;
+import com.campus.platform.module.chat.service.IChatService;
 import com.campus.platform.module.chat.vo.ConversationVO;
-import com.campus.platform.module.chat.websocket.ChatWsTicketService;
+import com.campus.platform.module.chat.websocket.IChatWsTicketService;
 import com.campus.platform.common.UserContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,14 +24,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class ChatControllerTest {
-    private ChatService chatService;
-    private ChatWsTicketService ticketService;
+    private IChatService chatService;
+    private IChatWsTicketService ticketService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        chatService = mock(ChatService.class);
-        ticketService = mock(ChatWsTicketService.class);
+        chatService = mock(IChatService.class);
+        ticketService = mock(IChatWsTicketService.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new ChatController(chatService, ticketService)).build();
         UserContext.set(7L, "student");
     }

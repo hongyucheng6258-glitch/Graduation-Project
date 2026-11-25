@@ -7,7 +7,7 @@ import com.campus.platform.module.activity.entity.Activity;
 import com.campus.platform.module.activity.mapper.ActivityMapper;
 import com.campus.platform.module.activity.mapper.ActivityWaitlistMapper;
 import com.campus.platform.module.activity.mapper.ActivityWaitlistMapper.Candidate;
-import com.campus.platform.module.message.service.MessageService;
+import com.campus.platform.module.message.service.IMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,7 +26,7 @@ import java.util.Objects;
 public class ActivityWaitlist {
     private final ActivityWaitlistMapper waitlist;
     private final ActivityMapper activities;
-    private final MessageService messages;
+    private final IMessageService messages;
     private final TransactionTemplate transactions;
 
     public List<Entry> mine(long userId) {
@@ -78,7 +78,7 @@ public class ActivityWaitlist {
     }
 
     /** Called with the activity row locked in the caller's transaction. */
-    boolean claim(Activity activity, long userId, long entryId) {
+    public boolean claim(Activity activity, long userId, long entryId) {
         LocalDateTime now = now();
         if (activity == null) throw unavailable();
         Entry entry = entry(userId, activity.getId());
@@ -96,26 +96,26 @@ public class ActivityWaitlist {
         return true;
     }
 
-    void release(long activityId, long userId, String state) {
+    public void release(long activityId, long userId, String state) {
         waitlist.release(state, activityId, userId);
     }
 
-    boolean reservedForOthers(Activity activity, long userId) {
+    public boolean reservedForOthers(Activity activity, long userId) {
         return limit(activity) > 0 && occupied(activity.getId(), now(), userId) >= limit(activity);
     }
 
-    boolean offersFillRemainingSeats(Activity activity, long userId, long approved) {
+    public boolean offersFillRemainingSeats(Activity activity, long userId, long approved) {
         if (limit(activity) == 0) return false;
         return approved + holds(activity.getId(), now(), userId) >= limit(activity);
     }
 
-    boolean queued(long activityId, long userId) {
+    public boolean queued(long activityId, long userId) {
         Entry row = entry(userId, activityId);
         return row != null && ("WAITING".equals(row.state()) || "OFFERED".equals(row.state()));
     }
 
     /** Expire offers and reserve any released seats in join order under the activity lock. */
-    void refresh(Activity activity) {
+    public void refresh(Activity activity) {
         if (activity == null) return;
         long id = activity.getId();
         LocalDateTime now = now();
@@ -187,7 +187,7 @@ public class ActivityWaitlist {
     }
 
     private static LocalDateTime now() {
-        return LocalDateTime.now(ActivityScheduleService.CAMPUS_ZONE).withNano(0);
+        return LocalDateTime.now(IActivityScheduleService.CAMPUS_ZONE).withNano(0);
     }
 
     private static BizException unavailable() {

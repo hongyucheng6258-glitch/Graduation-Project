@@ -1,5 +1,7 @@
 package com.campus.platform.module.chat.service;
 
+import com.campus.platform.module.chat.service.impl.UploadResourceServiceImpl;
+
 
 import com.campus.platform.common.BizException;
 import com.campus.platform.module.upload.entity.UploadResource;
@@ -18,7 +20,7 @@ import static org.mockito.Mockito.when;
 class UploadResourceServiceTest {
 
     @Mock private UploadResourceMapper mapper;
-    @InjectMocks private UploadResourceService service;
+    @InjectMocks private UploadResourceServiceImpl service;
 
     @Test
     void imageAlreadyBoundToAnotherChatMessageCannotBeReused() {
